@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { UserStats } from '@/types/wrapped';
 import { useWrappedData } from '@/hooks/useWrappedData';
 import { useFarcaster } from '@/contexts/FarcasterContext';
+import { useChristmasMusic } from '@/hooks/useChristmasMusic';
 import Snowfall from './Snowfall';
 import ChristmasLights from './ChristmasLights';
 import ChristmasDecorations from './ChristmasDecorations';
@@ -10,6 +11,7 @@ import WelcomeSlide from './slides/WelcomeSlide';
 import StatSlide from './slides/StatSlide';
 import JudgmentSlide from './slides/JudgmentSlide';
 import SlideProgress from './SlideProgress';
+import MusicControl from './MusicControl';
 import { useToast } from '@/hooks/use-toast';
 import { sdk } from '@farcaster/miniapp-sdk';
 
@@ -17,6 +19,7 @@ const WrappedApp = () => {
   const { user, isSDKLoaded, isInMiniApp } = useFarcaster();
   const [isLoading, setIsLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { isMuted, toggleMute } = useChristmasMusic();
   const { toast } = useToast();
 
   // Build stats from Farcaster user context (mock data for now until Neynar integration)
@@ -171,6 +174,7 @@ const WrappedApp = () => {
       <Snowfall />
       <ChristmasLights />
       <ChristmasDecorations />
+      <MusicControl isMuted={isMuted} onToggle={toggleMute} />
 
       {isLoading ? (
         <LoadingScreen 
