@@ -1,21 +1,22 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { SlideContent } from '@/types/wrapped';
 
 interface StatSlideProps {
   slide: SlideContent;
-  isFunnyMode: boolean;
 }
 
-const StatSlide = ({ slide, isFunnyMode }: StatSlideProps) => {
+const StatSlide = ({ slide }: StatSlideProps) => {
   const [animate, setAnimate] = useState(false);
   const [countValue, setCountValue] = useState(0);
 
   const numericValue = typeof slide.value === 'number' ? slide.value : parseInt(slide.value.toString());
 
   useEffect(() => {
+    setAnimate(false);
+    setCountValue(0);
     const timer = setTimeout(() => setAnimate(true), 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [slide.id]);
 
   // Animated counter
   useEffect(() => {
@@ -39,53 +40,52 @@ const StatSlide = ({ slide, isFunnyMode }: StatSlideProps) => {
     return () => clearInterval(timer);
   }, [animate, numericValue]);
 
-  const randomAlternate = useMemo(() => {
-    return slide.alternates[Math.floor(Math.random() * slide.alternates.length)];
-  }, [slide.alternates]);
-
   const colorClasses = {
     red: {
-      bg: 'from-christmas-red/20 to-christmas-red-dark/10',
-      border: 'border-christmas-red/30',
-      glow: 'shadow-[0_0_60px_hsl(var(--christmas-red)/0.3)]',
-      text: 'text-christmas-red',
-      accent: 'bg-christmas-red',
+      gradient: 'from-christmas-red via-christmas-red-light to-christmas-red',
+      glow: 'shadow-[0_0_100px_hsl(var(--christmas-red)/0.6)]',
+      text: 'text-christmas-red-light',
+      border: 'border-christmas-red/40',
+      bg: 'bg-christmas-red/20',
     },
     green: {
-      bg: 'from-christmas-green/20 to-christmas-green-light/10',
-      border: 'border-christmas-green/30',
-      glow: 'shadow-[0_0_60px_hsl(var(--christmas-green)/0.3)]',
+      gradient: 'from-christmas-green via-christmas-green-light to-christmas-green',
+      glow: 'shadow-[0_0_100px_hsl(var(--christmas-green)/0.6)]',
       text: 'text-christmas-green-light',
-      accent: 'bg-christmas-green',
+      border: 'border-christmas-green/40',
+      bg: 'bg-christmas-green/20',
     },
     gold: {
-      bg: 'from-christmas-gold/20 to-christmas-gold-dark/10',
-      border: 'border-christmas-gold/30',
-      glow: 'shadow-[0_0_60px_hsl(var(--christmas-gold)/0.3)]',
-      text: 'text-christmas-gold',
-      accent: 'bg-christmas-gold',
+      gradient: 'from-christmas-gold via-christmas-gold-light to-christmas-gold',
+      glow: 'shadow-[0_0_100px_hsl(var(--christmas-gold)/0.6)]',
+      text: 'text-christmas-gold-light',
+      border: 'border-christmas-gold/40',
+      bg: 'bg-christmas-gold/20',
     },
   };
 
   const colors = colorClasses[slide.color];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
+    <div className="flex flex-col items-center justify-center min-h-[75vh] text-center px-6">
       {/* Main stat card */}
       <div 
-        className={`relative christmas-card ${colors.glow} border ${colors.border} max-w-sm w-full transition-all duration-700 ${
+        className={`relative christmas-card ${colors.glow} border-2 ${colors.border} max-w-sm w-full transition-all duration-700 ${
           animate ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
         }`}
       >
-        {/* Background gradient */}
-        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${colors.bg} opacity-50`} />
+        {/* Decorative corners */}
+        <div className="absolute -top-3 -left-3 text-2xl">❄️</div>
+        <div className="absolute -top-3 -right-3 text-2xl">❄️</div>
+        <div className="absolute -bottom-3 -left-3 text-2xl">🎄</div>
+        <div className="absolute -bottom-3 -right-3 text-2xl">🎄</div>
         
         {/* Content */}
         <div className="relative z-10">
           {/* Emoji */}
           <div 
-            className={`text-6xl mb-6 transition-all duration-700 delay-200 ${
-              animate ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
+            className={`text-7xl mb-6 transition-all duration-700 delay-200 ${
+              animate ? 'opacity-100 scale-100 animate-bounce-in' : 'opacity-0 scale-50'
             }`}
           >
             {slide.emoji}
@@ -93,7 +93,7 @@ const StatSlide = ({ slide, isFunnyMode }: StatSlideProps) => {
 
           {/* Title */}
           <h2 
-            className={`font-display text-lg font-medium text-muted-foreground mb-2 transition-all duration-500 delay-300 ${
+            className={`font-display text-lg font-medium text-christmas-gold mb-4 uppercase tracking-widest transition-all duration-500 delay-300 ${
               animate ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -102,7 +102,7 @@ const StatSlide = ({ slide, isFunnyMode }: StatSlideProps) => {
 
           {/* Big number */}
           <div 
-            className={`font-display text-6xl md:text-7xl font-bold ${colors.text} mb-6 transition-all duration-700 delay-400 ${
+            className={`font-display text-7xl md:text-8xl font-bold mb-6 bg-gradient-to-b ${colors.gradient} bg-clip-text text-transparent transition-all duration-700 delay-400 ${
               animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
           >
@@ -110,27 +110,20 @@ const StatSlide = ({ slide, isFunnyMode }: StatSlideProps) => {
           </div>
 
           {/* Decorative line */}
-          <div className={`h-1 w-20 mx-auto rounded-full ${colors.accent} mb-6 opacity-60`} />
+          <div className={`h-1.5 w-24 mx-auto rounded-full ${colors.bg} mb-6`}>
+            <div className={`h-full rounded-full bg-gradient-to-r ${colors.gradient} animate-shimmer`} />
+          </div>
 
-          {/* Description */}
+          {/* Description - always shows the random funny text */}
           <p 
-            className={`text-foreground/90 leading-relaxed whitespace-pre-line transition-all duration-700 delay-500 ${
+            className={`text-lg text-christmas-snow leading-relaxed whitespace-pre-line font-medium transition-all duration-700 delay-500 ${
               animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
           >
-            {isFunnyMode ? slide.funnyText : slide.cleanText}
+            {slide.funnyText}
           </p>
         </div>
       </div>
-
-      {/* Alternate text */}
-      <p 
-        className={`mt-6 text-sm text-muted-foreground italic transition-all duration-700 delay-700 ${
-          animate ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        "{randomAlternate}"
-      </p>
     </div>
   );
 };

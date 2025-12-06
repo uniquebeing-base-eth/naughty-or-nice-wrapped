@@ -6,66 +6,68 @@
 
 @layer base {
   :root {
-    /* Christmas Theme */
-    --background: 220 30% 8%;
-    --foreground: 40 30% 96%;
+    /* Vibrant Christmas Theme */
+    --background: 348 80% 8%;
+    --foreground: 45 100% 96%;
 
-    --card: 220 25% 12%;
-    --card-foreground: 40 30% 96%;
+    --card: 348 70% 12%;
+    --card-foreground: 45 100% 96%;
 
-    --popover: 220 25% 12%;
-    --popover-foreground: 40 30% 96%;
+    --popover: 348 70% 12%;
+    --popover-foreground: 45 100% 96%;
 
-    /* Christmas Red */
-    --primary: 0 72% 51%;
-    --primary-foreground: 40 30% 98%;
+    /* Vibrant Christmas Red */
+    --primary: 0 90% 55%;
+    --primary-foreground: 45 100% 98%;
 
-    /* Forest Green */
-    --secondary: 142 50% 28%;
-    --secondary-foreground: 40 30% 98%;
+    /* Bright Green */
+    --secondary: 140 75% 40%;
+    --secondary-foreground: 45 100% 98%;
 
-    /* Muted winter tones */
-    --muted: 220 20% 18%;
-    --muted-foreground: 220 15% 60%;
+    /* Muted festive */
+    --muted: 348 50% 18%;
+    --muted-foreground: 348 30% 70%;
 
-    /* Gold accent */
-    --accent: 43 96% 56%;
-    --accent-foreground: 220 30% 8%;
+    /* Bright Gold */
+    --accent: 45 100% 55%;
+    --accent-foreground: 348 80% 8%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 40 30% 98%;
+    --destructive-foreground: 45 100% 98%;
 
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
-    --ring: 0 72% 51%;
+    --border: 348 40% 25%;
+    --input: 348 40% 25%;
+    --ring: 0 90% 55%;
 
     --radius: 1rem;
 
-    /* Custom Christmas colors */
-    --christmas-red: 0 72% 51%;
-    --christmas-red-dark: 0 72% 40%;
-    --christmas-green: 142 50% 28%;
-    --christmas-green-light: 142 45% 40%;
-    --christmas-gold: 43 96% 56%;
-    --christmas-gold-dark: 43 80% 45%;
-    --snow-white: 210 40% 98%;
-    --ice-blue: 200 80% 85%;
-    --midnight: 220 30% 8%;
-    --cozy-warm: 25 80% 55%;
+    /* Vibrant Christmas colors */
+    --christmas-red: 0 90% 55%;
+    --christmas-red-light: 0 95% 65%;
+    --christmas-red-dark: 0 85% 40%;
+    --christmas-green: 140 80% 42%;
+    --christmas-green-light: 140 85% 55%;
+    --christmas-green-dark: 140 75% 30%;
+    --christmas-gold: 45 100% 55%;
+    --christmas-gold-light: 48 100% 70%;
+    --christmas-gold-dark: 40 90% 45%;
+    --snow-white: 200 30% 98%;
+    --ice-blue: 200 100% 90%;
+    --warm-glow: 30 100% 60%;
+    --candy-pink: 340 90% 70%;
 
     /* Gradients */
-    --gradient-christmas: linear-gradient(135deg, hsl(0 72% 51%) 0%, hsl(0 72% 35%) 100%);
-    --gradient-nice: linear-gradient(135deg, hsl(142 50% 35%) 0%, hsl(142 50% 22%) 100%);
-    --gradient-naughty: linear-gradient(135deg, hsl(0 72% 51%) 0%, hsl(350 80% 35%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(43 96% 56%) 0%, hsl(35 90% 45%) 100%);
-    --gradient-snow: linear-gradient(180deg, hsl(220 30% 8%) 0%, hsl(220 25% 15%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(220 25% 14%) 0%, hsl(220 25% 10%) 100%);
+    --gradient-christmas: linear-gradient(135deg, hsl(0 90% 55%) 0%, hsl(0 85% 40%) 100%);
+    --gradient-nice: linear-gradient(135deg, hsl(140 80% 50%) 0%, hsl(140 75% 35%) 100%);
+    --gradient-naughty: linear-gradient(135deg, hsl(0 95% 60%) 0%, hsl(350 90% 45%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(48 100% 65%) 0%, hsl(40 95% 50%) 100%);
+    --gradient-festive: linear-gradient(180deg, hsl(348 80% 8%) 0%, hsl(348 70% 15%) 50%, hsl(0 60% 15%) 100%);
 
     /* Shadows */
-    --shadow-glow-red: 0 0 60px hsl(0 72% 51% / 0.4);
-    --shadow-glow-green: 0 0 60px hsl(142 50% 28% / 0.4);
-    --shadow-glow-gold: 0 0 40px hsl(43 96% 56% / 0.3);
-    --shadow-card: 0 25px 50px -12px hsl(0 0% 0% / 0.5);
+    --shadow-glow-red: 0 0 80px hsl(0 90% 55% / 0.5);
+    --shadow-glow-green: 0 0 80px hsl(140 80% 42% / 0.5);
+    --shadow-glow-gold: 0 0 60px hsl(45 100% 55% / 0.5);
+    --shadow-card: 0 25px 50px -12px hsl(0 0% 0% / 0.6);
 
     /* Typography */
     --font-display: 'Playfair Display', serif;
@@ -81,6 +83,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
+    background: var(--gradient-festive);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -90,9 +93,10 @@
 
 @layer components {
   .christmas-card {
-    @apply rounded-2xl p-8;
-    background: var(--gradient-card);
-    box-shadow: var(--shadow-card);
+    @apply rounded-3xl p-8;
+    background: linear-gradient(145deg, hsl(348 65% 14%) 0%, hsl(348 70% 10%) 100%);
+    box-shadow: var(--shadow-card), inset 0 1px 0 hsl(45 100% 55% / 0.1);
+    border: 1px solid hsl(45 100% 55% / 0.15);
   }
 
   .glow-red {
@@ -116,65 +120,66 @@
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-christmas);
   }
+
+  .ornament {
+    @apply rounded-full;
+    box-shadow: 
+      inset -4px -4px 10px rgba(0,0,0,0.3),
+      inset 4px 4px 10px rgba(255,255,255,0.2),
+      0 0 20px currentColor;
+  }
 }
 
 /* Snowfall animation */
 @keyframes snowfall {
   0% {
-    transform: translateY(-10vh) translateX(0);
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
     opacity: 1;
   }
-  100% {
-    transform: translateY(110vh) translateX(20px);
-    opacity: 0.3;
-  }
-}
-
-@keyframes snowfall-slow {
-  0% {
-    transform: translateY(-10vh) translateX(0) rotate(0deg);
-    opacity: 0.8;
+  50% {
+    transform: translateY(50vh) translateX(15px) rotate(180deg);
   }
   100% {
-    transform: translateY(110vh) translateX(-30px) rotate(360deg);
-    opacity: 0.2;
+    transform: translateY(110vh) translateX(-10px) rotate(360deg);
+    opacity: 0.4;
   }
 }
 
 @keyframes twinkle {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-15px) rotate(3deg); }
 }
 
 @keyframes pulse-glow {
   0%, 100% { 
-    box-shadow: 0 0 20px hsl(0 72% 51% / 0.3);
+    box-shadow: 0 0 30px hsl(0 90% 55% / 0.4);
+    transform: scale(1);
   }
   50% { 
-    box-shadow: 0 0 40px hsl(0 72% 51% / 0.6);
+    box-shadow: 0 0 60px hsl(0 90% 55% / 0.7);
+    transform: scale(1.02);
   }
+}
+
+@keyframes swing {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@keyframes lights-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 @keyframes slide-up {
   from {
     opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-40px);
+    transform: translateY(50px);
   }
   to {
     opacity: 1;
@@ -185,7 +190,7 @@
 @keyframes scale-in {
   from {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.8);
   }
   to {
     opacity: 1;
@@ -193,34 +198,36 @@
   }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 @keyframes bounce-in {
   0% {
     opacity: 0;
-    transform: scale(0.3);
+    transform: scale(0.3) rotate(-10deg);
   }
   50% {
-    transform: scale(1.05);
+    transform: scale(1.1) rotate(3deg);
   }
   70% {
-    transform: scale(0.9);
+    transform: scale(0.95) rotate(-2deg);
   }
   100% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) rotate(0deg);
   }
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes sparkle {
+  0%, 100% { 
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
   }
-  100% {
-    background-position: 200% 0;
+  50% { 
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
   }
 }
 
@@ -228,49 +235,50 @@
   animation: snowfall linear infinite;
 }
 
-.animate-snowfall-slow {
-  animation: snowfall-slow linear infinite;
-}
-
 .animate-twinkle {
-  animation: twinkle 2s ease-in-out infinite;
+  animation: twinkle 1.5s ease-in-out infinite;
 }
 
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
 }
 
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-.animate-slide-up {
-  animation: slide-up 0.6s ease-out forwards;
+.animate-swing {
+  animation: swing 3s ease-in-out infinite;
+  transform-origin: top center;
 }
 
-.animate-slide-down {
-  animation: slide-down 0.6s ease-out forwards;
+.animate-lights {
+  animation: lights-blink 1s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .animate-scale-in {
-  animation: scale-in 0.5s ease-out forwards;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out forwards;
+  animation: scale-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .animate-bounce-in {
-  animation: bounce-in 0.6s ease-out forwards;
+  animation: bounce-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .animate-shimmer {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    hsl(43 96% 56% / 0.3) 50%,
+    hsl(45 100% 55% / 0.4) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
+}
+
+.animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
 }
