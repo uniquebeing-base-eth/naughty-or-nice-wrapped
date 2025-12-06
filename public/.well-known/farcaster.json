@@ -12,6 +12,7 @@
     "imageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png",
     "buttonTitle": "🎄 Check Your Wrapped",
     "splashImageUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
-    "splashBackgroundColor": "#1a472a"
+    "splashBackgroundColor": "#1a472a",
+    "webhookUrl": "https://api.neynar.com/f/app/8bf7fd64-6415-4d52-b10c-65ffbb56d242/event"
   }
 }

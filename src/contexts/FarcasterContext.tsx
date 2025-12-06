@@ -64,6 +64,14 @@ export const FarcasterProvider = ({ children }: FarcasterProviderProps) => {
           // Signal that the app is ready
           await sdk.actions.ready();
           setIsSDKLoaded(true);
+          
+          // Prompt user to add the mini app for notifications
+          try {
+            await sdk.actions.addFrame();
+            console.log('Add frame prompt triggered successfully');
+          } catch (addFrameError) {
+            console.log('Add frame prompt dismissed or already added:', addFrameError);
+          }
         }
       } catch (err) {
         console.log('Farcaster SDK init (not in mini app context):', err);
