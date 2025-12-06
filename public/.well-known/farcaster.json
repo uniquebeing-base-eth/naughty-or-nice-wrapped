@@ -4,6 +4,9 @@
     "payload": "eyJkb21haW4iOiJuYXVnaHR5LW9yLW5pY2Utd3JhcHBlZC52ZXJjZWwuYXBwIn0",
     "signature": "yPVksoCeoXjgL0Sr/zXf/EsteR4x02BLIz6xXKhCMfsK631cmnLz4BGASZfAZGAFjh0HnDezpY2+8EqFzMu/7hs="
   },
+  "baseBuilder": {
+    "ownerAddress": "0x170c5a413136F094421fad8Dd20285b5e05Fff5e"
+  },
   "miniapp": {
     "version": "1",
     "name": "Naughty or Nice Wrapped",
@@ -13,7 +16,18 @@
     "buttonTitle": "🎄 Check Your Wrapped",
     "splashImageUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
     "splashBackgroundColor": "#1a472a",
-    "webhookUrl": "https://api.neynar.com/f/app/8bf7fd64-6415-4d52-b10c-65ffbb56d242/event"
+    "webhookUrl": "https://api.neynar.com/f/app/8bf7fd64-6415-4d52-b10c-65ffbb56d242/event",
+    "primaryCategory": "entertainment",
+    "tags": ["christmas", "wrapped", "farcaster", "yearinreview", "holidays"],
+    "subtitle": "Your 2024 Farcaster Recap",
+    "description": "Discover if Santa thinks you have been naughty or nice this year based on your Farcaster activity. Get your personalized Christmas wrapped and share your verdict.",
+    "screenshotUrls": [
+      "https://naughty-or-nice-wrapped.vercel.app/preview-image.png"
+    ],
+    "heroImageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png",
+    "tagline": "Are you Naughty or Nice?",
+    "ogTitle": "Naughty or Nice Wrapped",
+    "ogDescription": "Santa has been watching your Farcaster journey. Discover your verdict and share your personalized Christmas wrapped card."
   },
   "frame": {
     "version": "1",
