@@ -30,35 +30,43 @@ serve(async (req) => {
     const emoji = isNice ? '😇' : '😈';
     const verdictColor = isNice ? 'green' : 'red';
 
-    const prompt = `Create a festive Christmas-themed social media share card with these EXACT specifications:
+    const prompt = `Create an elegant Christmas-themed judgment card matching this EXACT design:
 
-LAYOUT & DESIGN:
-- Square format (1080x1080 pixels)
-- Dark navy/purple gradient background (#1a1a2e to #16213e)
-- Subtle falling snowflakes scattered across the background
-- Decorative Christmas stars in top corners (gold/yellow color)
-- Small Christmas trees in bottom corners
+BACKGROUND & FRAME:
+- Dark maroon/burgundy gradient background (#3a0d0d to #1a0505)
+- Elegant rectangular card in the center with rounded corners
+- Card has a thin gold/bronze border frame
+- Soft glowing orbs scattered in background (subtle white/cream dots)
+- ⭐ Gold star decorations in top left and top right corners
+- 🎄 Small Christmas tree emojis in bottom left and bottom right corners
 
-CONTENT (centered, top to bottom):
-1. Title at top: "❄️ Naughty or Nice Wrapped — 2025 ❄️" in elegant gold text
-2. A circular profile picture placeholder with gold border (for @${username})
-3. Username "@${username}" below the profile in white text
-4. Large circular progress ring showing ${score}% with ${verdictColor} gradient fill
-5. Inside the ring: "${score}%" in large bold text, with "${verdict}" label below
-6. Badge pill: "${badge}" in a rounded ${verdictColor} gradient pill with sparkle icon
-7. Two stat boxes at bottom:
-   - Left: "${nicePoints.toLocaleString()} nice moments" with green accent
-   - Right: "${naughtyPoints} naughty moments" with red accent
-8. Footer: "Made with ❄️ by @uniquebeing404"
+CARD CONTENT (from top to bottom, centered):
+1. Header: "❄️ NAUGHTY OR NICE WRAPPED — 2025 ❄️" in gold/yellow text, small elegant font
+2. Large circular profile photo area with golden ornate frame border
+3. Small ${emoji} emoji overlapping the profile circle at bottom-right
+4. Username "@${username}" in white bold text below profile
+5. Large circular progress ring:
+   - Thick ${verdictColor} glowing ring (bright green if nice, bright red if naughty)
+   - Ring shows ${score}% completion (partial circle)
+   - Gray/dark track behind the colored portion
+   - Soft glow effect around the ring
+6. Inside the ring center:
+   - "${score}%" in LARGE bold ${verdictColor} gradient text
+   - "${verdict}" label below in smaller ${verdictColor} text with gold accent
+7. Badge pill below ring: "✨ ${badge}" in a rounded ${verdictColor} pill/button with sparkle
+8. Two stat columns at bottom:
+   - Left: "${nicePoints.toLocaleString()}" in large green text, "nice moments" label below in gray
+   - Right: "${naughtyPoints}" in large red text, "naughty moments" label below in gray
+9. Footer at very bottom: "Made with ❄️ by @uniquebeing404" in small gray/muted text
 
-STYLE:
-- Luxurious, festive Christmas aesthetic
-- Rich ${verdictColor} and gold color accents throughout
-- Glowing effects around the score ring
-- Professional, shareable social media quality
-- Vibrant but elegant color palette
+STYLE REQUIREMENTS:
+- Rich, warm Christmas colors - burgundy, gold, ${verdictColor}
+- Elegant, luxurious aesthetic matching Spotify Wrapped style
+- The ${verdictColor} elements should GLOW subtly
+- Professional social media share card quality
+- Square format 1080x1080 pixels
 
-Generate a single, complete image matching this exact layout.`;
+This should look like a premium, shareable Christmas verdict card.`;
 
     console.log('Calling AI Gateway to generate image...');
 
