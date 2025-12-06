@@ -20,45 +20,26 @@ import { ExternalLink } from 'lucide-react';
 
 const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped';
 
-const FarcasterOnlyGuard = () => {
-  return (
-    <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
-      <Snowfall />
-      <ChristmasLights />
-      <ChristmasDecorations />
-      
-      <div className="relative z-10 text-center px-6 max-w-md">
-        <div className="christmas-card p-8 border-2 border-christmas-gold/30">
-          <div className="text-6xl mb-6">🎄</div>
-          
-          <h1 className="font-display text-3xl font-bold text-christmas-gold mb-4">
-            Naughty or Nice Wrapped
-          </h1>
-          
-          <p className="text-christmas-snow/90 text-lg mb-2">
-            This experience is exclusively available on Farcaster!
-          </p>
-          
-          <p className="text-christmas-snow/60 text-sm mb-8">
-            Open the Farcaster app to discover if you made Santa's nice list or naughty list this year. Your 2025 Farcaster journey awaits! ❄️
-          </p>
-          
-          <Button
-            onClick={() => window.open(FARCASTER_MINIAPP_URL, '_blank')}
-            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white px-8 py-4 rounded-full font-bold gap-2 text-lg shadow-lg shadow-purple-500/30 border-2 border-purple-400/30"
-          >
-            <ExternalLink className="w-5 h-5" />
-            Open in Farcaster
-          </Button>
-          
-          <p className="text-christmas-snow/40 text-xs mt-6">
-            Made with ❄️ by @uniquebeing404
-          </p>
-        </div>
+const FarcasterOnlyGuard = () => (
+  <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
+    <Snowfall />
+    <ChristmasLights />
+    <ChristmasDecorations />
+    <div className="relative z-10 text-center px-6 max-w-md">
+      <div className="christmas-card p-8 border-2 border-christmas-gold/30">
+        <div className="text-6xl mb-6">🎄</div>
+        <h1 className="font-display text-3xl font-bold text-christmas-gold mb-4">Naughty or Nice Wrapped</h1>
+        <p className="text-christmas-snow/90 text-lg mb-2">This experience is exclusively available on Farcaster!</p>
+        <p className="text-christmas-snow/60 text-sm mb-8">Open the Farcaster app to discover if you made Santa's nice list or naughty list this year. Your 2025 Farcaster journey awaits! ❄️</p>
+        <Button onClick={() => window.open(FARCASTER_MINIAPP_URL, '_blank')} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white px-8 py-4 rounded-full font-bold gap-2 text-lg shadow-lg shadow-purple-500/30 border-2 border-purple-400/30">
+          <ExternalLink className="w-5 h-5" />
+          Open in Farcaster
+        </Button>
+        <p className="text-christmas-snow/40 text-xs mt-6">Made with ❄️ by @uniquebeing404</p>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 const WrappedApp = () => {
   const { user, isSDKLoaded, isInMiniApp } = useFarcaster();
@@ -79,14 +60,7 @@ const WrappedApp = () => {
   useEffect(() => {
     const fetchStats = async () => {
       if (!user?.fid) {
-        setStats(prev => ({ ...prev,
-          replies: 2000 + Math.floor(Math.random() * 500),
-          likesGiven: 10000 + Math.floor(Math.random() * 2000),
-          likesReceived: 20000 + Math.floor(Math.random() * 5000),
-          recastsGiven: 2500 + Math.floor(Math.random() * 500),
-          recastsReceived: 789, activeDays: 150 + Math.floor(Math.random() * 150),
-          silentDays: 20 + Math.floor(Math.random() * 60),
-        }));
+        setStats(prev => ({ ...prev, replies: 2000 + Math.floor(Math.random() * 500), likesGiven: 10000 + Math.floor(Math.random() * 2000), likesReceived: 20000 + Math.floor(Math.random() * 5000), recastsGiven: 2500 + Math.floor(Math.random() * 500), recastsReceived: 789, activeDays: 150 + Math.floor(Math.random() * 150), silentDays: 20 + Math.floor(Math.random() * 60) }));
         setIsFetchingStats(false);
         return;
       }
@@ -94,18 +68,10 @@ const WrappedApp = () => {
         const { data, error } = await supabase.functions.invoke('fetch-farcaster-stats', { body: { fid: user.fid } });
         if (error) throw error;
         if (data?.stats) {
-          setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl,
-            replies: data.stats.replies || 0, likesGiven: data.stats.likes_given || 0,
-            likesReceived: Math.floor((data.stats.likes_given || 0) * 1.5),
-            recastsGiven: data.stats.recasts_given || 0, recastsReceived: Math.floor((data.stats.recasts_given || 0) * 1.2),
-            activeDays: data.stats.active_days || 0, silentDays: data.stats.silent_days || 0,
-          }));
+          setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl, replies: data.stats.replies || 0, likesGiven: data.stats.likes_given || 0, likesReceived: Math.floor((data.stats.likes_given || 0) * 1.5), recastsGiven: data.stats.recasts_given || 0, recastsReceived: Math.floor((data.stats.recasts_given || 0) * 1.2), activeDays: data.stats.active_days || 0, silentDays: data.stats.silent_days || 0 }));
         }
       } catch {
-        setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl,
-          replies: 2000, likesGiven: 10000, likesReceived: 20000, recastsGiven: 2500,
-          recastsReceived: 789, activeDays: 200, silentDays: 30,
-        }));
+        setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl, replies: 2000, likesGiven: 10000, likesReceived: 20000, recastsGiven: 2500, recastsReceived: 789, activeDays: 200, silentDays: 30 }));
       } finally { setIsFetchingStats(false); }
     };
     if (isSDKLoaded) fetchStats();
@@ -147,10 +113,7 @@ const WrappedApp = () => {
 
   const handleLoadingComplete = useCallback(() => setIsLoading(false), []);
 
-  // Guard: Show Farcaster-only screen if not in mini app
-  if (isSDKLoaded && !isInMiniApp) {
-    return <FarcasterOnlyGuard />;
-  }
+  if (isSDKLoaded && !isInMiniApp) return <FarcasterOnlyGuard />;
 
   if (!isSDKLoaded || isFetchingStats) {
     return (<div className="relative min-h-screen overflow-hidden"><Snowfall /><ChristmasLights /><ChristmasDecorations /><LoadingScreen onComplete={() => {}} username={stats.username} pfp={stats.pfp} /></div>);
