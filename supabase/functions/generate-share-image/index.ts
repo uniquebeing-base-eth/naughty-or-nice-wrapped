@@ -30,7 +30,11 @@ serve(async (req) => {
     const emoji = isNice ? '😇' : '😈';
     const verdictColor = isNice ? 'green' : 'red';
 
-    const prompt = `Create an elegant Christmas-themed judgment card matching this EXACT design:
+    const characterDescription = isNice 
+      ? "a cute happy elf character with rosy cheeks, pointy ears, and a red & green Christmas outfit with a Santa hat, looking cheerful and innocent"
+      : "a cute mischievous little devil/imp character with tiny horns, rosy cheeks, wearing a Santa hat tilted playfully, looking cheeky but adorable";
+
+    const prompt = `Create an elegant Christmas-themed judgment card with this EXACT design:
 
 BACKGROUND & FRAME:
 - Dark maroon/burgundy gradient background (#3a0d0d to #1a0505)
@@ -42,9 +46,9 @@ BACKGROUND & FRAME:
 
 CARD CONTENT (from top to bottom, centered):
 1. Header: "❄️ NAUGHTY OR NICE WRAPPED — 2025 ❄️" in gold/yellow text, small elegant font
-2. Large circular profile photo area with golden ornate frame border
-3. Small ${emoji} emoji overlapping the profile circle at bottom-right
-4. Username "@${username}" in white bold text below profile
+2. A cute circular avatar showing ${characterDescription} - this should be adorable and festive!
+3. Small ${emoji} emoji overlapping the character circle at bottom-right
+4. Username "@${username}" in white bold text below the character
 5. Large circular progress ring:
    - Thick ${verdictColor} glowing ring (bright green if nice, bright red if naughty)
    - Ring shows ${score}% completion (partial circle)
@@ -61,12 +65,13 @@ CARD CONTENT (from top to bottom, centered):
 
 STYLE REQUIREMENTS:
 - Rich, warm Christmas colors - burgundy, gold, ${verdictColor}
+- The character avatar should be CUTE, 3D-style, and festive like a Pixar/Disney character
 - Elegant, luxurious aesthetic matching Spotify Wrapped style
 - The ${verdictColor} elements should GLOW subtly
 - Professional social media share card quality
 - Square format 1080x1080 pixels
 
-This should look like a premium, shareable Christmas verdict card.`;
+This should look like a premium, shareable Christmas verdict card with an adorable character.`;
 
     console.log('Calling AI Gateway to generate image...');
 
