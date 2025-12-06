@@ -234,14 +234,41 @@ serve(async (req) => {
       longest_streak: Math.max(longestStreak, 1),
     };
 
-    console.log('Final calculated stats:', stats);
+    // Calculate judgment (naughty/nice) - this is now saved permanently
+    const naughtyPoints = Math.round(finalReplies * 0.2);
+    const nicePoints = finalLikesGiven + finalRecastsGiven;
+    
+    // Calculate score with randomness for varied outcomes
+    const baseNiceRatio = nicePoints / (nicePoints + naughtyPoints * 5);
+    const randomOffset = (Math.random() - 0.5) * 0.4; // -0.2 to +0.2
+    const finalRatio = Math.max(0.3, Math.min(0.9, baseNiceRatio + randomOffset));
+    const score = Math.round(finalRatio * 100);
+    
+    // ~45% Naughty, ~55% Nice for balanced outcomes
+    const isNice = score >= 55;
+    
+    const niceBadges = ['Snowflake Saint', 'Gift Giver', 'Holiday Hero', 'Jolly Elf'];
+    const naughtyBadges = ['North Pole Rebel', 'Gingerbread Menace', 'Elf Disturber', 'Silent Night Sinner'];
+    const badges = isNice ? niceBadges : naughtyBadges;
+    const badge = badges[Math.floor(Math.random() * badges.length)];
+    
+    const judgment = {
+      score,
+      isNice,
+      badge,
+      nicePoints,
+      naughtyPoints,
+    };
 
-    // Save stats to database for this FID
+    console.log('Final calculated stats:', stats);
+    console.log('Judgment calculated:', judgment);
+
+    // Save stats and judgment to database for this FID
     const { error: insertError } = await supabase
       .from('wrapped_stats')
       .insert({
         fid: fid,
-        stats: stats,
+        stats: { ...stats, judgment },
         user_data: user,
       });
 
@@ -249,10 +276,10 @@ serve(async (req) => {
       console.error('Error saving stats:', insertError);
       // Don't throw - still return the stats even if save fails
     } else {
-      console.log(`Saved stats for FID ${fid} to database`);
+      console.log(`Saved stats and judgment for FID ${fid} to database`);
     }
 
-    return new Response(JSON.stringify({ stats, user }), {
+    return new Response(JSON.stringify({ stats: { ...stats, judgment }, user }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {

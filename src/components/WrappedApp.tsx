@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { UserStats } from '@/types/wrapped';
+import { UserStats, JudgmentResult } from '@/types/wrapped';
 import { useWrappedData } from '@/hooks/useWrappedData';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useChristmasMusic } from '@/hooks/useChristmasMusic';
@@ -57,6 +57,9 @@ const WrappedApp = () => {
     activeDays: 0, silentDays: 0, timeframe: 'year',
   });
 
+  // Store saved judgment from API
+  const [savedJudgment, setSavedJudgment] = useState<JudgmentResult | null>(null);
+
   useEffect(() => {
     const fetchStats = async () => {
       if (!user?.fid) {
@@ -69,6 +72,11 @@ const WrappedApp = () => {
         if (error) throw error;
         if (data?.stats) {
           setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl, replies: data.stats.replies || 0, likesGiven: data.stats.likes_given || 0, likesReceived: Math.floor((data.stats.likes_given || 0) * 1.5), recastsGiven: data.stats.recasts_given || 0, recastsReceived: Math.floor((data.stats.recasts_given || 0) * 1.2), activeDays: data.stats.active_days || 0, silentDays: data.stats.silent_days || 0 }));
+          
+          // Use saved judgment if available
+          if (data.stats.judgment) {
+            setSavedJudgment(data.stats.judgment);
+          }
         }
       } catch {
         setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl, replies: 2000, likesGiven: 10000, likesReceived: 20000, recastsGiven: 2500, recastsReceived: 789, activeDays: 200, silentDays: 30 }));
@@ -77,7 +85,11 @@ const WrappedApp = () => {
     if (isSDKLoaded) fetchStats();
   }, [user?.fid, isSDKLoaded]);
 
-  const { slides, judgment } = useWrappedData(stats);
+  const { slides, judgment: calculatedJudgment } = useWrappedData(stats);
+  
+  // Use saved judgment if available, otherwise use calculated (for new users or fallback)
+  const judgment = savedJudgment || calculatedJudgment;
+  
   const totalSlides = 1 + slides.length + 1;
   const isLastSlide = currentSlide === totalSlides - 1;
   const isFirstSlide = currentSlide === 0;
