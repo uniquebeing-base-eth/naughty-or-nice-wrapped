@@ -107,7 +107,7 @@ const StatSlide = ({ slide }: StatSlideProps) => {
               animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
           >
-            {countValue.toLocaleString()}+
+            {countValue.toLocaleString()}{!['naughty-moments', 'nice-moments'].includes(slide.id) && '+'}
           </div>
 
           {/* Decorative line */}
