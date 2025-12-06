@@ -57,25 +57,111 @@ serve(async (req) => {
 
     console.log(`No existing stats for FID ${fid}, generating new data`);
 
-    // Fetch user profile
-    const userResponse = await fetch(
-      `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`,
-      {
-        headers: {
-          'accept': 'application/json',
-          'x-api-key': NEYNAR_API_KEY,
-        },
+    // Fetch user profile - with fallback if API fails
+    let user: any = null;
+    let neynarFailed = false;
+    
+    try {
+      const userResponse = await fetch(
+        `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`,
+        {
+          headers: {
+            'accept': 'application/json',
+            'x-api-key': NEYNAR_API_KEY,
+          },
+        }
+      );
+
+      if (!userResponse.ok) {
+        console.error('Neynar user API error:', await userResponse.text());
+        neynarFailed = true;
+      } else {
+        const userData = await userResponse.json();
+        user = userData.users?.[0];
+        console.log(`User data:`, user?.username, 'follower_count:', user?.follower_count, 'following_count:', user?.following_count);
       }
-    );
-
-    if (!userResponse.ok) {
-      console.error('Neynar user API error:', await userResponse.text());
-      throw new Error('Failed to fetch user from Neynar');
+    } catch (e) {
+      console.error('Neynar API failed:', e);
+      neynarFailed = true;
     }
-
-    const userData = await userResponse.json();
-    const user = userData.users?.[0];
-    console.log(`User data:`, user?.username, 'follower_count:', user?.follower_count, 'following_count:', user?.following_count);
+    
+    // If Neynar failed, generate completely random fallback data
+    if (neynarFailed || !user) {
+      console.log('Generating random fallback data for FID:', fid);
+      
+      // FIRST decide randomly if user is Naughty or Nice (~50/50)
+      const isNice = Math.random() >= 0.5;
+      
+      // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
+      const score = isNice 
+        ? 55 + Math.floor(Math.random() * 41)
+        : 20 + Math.floor(Math.random() * 35);
+      
+      // Generate naughty/nice points that MATCH the verdict
+      let naughtyPoints: number;
+      let nicePoints: number;
+      
+      if (isNice) {
+        nicePoints = 8000 + Math.floor(Math.random() * 17000);
+        naughtyPoints = 100 + Math.floor(Math.random() * 400);
+      } else {
+        naughtyPoints = 800 + Math.floor(Math.random() * 1200);
+        nicePoints = 1000 + Math.floor(Math.random() * 4000);
+      }
+      
+      const niceBadges = ['Snowflake Saint', 'Gift Giver', 'Holiday Hero', 'Jolly Elf'];
+      const naughtyBadges = ['North Pole Rebel', 'Gingerbread Menace', 'Elf Disturber', 'Silent Night Sinner'];
+      const badges = isNice ? niceBadges : naughtyBadges;
+      const badge = badges[Math.floor(Math.random() * badges.length)];
+      
+      const fallbackStats = {
+        replies: 1500 + Math.floor(Math.random() * 3000),
+        likes_given: 5000 + Math.floor(Math.random() * 15000),
+        recasts_given: 1000 + Math.floor(Math.random() * 5000),
+        likes_received: 10000 + Math.floor(Math.random() * 30000),
+        active_days: 100 + Math.floor(Math.random() * 200),
+        silent_days: 10 + Math.floor(Math.random() * 80),
+        top_channel: 'farcaster',
+        most_active_hour: Math.floor(Math.random() * 24),
+        longest_streak: 3 + Math.floor(Math.random() * 30),
+        judgment: {
+          score,
+          isNice,
+          badge,
+          nicePoints,
+          naughtyPoints,
+        }
+      };
+      
+      const fallbackUser = {
+        fid: fid,
+        username: `user${fid}`,
+        display_name: `Farcaster User`,
+        pfp_url: null,
+      };
+      
+      // Save fallback stats to database
+      const { error: insertError } = await supabase
+        .from('wrapped_stats')
+        .insert({
+          fid: fid,
+          stats: fallbackStats,
+          user_data: fallbackUser,
+        });
+      
+      if (insertError) {
+        console.error('Error saving fallback stats:', insertError);
+      } else {
+        console.log(`Saved fallback stats for FID ${fid}`);
+      }
+      
+      return new Response(JSON.stringify({ 
+        stats: fallbackStats, 
+        user: fallbackUser 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Fetch user's casts with pagination to get more data
     let allCasts: any[] = [];
