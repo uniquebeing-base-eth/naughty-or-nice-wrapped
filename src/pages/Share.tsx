@@ -32,7 +32,7 @@ const Share = () => {
         {/* Open Graph */}
         <meta property="og:title" content={`@${username} is ${score}% ${verdict} ${emoji}`} />
         <meta property="og:description" content={`${badge} - Find out if you've been Naughty or Nice on Farcaster in 2025!`} />
-        <meta property="og:image" content={imageUrl || 'https://naughty-or-nice-wrapped.lovable.app/preview-image.png'} />
+        <meta property="og:image" content={imageUrl || 'https://naughty-or-nice-wrapped.vercel.app/preview-image.png'} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={window.location.href} />
         
@@ -40,11 +40,11 @@ const Share = () => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`@${username} is ${score}% ${verdict} ${emoji}`} />
         <meta name="twitter:description" content={`${badge} - Find out if you've been Naughty or Nice on Farcaster in 2025!`} />
-        <meta name="twitter:image" content={imageUrl || 'https://naughty-or-nice-wrapped.lovable.app/preview-image.png'} />
+        <meta name="twitter:image" content={imageUrl || 'https://naughty-or-nice-wrapped.vercel.app/preview-image.png'} />
         
         {/* Farcaster Frame */}
         <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content={imageUrl || 'https://naughty-or-nice-wrapped.lovable.app/preview-image.png'} />
+        <meta property="fc:frame:image" content={imageUrl || 'https://naughty-or-nice-wrapped.vercel.app/preview-image.png'} />
         <meta property="fc:frame:button:1" content="Get Your Wrapped 🎄" />
         <meta property="fc:frame:button:1:action" content="link" />
         <meta property="fc:frame:button:1:target" content="https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped" />

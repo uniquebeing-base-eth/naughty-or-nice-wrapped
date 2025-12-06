@@ -113,7 +113,7 @@ const WrappedApp = () => {
       badge: judgment.badge,
       pfp: stats.pfp,
     });
-    const shareUrl = `https://naughty-or-nice-wrapped.lovable.app/share?${shareParams.toString()}`;
+    const shareUrl = `https://naughty-or-nice-wrapped.vercel.app/share?${shareParams.toString()}`;
     
     if (isInMiniApp && sdk) {
       try { 
