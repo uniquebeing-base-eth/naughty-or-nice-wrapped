@@ -25,26 +25,7 @@ serve(async (req) => {
 
     console.log(`Fetching stats for FID: ${fid}`);
 
-    // Fetch user's casts to calculate stats
-    const castsResponse = await fetch(
-      `https://api.neynar.com/v2/farcaster/feed/user/${fid}/replies_and_recasts?limit=150`,
-      {
-        headers: {
-          'accept': 'application/json',
-          'x-api-key': NEYNAR_API_KEY,
-        },
-      }
-    );
-
-    if (!castsResponse.ok) {
-      console.error('Neynar casts API error:', await castsResponse.text());
-      throw new Error('Failed to fetch casts from Neynar');
-    }
-
-    const castsData = await castsResponse.json();
-    console.log(`Fetched ${castsData.casts?.length || 0} casts`);
-
-    // Fetch user profile for reactions given
+    // Fetch user profile
     const userResponse = await fetch(
       `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`,
       {
@@ -62,50 +43,154 @@ serve(async (req) => {
 
     const userData = await userResponse.json();
     const user = userData.users?.[0];
-    console.log(`User data:`, user?.username);
+    console.log(`User data:`, user?.username, 'follower_count:', user?.follower_count, 'following_count:', user?.following_count);
 
-    // Calculate stats from 2025
-    const casts = castsData.casts || [];
-    const year2025Casts = casts.filter((cast: any) => {
-      const castDate = new Date(cast.timestamp);
-      return castDate.getFullYear() === 2025;
+    // Fetch user's casts with pagination to get more data
+    let allCasts: any[] = [];
+    let cursor: string | null = null;
+    let fetchCount = 0;
+    const maxFetches = 5; // Fetch up to 5 pages (750 casts max)
+
+    while (fetchCount < maxFetches) {
+      const castsUrl: string = cursor 
+        ? `https://api.neynar.com/v2/farcaster/feed/user/casts?fid=${fid}&limit=150&cursor=${cursor}`
+        : `https://api.neynar.com/v2/farcaster/feed/user/casts?fid=${fid}&limit=150`;
+      
+      console.log(`Fetching casts page ${fetchCount + 1}...`);
+      
+      const castsResponse: Response = await fetch(castsUrl, {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': NEYNAR_API_KEY,
+        },
+      });
+
+      if (!castsResponse.ok) {
+        console.error('Neynar casts API error:', await castsResponse.text());
+        break;
+      }
+
+      const castsData: any = await castsResponse.json();
+      const casts = castsData.casts || [];
+      console.log(`Page ${fetchCount + 1}: Got ${casts.length} casts`);
+      
+      if (casts.length === 0) break;
+      
+      allCasts = [...allCasts, ...casts];
+      cursor = castsData.next?.cursor;
+      fetchCount++;
+      
+      if (!cursor) break;
+    }
+
+    console.log(`Total casts fetched: ${allCasts.length}`);
+
+    // Filter for 2025 casts
+    const year2025Start = new Date('2025-01-01T00:00:00Z').getTime();
+    const year2025Casts = allCasts.filter((cast: any) => {
+      const castDate = new Date(cast.timestamp).getTime();
+      return castDate >= year2025Start;
     });
 
-    // Count replies (casts that are replies)
+    console.log(`Casts in 2025: ${year2025Casts.length}`);
+
+    // Count replies (casts with parent_hash are replies)
     const replies = year2025Casts.filter((cast: any) => cast.parent_hash).length;
-    
-    // Count recasts
-    const recasts = year2025Casts.filter((cast: any) => cast.text === '').length;
-    
-    // Get unique active days
-    const activeDays = new Set(
+    console.log(`Replies in 2025: ${replies}`);
+
+    // Get unique active days in 2025
+    const activeDaysSet = new Set(
       year2025Casts.map((cast: any) => 
         new Date(cast.timestamp).toISOString().split('T')[0]
       )
-    ).size;
+    );
+    const activeDays = activeDaysSet.size;
+    console.log(`Active days in 2025: ${activeDays}`);
 
-    // Calculate likes given (approximation from user's following activity)
-    // Since Neynar doesn't directly expose "likes given", we'll use follower engagement
-    const likesGiven = Math.floor((user?.follower_count || 0) * 0.3 + Math.random() * 50);
-    const recastsGiven = Math.floor(recasts * 1.5 + Math.random() * 20);
+    // Calculate total likes and recasts given by summing up reactions on user's casts
+    // This gives us engagement metrics
+    let totalLikesReceived = 0;
+    let totalRecastsReceived = 0;
+    
+    year2025Casts.forEach((cast: any) => {
+      totalLikesReceived += cast.reactions?.likes_count || 0;
+      totalRecastsReceived += cast.reactions?.recasts_count || 0;
+    });
 
-    // Calculate silent days (days in 2025 minus active days)
-    const daysIn2025 = 365;
-    const daysPassed = Math.min(daysIn2025, Math.floor((Date.now() - new Date('2025-01-01').getTime()) / (1000 * 60 * 60 * 24)));
+    console.log(`Likes received in 2025: ${totalLikesReceived}`);
+    console.log(`Recasts received in 2025: ${totalRecastsReceived}`);
+
+    // Estimate likes/recasts given based on user's engagement patterns
+    // Active users typically give more reactions than they receive
+    const engagementRatio = user?.following_count ? Math.min(user.following_count / 100, 3) : 1;
+    const likesGiven = Math.floor(totalLikesReceived * engagementRatio * 1.5) + (year2025Casts.length * 2);
+    const recastsGiven = Math.floor(totalRecastsReceived * engagementRatio) + Math.floor(year2025Casts.length * 0.3);
+
+    console.log(`Estimated likes given: ${likesGiven}`);
+    console.log(`Estimated recasts given: ${recastsGiven}`);
+
+    // Calculate days passed in 2025
+    const now = new Date();
+    const startOf2025 = new Date('2025-01-01T00:00:00Z');
+    const daysPassed = Math.floor((now.getTime() - startOf2025.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const silentDays = Math.max(0, daysPassed - activeDays);
 
+    console.log(`Days passed in 2025: ${daysPassed}, Silent days: ${silentDays}`);
+
+    // Calculate most active hour
+    const hourCounts: Record<number, number> = {};
+    year2025Casts.forEach((cast: any) => {
+      const hour = new Date(cast.timestamp).getHours();
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    });
+    const mostActiveHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '12';
+
+    // Calculate longest streak
+    const sortedDays = Array.from(activeDaysSet).sort();
+    let longestStreak = 0;
+    let currentStreak = 1;
+    
+    for (let i = 1; i < sortedDays.length; i++) {
+      const prevDate = new Date(sortedDays[i - 1]);
+      const currDate = new Date(sortedDays[i]);
+      const diffDays = Math.floor((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) {
+        currentStreak++;
+        longestStreak = Math.max(longestStreak, currentStreak);
+      } else {
+        currentStreak = 1;
+      }
+    }
+    longestStreak = Math.max(longestStreak, currentStreak, 1);
+
+    console.log(`Longest streak: ${longestStreak} days`);
+
+    // Find top channel
+    const channelCounts: Record<string, number> = {};
+    year2025Casts.forEach((cast: any) => {
+      const channel = cast.root_parent_url || cast.parent_url || 'home';
+      // Extract channel name from URL
+      const channelMatch = channel.match(/\/channel\/([^/]+)/);
+      const channelName = channelMatch ? channelMatch[1] : 'home';
+      channelCounts[channelName] = (channelCounts[channelName] || 0) + 1;
+    });
+    const topChannel = Object.entries(channelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'farcaster';
+
+    console.log(`Top channel: ${topChannel}`);
+
     const stats = {
-      replies: replies || Math.floor(Math.random() * 100) + 10,
-      likes_given: likesGiven || Math.floor(Math.random() * 200) + 50,
-      recasts_given: recastsGiven || Math.floor(Math.random() * 50) + 10,
-      active_days: activeDays || Math.floor(Math.random() * 200) + 30,
-      silent_days: silentDays || Math.floor(Math.random() * 100) + 20,
-      top_channel: getRandomChannel(),
-      most_active_hour: Math.floor(Math.random() * 24),
-      longest_streak: Math.floor(Math.random() * 30) + 5,
+      replies: Math.max(replies, 1),
+      likes_given: Math.max(likesGiven, 10),
+      recasts_given: Math.max(recastsGiven, 5),
+      active_days: Math.max(activeDays, 1),
+      silent_days: silentDays,
+      top_channel: topChannel,
+      most_active_hour: parseInt(mostActiveHour),
+      longest_streak: longestStreak,
     };
 
-    console.log('Calculated stats:', stats);
+    console.log('Final calculated stats:', stats);
 
     return new Response(JSON.stringify({ stats, user }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -119,8 +204,3 @@ serve(async (req) => {
     });
   }
 });
-
-function getRandomChannel() {
-  const channels = ['farcaster', 'base', 'dev', 'memes', 'art', 'music', 'crypto', 'gaming'];
-  return channels[Math.floor(Math.random() * channels.length)];
-}
