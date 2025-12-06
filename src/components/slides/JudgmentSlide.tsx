@@ -183,15 +183,18 @@ const JudgmentSlide = ({ stats, judgment, onShare }: JudgmentSlideProps) => {
         </div>
       </div>
 
-      {/* Share button - outside the card, fixed at bottom */}
+      {/* Share button - outside the card, z-30 to be above tap overlay */}
       <div 
-        className={`mt-4 transition-all duration-700 delay-1000 ${
+        className={`mt-4 transition-all duration-700 delay-1000 relative z-30 ${
           animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
         <Button
-          onClick={onShare}
-          className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30"
+          onClick={(e) => {
+            e.stopPropagation();
+            onShare();
+          }}
+          className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto"
         >
           <Share2 className="w-4 h-4" />
           Share on Farcaster
