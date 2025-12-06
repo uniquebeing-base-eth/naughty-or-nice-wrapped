@@ -64,22 +64,22 @@ serve(async (req) => {
     const user = userData.users?.[0];
     console.log(`User data:`, user?.username);
 
-    // Calculate stats from 2024
+    // Calculate stats from 2025
     const casts = castsData.casts || [];
-    const year2024Casts = casts.filter((cast: any) => {
+    const year2025Casts = casts.filter((cast: any) => {
       const castDate = new Date(cast.timestamp);
-      return castDate.getFullYear() === 2024;
+      return castDate.getFullYear() === 2025;
     });
 
     // Count replies (casts that are replies)
-    const replies = year2024Casts.filter((cast: any) => cast.parent_hash).length;
+    const replies = year2025Casts.filter((cast: any) => cast.parent_hash).length;
     
     // Count recasts
-    const recasts = year2024Casts.filter((cast: any) => cast.text === '').length;
+    const recasts = year2025Casts.filter((cast: any) => cast.text === '').length;
     
     // Get unique active days
     const activeDays = new Set(
-      year2024Casts.map((cast: any) => 
+      year2025Casts.map((cast: any) => 
         new Date(cast.timestamp).toISOString().split('T')[0]
       )
     ).size;
@@ -89,9 +89,9 @@ serve(async (req) => {
     const likesGiven = Math.floor((user?.follower_count || 0) * 0.3 + Math.random() * 50);
     const recastsGiven = Math.floor(recasts * 1.5 + Math.random() * 20);
 
-    // Calculate silent days (days in 2024 minus active days)
-    const daysIn2024 = 366; // 2024 is a leap year
-    const daysPassed = Math.min(daysIn2024, Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 60 * 24)));
+    // Calculate silent days (days in 2025 minus active days)
+    const daysIn2025 = 365;
+    const daysPassed = Math.min(daysIn2025, Math.floor((Date.now() - new Date('2025-01-01').getTime()) / (1000 * 60 * 60 * 24)));
     const silentDays = Math.max(0, daysPassed - activeDays);
 
     const stats = {
