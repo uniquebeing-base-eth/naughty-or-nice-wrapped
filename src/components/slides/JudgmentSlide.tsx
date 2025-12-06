@@ -7,10 +7,9 @@ interface JudgmentSlideProps {
   stats: UserStats;
   judgment: JudgmentResult;
   onShare: () => void;
-  onGenerateNew: () => void;
 }
 
-const JudgmentSlide = ({ stats, judgment, onShare, onGenerateNew }: JudgmentSlideProps) => {
+const JudgmentSlide = ({ stats, judgment, onShare }: JudgmentSlideProps) => {
   const [animate, setAnimate] = useState(false);
   const [scoreValue, setScoreValue] = useState(0);
 
@@ -184,9 +183,9 @@ const JudgmentSlide = ({ stats, judgment, onShare, onGenerateNew }: JudgmentSlid
         </div>
       </div>
 
-      {/* Action buttons */}
+      {/* Share button */}
       <div 
-        className={`flex flex-col sm:flex-row gap-4 mt-8 transition-all duration-700 delay-1000 ${
+        className={`mt-8 transition-all duration-700 delay-1000 ${
           animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
@@ -196,13 +195,6 @@ const JudgmentSlide = ({ stats, judgment, onShare, onGenerateNew }: JudgmentSlid
         >
           <Share2 className="w-5 h-5" />
           Share on Farcaster
-        </Button>
-        <Button
-          onClick={onGenerateNew}
-          variant="outline"
-          className="border-2 border-christmas-gold text-christmas-gold hover:bg-christmas-gold/20 px-8 py-4 rounded-full font-bold"
-        >
-          🎁 Generate Yours
         </Button>
       </div>
 

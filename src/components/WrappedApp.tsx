@@ -110,7 +110,6 @@ const WrappedApp = () => {
           stats={stats}
           judgment={judgment}
           onShare={handleShare}
-          onGenerateNew={handleGenerateNew}
         />
       );
     }
@@ -138,16 +137,11 @@ const WrappedApp = () => {
         />
       ) : (
         <>
-          {/* Tap zones overlay */}
+          {/* Tap zone overlay */}
           <div 
-            className="fixed inset-0 z-20 flex"
+            className="fixed inset-0 z-20"
             onClick={handleTap}
-          >
-            {/* Left tap zone - subtle indicator on hover */}
-            <div className="w-2/5 h-full cursor-pointer hover:bg-white/5 transition-colors" />
-            {/* Right tap zone */}
-            <div className="w-3/5 h-full cursor-pointer hover:bg-white/5 transition-colors" />
-          </div>
+          />
 
           {/* Content */}
           <div className="relative z-10 pb-24 pt-12 min-h-screen pointer-events-none">
