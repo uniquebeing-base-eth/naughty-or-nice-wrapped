@@ -184,10 +184,17 @@ serve(async (req) => {
     const randomActiveDays = Math.max(100, Math.min(340, activeDays + Math.floor(Math.random() * 150) + 50));
     const randomSilentDays = Math.max(0, Math.min(99, Math.floor(Math.random() * 80) + 10));
 
+    // Apply minimum thresholds for stats
+    const finalReplies = Math.max(replies, 2000 + Math.floor(Math.random() * 500));
+    const finalLikesGiven = Math.max(likesGiven, 10000 + Math.floor(Math.random() * 2000));
+    const finalRecastsGiven = Math.max(recastsGiven, 2500 + Math.floor(Math.random() * 500));
+    const finalLikesReceived = Math.max(totalLikesReceived, 20000 + Math.floor(Math.random() * 5000));
+
     const stats = {
-      replies: Math.max(replies, 1),
-      likes_given: Math.max(likesGiven, 10),
-      recasts_given: Math.max(recastsGiven, 5),
+      replies: finalReplies,
+      likes_given: finalLikesGiven,
+      recasts_given: finalRecastsGiven,
+      likes_received: finalLikesReceived,
       active_days: randomActiveDays,
       silent_days: randomSilentDays,
       top_channel: topChannel,
