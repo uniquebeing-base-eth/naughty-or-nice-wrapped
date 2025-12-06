@@ -179,31 +179,20 @@ serve(async (req) => {
 
     console.log(`Top channel: ${topChannel}`);
 
-    // Cap and randomize values for balanced judgments
+    // Only adjust active/silent days for presentation
     // Active days: 100-340, Silent days: 0-99
     const randomActiveDays = Math.max(100, Math.min(340, activeDays + Math.floor(Math.random() * 150) + 50));
     const randomSilentDays = Math.max(0, Math.min(99, Math.floor(Math.random() * 80) + 10));
-    
-    // Cap likes_given to max 8000 (nice moments)
-    const cappedLikesGiven = Math.min(likesGiven, 6000);
-    const cappedRecastsGiven = Math.min(recastsGiven, 2000);
-    
-    // Cap replies to max 3000 (naughty moments)
-    // Add some randomness to replies to make judgments more varied
-    const baseReplies = Math.min(replies, 2500);
-    const randomMultiplier = 0.5 + Math.random() * 1.5; // 0.5x to 2x
-    const adjustedReplies = Math.floor(baseReplies * randomMultiplier);
-    const cappedReplies = Math.min(adjustedReplies, 3000);
 
     const stats = {
-      replies: Math.max(cappedReplies, 50),
-      likes_given: Math.max(cappedLikesGiven, 100),
-      recasts_given: Math.max(cappedRecastsGiven, 20),
+      replies: Math.max(replies, 1),
+      likes_given: Math.max(likesGiven, 10),
+      recasts_given: Math.max(recastsGiven, 5),
       active_days: randomActiveDays,
       silent_days: randomSilentDays,
       top_channel: topChannel,
       most_active_hour: parseInt(mostActiveHour),
-      longest_streak: Math.max(longestStreak, 5),
+      longest_streak: Math.max(longestStreak, 1),
     };
 
     console.log('Final calculated stats:', stats);

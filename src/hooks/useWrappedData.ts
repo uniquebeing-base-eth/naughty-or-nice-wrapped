@@ -18,12 +18,22 @@ export const mockUserStats: UserStats = {
 const randomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 export const useWrappedData = (stats: UserStats) => {
+  // Cap values for judgment calculation only (not displayed stats)
+  // Nice moments capped at 8000, naughty moments capped at 3000
+  const cappedNicePoints = Math.min(stats.likesGiven + stats.recastsGiven, 8000);
+  const cappedNaughtyPoints = Math.min(Math.round(stats.replies * 0.2), 3000);
+  
+  // Add randomness to make judgments more varied
+  const randomFactor = 0.7 + Math.random() * 0.6; // 0.7x to 1.3x
+  const adjustedNaughtyPoints = Math.round(cappedNaughtyPoints * randomFactor);
+  
+  // Display values (uncapped)
   const naughtyPoints = Math.round(stats.replies * 0.2);
   const nicePoints = stats.likesGiven + stats.recastsGiven;
   
   const judgment: JudgmentResult = useMemo(() => {
-    const totalPoints = nicePoints + naughtyPoints;
-    const score = totalPoints > 0 ? Math.round((nicePoints / totalPoints) * 100) : 50;
+    const totalPoints = cappedNicePoints + adjustedNaughtyPoints;
+    const score = totalPoints > 0 ? Math.round((cappedNicePoints / totalPoints) * 100) : 50;
     const isNice = score >= 60;
     
     const niceBadges = ['Snowflake Saint', 'Gift Giver', 'Holiday Hero', 'Jolly Elf'];
@@ -33,7 +43,7 @@ export const useWrappedData = (stats: UserStats) => {
     const badge = randomItem(badges);
     
     return { score, isNice, badge, nicePoints, naughtyPoints };
-  }, [nicePoints, naughtyPoints]);
+  }, [cappedNicePoints, adjustedNaughtyPoints, nicePoints, naughtyPoints]);
 
   const slides: SlideContent[] = useMemo(() => [
     {
