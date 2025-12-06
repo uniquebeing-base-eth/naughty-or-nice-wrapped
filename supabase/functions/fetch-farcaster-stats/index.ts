@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,8 @@ serve(async (req) => {
   try {
     const { fid } = await req.json();
     const NEYNAR_API_KEY = Deno.env.get('NEYNAR_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!NEYNAR_API_KEY) {
       throw new Error('NEYNAR_API_KEY is not configured');
@@ -23,7 +26,36 @@ serve(async (req) => {
       throw new Error('FID is required');
     }
 
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Supabase configuration missing');
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
     console.log(`Fetching stats for FID: ${fid}`);
+
+    // Check if we already have saved stats for this FID
+    const { data: existingData, error: fetchError } = await supabase
+      .from('wrapped_stats')
+      .select('*')
+      .eq('fid', fid)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('Error fetching existing stats:', fetchError);
+    }
+
+    if (existingData) {
+      console.log(`Found existing stats for FID ${fid}, returning saved data`);
+      return new Response(JSON.stringify({ 
+        stats: existingData.stats, 
+        user: existingData.user_data 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`No existing stats for FID ${fid}, generating new data`);
 
     // Fetch user profile
     const userResponse = await fetch(
@@ -203,6 +235,22 @@ serve(async (req) => {
     };
 
     console.log('Final calculated stats:', stats);
+
+    // Save stats to database for this FID
+    const { error: insertError } = await supabase
+      .from('wrapped_stats')
+      .insert({
+        fid: fid,
+        stats: stats,
+        user_data: user,
+      });
+
+    if (insertError) {
+      console.error('Error saving stats:', insertError);
+      // Don't throw - still return the stats even if save fails
+    } else {
+      console.log(`Saved stats for FID ${fid} to database`);
+    }
 
     return new Response(JSON.stringify({ stats, user }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
