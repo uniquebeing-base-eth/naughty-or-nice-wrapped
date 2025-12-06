@@ -133,7 +133,10 @@ const WrappedApp = () => {
 
       if (isInMiniApp && sdk) {
         try { 
-          await sdk.actions.composeCast({ text: shareText, embeds: [imageUrl] }); 
+          await sdk.actions.composeCast({ 
+            text: shareText, 
+            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
+          }); 
           setIsGeneratingShare(false);
           return; 
         } catch { /* fallback */ }
