@@ -26,11 +26,6 @@ const SlideProgress = ({ currentSlide, totalSlides }: SlideProgressProps) => {
             </div>
           ))}
         </div>
-
-        {/* Tap hint */}
-        <p className="text-center text-christmas-snow/40 text-xs mt-3 font-medium">
-          ← Tap left to go back · Tap right to continue →
-        </p>
       </div>
     </div>
   );
