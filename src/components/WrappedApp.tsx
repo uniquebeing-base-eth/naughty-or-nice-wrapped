@@ -15,6 +15,50 @@ import MusicControl from './MusicControl';
 import { useToast } from '@/hooks/use-toast';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { ExternalLink } from 'lucide-react';
+
+const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped';
+
+const FarcasterOnlyGuard = () => {
+  return (
+    <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
+      <Snowfall />
+      <ChristmasLights />
+      <ChristmasDecorations />
+      
+      <div className="relative z-10 text-center px-6 max-w-md">
+        <div className="christmas-card p-8 border-2 border-christmas-gold/30">
+          <div className="text-6xl mb-6">🎄</div>
+          
+          <h1 className="font-display text-3xl font-bold text-christmas-gold mb-4">
+            Naughty or Nice Wrapped
+          </h1>
+          
+          <p className="text-christmas-snow/90 text-lg mb-2">
+            This experience is exclusively available on Farcaster!
+          </p>
+          
+          <p className="text-christmas-snow/60 text-sm mb-8">
+            Open the Farcaster app to discover if you made Santa's nice list or naughty list this year. Your 2025 Farcaster journey awaits! ❄️
+          </p>
+          
+          <Button
+            onClick={() => window.open(FARCASTER_MINIAPP_URL, '_blank')}
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white px-8 py-4 rounded-full font-bold gap-2 text-lg shadow-lg shadow-purple-500/30 border-2 border-purple-400/30"
+          >
+            <ExternalLink className="w-5 h-5" />
+            Open in Farcaster
+          </Button>
+          
+          <p className="text-christmas-snow/40 text-xs mt-6">
+            Made with ❄️ by @uniquebeing404
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const WrappedApp = () => {
   const { user, isSDKLoaded, isInMiniApp } = useFarcaster();
@@ -102,6 +146,11 @@ const WrappedApp = () => {
   };
 
   const handleLoadingComplete = useCallback(() => setIsLoading(false), []);
+
+  // Guard: Show Farcaster-only screen if not in mini app
+  if (isSDKLoaded && !isInMiniApp) {
+    return <FarcasterOnlyGuard />;
+  }
 
   if (!isSDKLoaded || isFetchingStats) {
     return (<div className="relative min-h-screen overflow-hidden"><Snowfall /><ChristmasLights /><ChristmasDecorations /><LoadingScreen onComplete={() => {}} username={stats.username} pfp={stats.pfp} /></div>);
