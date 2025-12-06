@@ -67,10 +67,16 @@ export const FarcasterProvider = ({ children }: FarcasterProviderProps) => {
           
           // Prompt user to add the mini app for notifications
           try {
-            await sdk.actions.addFrame();
-            console.log('Add frame prompt triggered successfully');
-          } catch (addFrameError) {
-            console.log('Add frame prompt dismissed or already added:', addFrameError);
+            // Use addMiniApp (newer API) with fallback to addFrame
+            if (sdk.actions.addMiniApp) {
+              await sdk.actions.addMiniApp();
+              console.log('Add mini app prompt triggered successfully');
+            } else if (sdk.actions.addFrame) {
+              await sdk.actions.addFrame();
+              console.log('Add frame prompt triggered successfully');
+            }
+          } catch (addError) {
+            console.log('Add app prompt dismissed or already added:', addError);
           }
         }
       } catch (err) {
