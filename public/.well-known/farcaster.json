@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Naughty or Nice Wrapped",
+    "iconUrl": "/splash-icon.png",
+    "homeUrl": "/",
+    "imageUrl": "/preview-image.png",
+    "buttonTitle": "🎄 Check Your Wrapped",
+    "splashImageUrl": "/splash-icon.png",
+    "splashBackgroundColor": "#1a472a",
+    "description": "Discover if you've been Naughty or Nice on Farcaster this year! Get your personalized Christmas Wrapped with fun stats and a shareable judgment card."
+  }
+}
