@@ -101,7 +101,7 @@ const WrappedApp = () => {
       try {
         await sdk.actions.composeCast({
           text: shareText,
-          embeds: ['https://naughty-or-nice-wrapped.lovable.app'],
+          embeds: ['https://naughty-or-nice-wrapped.vercel.app'],
         });
         return;
       } catch (err) {

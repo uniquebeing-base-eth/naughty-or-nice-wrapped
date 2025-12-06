@@ -7,11 +7,11 @@
   "miniapp": {
     "version": "1",
     "name": "Naughty or Nice Wrapped",
-    "iconUrl": "/splash-icon.png",
-    "homeUrl": "/",
-    "imageUrl": "/preview-image.png",
+    "iconUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
+    "homeUrl": "https://naughty-or-nice-wrapped.vercel.app",
+    "imageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png",
     "buttonTitle": "🎄 Check Your Wrapped",
-    "splashImageUrl": "/splash-icon.png",
+    "splashImageUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
     "splashBackgroundColor": "#1a472a",
     "description": "Discover if you've been Naughty or Nice on Farcaster this year! Get your personalized Christmas Wrapped with fun stats and a shareable judgment card."
   }
