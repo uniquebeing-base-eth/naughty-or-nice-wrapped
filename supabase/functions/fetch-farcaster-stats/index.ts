@@ -235,17 +235,27 @@ serve(async (req) => {
       longest_streak: Math.max(longestStreak, 1),
     };
 
-    // Calculate judgment (naughty/nice) - FULLY RANDOM values for each user
-    // These are NOT calculated from stats - they are completely independent random values
-    const naughtyPoints = 100 + Math.floor(Math.random() * 900); // 100-999 random
-    const nicePoints = 5000 + Math.floor(Math.random() * 20000); // 5000-25000 random
+    // FIRST decide randomly if user is Naughty or Nice (~50/50)
+    const isNice = Math.random() >= 0.5;
     
-    // Random score between 30-90 for varied outcomes
-    const baseScore = Math.random() * 60 + 30;
-    const score = Math.round(baseScore);
+    // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
+    const score = isNice 
+      ? 55 + Math.floor(Math.random() * 41) // 55-95 for Nice
+      : 20 + Math.floor(Math.random() * 35); // 20-54 for Naughty
     
-    // Roughly 50/50 split for balanced outcomes
-    const isNice = score >= 55;
+    // Generate naughty/nice points that MATCH the verdict
+    let naughtyPoints: number;
+    let nicePoints: number;
+    
+    if (isNice) {
+      // Nice verdict: high nice points, lower naughty points
+      nicePoints = 8000 + Math.floor(Math.random() * 17000); // 8000-25000
+      naughtyPoints = 100 + Math.floor(Math.random() * 400); // 100-500
+    } else {
+      // Naughty verdict: higher naughty points, lower nice points  
+      naughtyPoints = 800 + Math.floor(Math.random() * 1200); // 800-2000
+      nicePoints = 1000 + Math.floor(Math.random() * 4000); // 1000-5000
+    }
     
     const niceBadges = ['Snowflake Saint', 'Gift Giver', 'Holiday Hero', 'Jolly Elf'];
     const naughtyBadges = ['North Pole Rebel', 'Gingerbread Menace', 'Elf Disturber', 'Silent Night Sinner'];
