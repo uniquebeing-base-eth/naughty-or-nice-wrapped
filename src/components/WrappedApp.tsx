@@ -102,29 +102,51 @@ const WrappedApp = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleNext, handlePrev, isLastSlide, isFirstSlide]);
 
+  const [isGeneratingShare, setIsGeneratingShare] = useState(false);
+
   const handleShare = async () => {
     const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
     
-    // Build share URL with meta tag params
-    const shareParams = new URLSearchParams({
-      username: stats.username,
-      score: judgment.score.toString(),
-      nice: judgment.isNice.toString(),
-      badge: judgment.badge,
-      pfp: stats.pfp,
-    });
-    const shareUrl = `https://naughty-or-nice-wrapped.vercel.app/share?${shareParams.toString()}`;
-    
-    if (isInMiniApp && sdk) {
-      try { 
-        await sdk.actions.composeCast({ text: shareText, embeds: [shareUrl] }); 
-        return; 
-      } catch { /* fallback */ }
-    }
-    try { 
-      await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`); 
+    setIsGeneratingShare(true);
+    toast({ title: "🎨 Generating your card...", description: "This takes a few seconds" });
+
+    try {
+      // Generate the share image
+      const { data, error } = await supabase.functions.invoke('generate-share-image', {
+        body: {
+          username: stats.username,
+          pfp: stats.pfp,
+          score: judgment.score,
+          isNice: judgment.isNice,
+          badge: judgment.badge,
+          nicePoints: judgment.nicePoints || 0,
+          naughtyPoints: judgment.naughtyPoints || 0,
+        },
+      });
+
+      if (error || !data?.imageUrl) {
+        throw new Error(error?.message || 'Failed to generate image');
+      }
+
+      const imageUrl = data.imageUrl;
+      console.log('Share image generated:', imageUrl);
+
+      if (isInMiniApp && sdk) {
+        try { 
+          await sdk.actions.composeCast({ text: shareText, embeds: [imageUrl] }); 
+          setIsGeneratingShare(false);
+          return; 
+        } catch { /* fallback */ }
+      }
+      
+      await navigator.clipboard.writeText(`${shareText}\n\n${imageUrl}`); 
       toast({ title: "🎄 Copied!", description: "Share on Farcaster" }); 
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('Share error:', err);
+      toast({ title: "Failed to generate", description: "Please try again", variant: "destructive" });
+    } finally {
+      setIsGeneratingShare(false);
+    }
   };
 
   const handleLoadingComplete = useCallback(() => setIsLoading(false), []);
@@ -137,7 +159,7 @@ const WrappedApp = () => {
 
   const renderSlide = () => {
     if (currentSlide === 0) return <WelcomeSlide username={stats.username} pfp={stats.pfp} />;
-    if (currentSlide === totalSlides - 1) return <JudgmentSlide stats={stats} judgment={judgment} onShare={handleShare} />;
+    if (currentSlide === totalSlides - 1) return <JudgmentSlide stats={stats} judgment={judgment} onShare={handleShare} isGeneratingShare={isGeneratingShare} />;
     return <StatSlide key={slides[currentSlide - 1].id} slide={slides[currentSlide - 1]} />;
   };
 

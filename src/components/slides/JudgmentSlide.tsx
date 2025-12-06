@@ -7,9 +7,10 @@ interface JudgmentSlideProps {
   stats: UserStats;
   judgment: JudgmentResult;
   onShare: () => void;
+  isGeneratingShare?: boolean;
 }
 
-const JudgmentSlide = ({ stats, judgment, onShare }: JudgmentSlideProps) => {
+const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: JudgmentSlideProps) => {
   const [animate, setAnimate] = useState(false);
   const [scoreValue, setScoreValue] = useState(0);
 
@@ -118,9 +119,22 @@ const JudgmentSlide = ({ stats, judgment, onShare }: JudgmentSlideProps) => {
       </div>
 
       <div className={`mt-4 transition-all duration-700 delay-1000 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-        <Button onClick={(e) => { e.stopPropagation(); onShare(); }} className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto">
-          <Share2 className="w-4 h-4" />
-          Share on Farcaster
+        <Button 
+          onClick={(e) => { e.stopPropagation(); onShare(); }} 
+          disabled={isGeneratingShare}
+          className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto disabled:opacity-70"
+        >
+          {isGeneratingShare ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Share2 className="w-4 h-4" />
+              Share on Farcaster
+            </>
+          )}
         </Button>
       </div>
 
