@@ -4,13 +4,15 @@ import { useWrappedData, mockUserStats } from '@/hooks/useWrappedData';
 import Snowfall from './Snowfall';
 import ChristmasLights from './ChristmasLights';
 import ChristmasDecorations from './ChristmasDecorations';
+import LoadingScreen from './LoadingScreen';
 import WelcomeSlide from './slides/WelcomeSlide';
 import StatSlide from './slides/StatSlide';
 import JudgmentSlide from './slides/JudgmentSlide';
-import SlideNavigation from './SlideNavigation';
+import SlideProgress from './SlideProgress';
 import { useToast } from '@/hooks/use-toast';
 
 const WrappedApp = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [stats] = useState<UserStats>(mockUserStats);
   const { slides, judgment } = useWrappedData(stats);
@@ -18,6 +20,7 @@ const WrappedApp = () => {
 
   // Total slides: welcome (1) + stat slides + judgment (1)
   const totalSlides = 1 + slides.length + 1;
+  const isLastSlide = currentSlide === totalSlides - 1;
 
   const handleNext = useCallback(() => {
     if (currentSlide < totalSlides - 1) {
@@ -25,66 +28,37 @@ const WrappedApp = () => {
     }
   }, [currentSlide, totalSlides]);
 
-  const handlePrev = useCallback(() => {
-    if (currentSlide > 0) {
-      setCurrentSlide(prev => prev - 1);
+  // Tap to advance
+  const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Don't advance if clicking on buttons or interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a')) {
+      return;
     }
-  }, [currentSlide]);
+    
+    // Don't advance on the last slide (judgment card)
+    if (!isLastSlide) {
+      handleNext();
+    }
+  }, [handleNext, isLastSlide]);
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === ' ') {
-        handleNext();
-      } else if (e.key === 'ArrowLeft') {
-        handlePrev();
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+        if (!isLastSlide) {
+          handleNext();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNext, handlePrev]);
-
-  // Touch swipe support
-  useEffect(() => {
-    let startX = 0;
-    let startY = 0;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      const endX = e.changedTouches[0].clientX;
-      const endY = e.changedTouches[0].clientY;
-      const diffX = startX - endX;
-      const diffY = Math.abs(startY - endY);
-
-      // Only trigger if horizontal swipe is more significant than vertical
-      if (Math.abs(diffX) > 50 && diffY < 100) {
-        if (diffX > 0) {
-          handleNext();
-        } else {
-          handlePrev();
-        }
-      }
-    };
-
-    window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [handleNext, handlePrev]);
+  }, [handleNext, isLastSlide]);
 
   const handleShare = () => {
     const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
     
-    // For Farcaster, we'd integrate with Warpcast SDK
-    // For now, copy to clipboard
     navigator.clipboard.writeText(shareText);
     toast({
       title: "🎄 Copied to clipboard!",
@@ -93,12 +67,13 @@ const WrappedApp = () => {
   };
 
   const handleGenerateNew = () => {
+    setIsLoading(true);
     setCurrentSlide(0);
-    toast({
-      title: "🎅 Starting over!",
-      description: "Let's see your Wrapped again",
-    });
   };
+
+  const handleLoadingComplete = useCallback(() => {
+    setIsLoading(false);
+  }, []);
 
   const renderSlide = () => {
     if (currentSlide === 0) {
@@ -136,19 +111,24 @@ const WrappedApp = () => {
       <ChristmasLights />
       <ChristmasDecorations />
 
-      {/* Main content area */}
-      <div className="relative z-10 pb-36 pt-12">
-        {renderSlide()}
-      </div>
+      {isLoading ? (
+        <LoadingScreen onComplete={handleLoadingComplete} />
+      ) : (
+        <>
+          {/* Tap area - covers the whole screen */}
+          <div 
+            className="relative z-10 pb-24 pt-12 min-h-screen cursor-pointer"
+            onClick={handleTap}
+          >
+            {renderSlide()}
+          </div>
 
-      <SlideNavigation
-        currentSlide={currentSlide}
-        totalSlides={totalSlides}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        canGoPrev={currentSlide > 0}
-        canGoNext={currentSlide < totalSlides - 1}
-      />
+          <SlideProgress
+            currentSlide={currentSlide}
+            totalSlides={totalSlides}
+          />
+        </>
+      )}
     </div>
   );
 };
