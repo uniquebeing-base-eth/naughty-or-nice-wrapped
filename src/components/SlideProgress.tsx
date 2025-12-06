@@ -5,7 +5,7 @@ interface SlideProgressProps {
 
 const SlideProgress = ({ currentSlide, totalSlides }: SlideProgressProps) => {
   return (
-    <div className="fixed bottom-6 left-0 right-0 z-50 px-6">
+    <div className="fixed bottom-6 left-0 right-0 z-50 px-6 pointer-events-none">
       <div className="max-w-md mx-auto">
         {/* Progress bars */}
         <div className="flex gap-1.5">
@@ -28,8 +28,8 @@ const SlideProgress = ({ currentSlide, totalSlides }: SlideProgressProps) => {
         </div>
 
         {/* Tap hint */}
-        <p className="text-center text-christmas-snow/50 text-sm mt-4 font-medium">
-          Tap anywhere to continue
+        <p className="text-center text-christmas-snow/40 text-xs mt-3 font-medium">
+          ← Tap left to go back · Tap right to continue →
         </p>
       </div>
     </div>

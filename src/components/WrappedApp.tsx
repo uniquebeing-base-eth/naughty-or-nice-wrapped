@@ -18,9 +18,9 @@ const WrappedApp = () => {
   const { slides, judgment } = useWrappedData(stats);
   const { toast } = useToast();
 
-  // Total slides: welcome (1) + stat slides + judgment (1)
   const totalSlides = 1 + slides.length + 1;
   const isLastSlide = currentSlide === totalSlides - 1;
+  const isFirstSlide = currentSlide === 0;
 
   const handleNext = useCallback(() => {
     if (currentSlide < totalSlides - 1) {
@@ -28,33 +28,52 @@ const WrappedApp = () => {
     }
   }, [currentSlide, totalSlides]);
 
-  // Tap to advance
+  const handlePrev = useCallback(() => {
+    if (currentSlide > 0) {
+      setCurrentSlide(prev => prev - 1);
+    }
+  }, [currentSlide]);
+
+  // Left/Right tap navigation
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Don't advance if clicking on buttons or interactive elements
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('a')) {
       return;
     }
+
+    // Get tap position
+    const clientX = 'touches' in e 
+      ? e.changedTouches?.[0]?.clientX || 0
+      : (e as React.MouseEvent).clientX;
     
-    // Don't advance on the last slide (judgment card)
-    if (!isLastSlide) {
-      handleNext();
+    const screenWidth = window.innerWidth;
+    const tapZone = clientX / screenWidth;
+
+    // Left 40% = back, Right 60% = forward
+    if (tapZone < 0.4) {
+      if (!isFirstSlide) {
+        handlePrev();
+      }
+    } else {
+      if (!isLastSlide) {
+        handleNext();
+      }
     }
-  }, [handleNext, isLastSlide]);
+  }, [handleNext, handlePrev, isLastSlide, isFirstSlide]);
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
-        if (!isLastSlide) {
-          handleNext();
-        }
+        if (!isLastSlide) handleNext();
+      } else if (e.key === 'ArrowLeft') {
+        if (!isFirstSlide) handlePrev();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNext, isLastSlide]);
+  }, [handleNext, handlePrev, isLastSlide, isFirstSlide]);
 
   const handleShare = () => {
     const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
@@ -112,15 +131,29 @@ const WrappedApp = () => {
       <ChristmasDecorations />
 
       {isLoading ? (
-        <LoadingScreen onComplete={handleLoadingComplete} />
+        <LoadingScreen 
+          onComplete={handleLoadingComplete} 
+          username={stats.username}
+          pfp={stats.pfp}
+        />
       ) : (
         <>
-          {/* Tap area - covers the whole screen */}
+          {/* Tap zones overlay */}
           <div 
-            className="relative z-10 pb-24 pt-12 min-h-screen cursor-pointer"
+            className="fixed inset-0 z-20 flex"
             onClick={handleTap}
           >
-            {renderSlide()}
+            {/* Left tap zone - subtle indicator on hover */}
+            <div className="w-2/5 h-full cursor-pointer hover:bg-white/5 transition-colors" />
+            {/* Right tap zone */}
+            <div className="w-3/5 h-full cursor-pointer hover:bg-white/5 transition-colors" />
+          </div>
+
+          {/* Content */}
+          <div className="relative z-10 pb-24 pt-12 min-h-screen pointer-events-none">
+            <div className="pointer-events-auto">
+              {renderSlide()}
+            </div>
           </div>
 
           <SlideProgress
