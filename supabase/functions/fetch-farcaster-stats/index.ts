@@ -235,13 +235,13 @@ serve(async (req) => {
       longest_streak: Math.max(longestStreak, 1),
     };
 
-    // Calculate judgment (naughty/nice) - this is now saved permanently
-    const naughtyPoints = Math.round(finalReplies * 0.2);
-    const nicePoints = finalLikesGiven + finalRecastsGiven;
+    // Calculate judgment (naughty/nice) - FULLY RANDOM values for each user
+    // These are NOT calculated from stats - they are completely independent random values
+    const naughtyPoints = 100 + Math.floor(Math.random() * 900); // 100-999 random
+    const nicePoints = 5000 + Math.floor(Math.random() * 20000); // 5000-25000 random
     
-    // MUCH MORE randomness for truly varied outcomes
-    // Score ranges from 30-90 with heavy random influence
-    const baseScore = Math.random() * 60 + 30; // Random base between 30-90
+    // Random score between 30-90 for varied outcomes
+    const baseScore = Math.random() * 60 + 30;
     const score = Math.round(baseScore);
     
     // Roughly 50/50 split for balanced outcomes
