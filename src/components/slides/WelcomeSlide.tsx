@@ -1,13 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 interface WelcomeSlideProps {
   username: string;
   pfp: string;
-  isFunnyMode: boolean;
 }
 
-const WelcomeSlide = ({ username, pfp, isFunnyMode }: WelcomeSlideProps) => {
+const welcomeTexts = [
+  { main: "Ho ho ho… Santa has been stalking your casts 👀", sub: "Let's see what you've been up to!" },
+  { main: "Santa checked his list twice 📜", sub: "Time to reveal your Farcaster journey!" },
+  { main: "The elves have been watching 🧝", sub: "Your Wrapped is ready!" },
+  { main: "Jingle bells, your stats tell 🔔", sub: "Were you naughty or nice?" },
+];
+
+const WelcomeSlide = ({ username, pfp }: WelcomeSlideProps) => {
   const [animate, setAnimate] = useState(false);
+  
+  const welcomeText = useMemo(() => welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)], []);
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimate(true), 100);
@@ -15,67 +23,64 @@ const WelcomeSlide = ({ username, pfp, isFunnyMode }: WelcomeSlideProps) => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
-      {/* Decorative elements */}
-      <div className="absolute top-20 left-10 text-4xl animate-float" style={{ animationDelay: '0s' }}>🎄</div>
-      <div className="absolute top-32 right-12 text-3xl animate-float" style={{ animationDelay: '0.5s' }}>⭐</div>
-      <div className="absolute bottom-32 left-16 text-3xl animate-float" style={{ animationDelay: '1s' }}>🎁</div>
-      <div className="absolute bottom-20 right-10 text-4xl animate-float" style={{ animationDelay: '1.5s' }}>❄️</div>
-
-      {/* Profile picture */}
+    <div className="flex flex-col items-center justify-center min-h-[75vh] text-center px-6">
+      {/* Profile picture with glow */}
       <div 
         className={`relative mb-8 transition-all duration-700 ${
           animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
         }`}
       >
-        <div className="absolute inset-0 rounded-full bg-christmas-gold/30 blur-xl animate-pulse" />
+        <div className="absolute inset-0 rounded-full bg-christmas-gold blur-2xl opacity-60 animate-pulse scale-125" />
+        <div className="absolute inset-0 rounded-full bg-christmas-red blur-xl opacity-40 animate-pulse scale-110" style={{ animationDelay: '0.5s' }} />
         <img
           src={pfp}
           alt={username}
-          className="w-28 h-28 rounded-full border-4 border-christmas-gold relative z-10 shadow-lg"
+          className="w-32 h-32 rounded-full border-4 border-christmas-gold relative z-10 shadow-2xl"
         />
-        <div className="absolute -bottom-2 -right-2 text-3xl z-20">🎅</div>
+        <div className="absolute -bottom-2 -right-2 text-4xl z-20 animate-bounce">🎅</div>
+        <div className="absolute -top-2 -left-2 text-2xl z-20 animate-float">⭐</div>
       </div>
 
       {/* Title */}
       <h1 
-        className={`font-display text-4xl md:text-5xl font-bold mb-4 transition-all duration-700 delay-200 ${
+        className={`font-display text-5xl md:text-6xl font-bold mb-2 transition-all duration-700 delay-200 ${
           animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
         <span className="text-christmas-snow">Naughty or Nice</span>
-        <br />
-        <span className="text-gradient-gold">Wrapped</span>
       </h1>
-
-      {/* Subtitle */}
-      <p 
-        className={`text-lg md:text-xl text-muted-foreground max-w-md leading-relaxed transition-all duration-700 delay-400 ${
+      <h2
+        className={`font-display text-4xl md:text-5xl font-bold mb-6 transition-all duration-700 delay-300 ${
           animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
-        {isFunnyMode ? (
-          <>
-            Ho ho ho… Santa has been stalking your casts 👀🎄
-            <br />
-            <span className="text-christmas-snow/80">Let's see what you've been up to.</span>
-          </>
-        ) : (
-          <>
-            Welcome to your Naughty or Nice Wrapped 🎄
-            <br />
-            <span className="text-christmas-snow/80">Santa has been watching your Farcaster journey.</span>
-          </>
-        )}
+        <span className="text-gradient-gold">Wrapped</span>
+        <span className="ml-3 text-4xl">🎄</span>
+      </h2>
+
+      {/* Subtitle */}
+      <p 
+        className={`text-xl md:text-2xl text-christmas-snow font-medium max-w-md leading-relaxed transition-all duration-700 delay-400 ${
+          animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}
+      >
+        {welcomeText.main}
+      </p>
+      <p 
+        className={`text-lg text-christmas-gold/80 mt-2 transition-all duration-700 delay-500 ${
+          animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}
+      >
+        {welcomeText.sub}
       </p>
 
       {/* Username badge */}
       <div 
-        className={`mt-8 px-6 py-3 rounded-full bg-card border border-christmas-gold/30 transition-all duration-700 delay-600 ${
+        className={`mt-10 px-8 py-4 rounded-full bg-gradient-to-r from-christmas-red to-christmas-red-dark border-2 border-christmas-gold/40 shadow-lg transition-all duration-700 delay-600 ${
           animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
-        <span className="text-christmas-gold font-medium">@{username}</span>
+        <span className="text-christmas-gold font-bold text-lg">@{username}</span>
       </div>
     </div>
   );

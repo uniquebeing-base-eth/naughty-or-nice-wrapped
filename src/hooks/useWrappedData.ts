@@ -16,6 +16,9 @@ export const mockUserStats: UserStats = {
   timeframe: 'year',
 };
 
+// Helper to get random item from array
+const randomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
 export const useWrappedData = (stats: UserStats) => {
   const naughtyPoints = Math.round(stats.replies * 0.2);
   const nicePoints = stats.likesGiven + stats.recastsGiven;
@@ -29,7 +32,7 @@ export const useWrappedData = (stats: UserStats) => {
     const naughtyBadges = ['North Pole Rebel', 'Gingerbread Menace', 'Elf Disturber', 'Silent Night Sinner'];
     
     const badges = isNice ? niceBadges : naughtyBadges;
-    const badge = badges[Math.floor(Math.random() * badges.length)];
+    const badge = randomItem(badges);
     
     return { score, isNice, badge, nicePoints, naughtyPoints };
   }, [nicePoints, naughtyPoints]);
@@ -40,12 +43,13 @@ export const useWrappedData = (stats: UserStats) => {
       title: 'Replies Sent',
       value: stats.replies,
       cleanText: `You sent ${stats.replies.toLocaleString()} replies this year.`,
-      funnyText: `You sent ${stats.replies.toLocaleString()} replies…\nSome sweet, some chaotic, all unforgettable 😈😂`,
-      alternates: [
-        'Certified Farcaster chatterbox.',
-        'Elf-level typing stamina.',
-        'You simply refuse to keep quiet.',
-      ],
+      funnyText: randomItem([
+        `You sent ${stats.replies.toLocaleString()} replies…\nSome sweet, some chaotic, all unforgettable 😈`,
+        `${stats.replies.toLocaleString()} replies!\nCertified Farcaster chatterbox 💬`,
+        `${stats.replies.toLocaleString()} replies dropped!\nElf-level typing stamina 🧝`,
+        `You simply refuse to keep quiet.\n${stats.replies.toLocaleString()} replies and counting! 🔥`,
+      ]),
+      alternates: [],
       emoji: '💬',
       color: 'red',
     },
@@ -54,12 +58,13 @@ export const useWrappedData = (stats: UserStats) => {
       title: 'Likes Given',
       value: stats.likesGiven,
       cleanText: `You gave ${stats.likesGiven.toLocaleString()} likes.`,
-      funnyText: `You gave ${stats.likesGiven.toLocaleString()} likes 🎁\nYour thumb deserves a Christmas bonus.`,
-      alternates: [
-        'Love distributor of the North Pole.',
-        'Generous elf energy.',
-        'Santa approves your kindness.',
-      ],
+      funnyText: randomItem([
+        `You gave ${stats.likesGiven.toLocaleString()} likes 🎁\nYour thumb deserves a Christmas bonus!`,
+        `${stats.likesGiven.toLocaleString()} likes!\nLove distributor of the North Pole ❄️`,
+        `Generous elf energy detected!\n${stats.likesGiven.toLocaleString()} hearts spread 💚`,
+        `Santa approves your kindness.\n${stats.likesGiven.toLocaleString()} likes given! 🎅`,
+      ]),
+      alternates: [],
       emoji: '❤️',
       color: 'green',
     },
@@ -68,12 +73,13 @@ export const useWrappedData = (stats: UserStats) => {
       title: 'Likes Received',
       value: stats.likesReceived,
       cleanText: `You received ${stats.likesReceived.toLocaleString()} likes.`,
-      funnyText: `You received ${stats.likesReceived.toLocaleString()} likes ❄️\nYour casts sparkle with Christmas magic.`,
-      alternates: [
-        "You're basically Farcaster's Rudolph.",
-        'People REALLY like your vibe.',
-        'Santa is jealous of your engagement.',
-      ],
+      funnyText: randomItem([
+        `You received ${stats.likesReceived.toLocaleString()} likes ⭐\nYour casts sparkle with Christmas magic!`,
+        `${stats.likesReceived.toLocaleString()} likes received!\nYou're basically Farcaster's Rudolph 🦌`,
+        `People REALLY like your vibe.\n${stats.likesReceived.toLocaleString()} hearts! 💛`,
+        `Santa is jealous of your engagement.\n${stats.likesReceived.toLocaleString()} likes! ✨`,
+      ]),
+      alternates: [],
       emoji: '✨',
       color: 'gold',
     },
@@ -82,12 +88,13 @@ export const useWrappedData = (stats: UserStats) => {
       title: 'Recasts Given',
       value: stats.recastsGiven,
       cleanText: `You recasted ${stats.recastsGiven.toLocaleString()} posts.`,
-      funnyText: `You recasted ${stats.recastsGiven.toLocaleString()} posts 🎄\nSharing is caring — certified community elf.`,
-      alternates: [
-        'North Pole signal booster.',
-        'Gift-giver behavior.',
-        'Your recasts keep the sleigh running.',
-      ],
+      funnyText: randomItem([
+        `You recasted ${stats.recastsGiven.toLocaleString()} posts 🎄\nSharing is caring — certified community elf!`,
+        `North Pole signal booster!\n${stats.recastsGiven.toLocaleString()} recasts 📡`,
+        `Gift-giver behavior unlocked.\n${stats.recastsGiven.toLocaleString()} posts shared! 🎁`,
+        `Your recasts keep the sleigh running!\n${stats.recastsGiven.toLocaleString()} boosts 🛷`,
+      ]),
+      alternates: [],
       emoji: '🔄',
       color: 'green',
     },
@@ -96,12 +103,13 @@ export const useWrappedData = (stats: UserStats) => {
       title: 'Active Days',
       value: stats.activeDays,
       cleanText: `You were active for ${stats.activeDays} days.`,
-      funnyText: `You posted for ${stats.activeDays} days straight ❄️\nDedication level: Santa-before-Christmas.`,
-      alternates: [
-        'Consistency colder than the North Pole.',
-        'Elf work ethic unlocked.',
-        'The Farcaster grind never sleeps.',
-      ],
+      funnyText: randomItem([
+        `You posted for ${stats.activeDays} days straight ❄️\nDedication level: Santa-before-Christmas!`,
+        `${stats.activeDays} active days!\nConsistency colder than the North Pole 🏔️`,
+        `Elf work ethic unlocked!\n${stats.activeDays} days of grinding 💪`,
+        `The Farcaster grind never sleeps.\n${stats.activeDays} days strong! 🔥`,
+      ]),
+      alternates: [],
       emoji: '📅',
       color: 'gold',
     },
@@ -110,12 +118,13 @@ export const useWrappedData = (stats: UserStats) => {
       title: 'Silent Days',
       value: stats.silentDays,
       cleanText: `You were inactive for ${stats.silentDays} days.`,
-      funnyText: `You disappeared for ${stats.silentDays} days 😴\nSanta thought you melted.`,
-      alternates: [
-        'Elf PTO detected.',
-        'Holiday hibernation mode.',
-        'Ghost of Christmas Past.',
-      ],
+      funnyText: randomItem([
+        `You disappeared for ${stats.silentDays} days 😴\nSanta thought you melted!`,
+        `${stats.silentDays} silent days!\nElf PTO detected 🏖️`,
+        `Holiday hibernation mode.\n${stats.silentDays} days offline 💤`,
+        `Ghost of Christmas Past!\n${stats.silentDays} days MIA 👻`,
+      ]),
+      alternates: [],
       emoji: '🌙',
       color: 'red',
     },
@@ -124,12 +133,13 @@ export const useWrappedData = (stats: UserStats) => {
       title: 'Naughty Moments',
       value: naughtyPoints,
       cleanText: `You had ${naughtyPoints} naughty moments.`,
-      funnyText: `You dropped ${naughtyPoints} spicy replies 😈\nElf Committee is reviewing your case…`,
-      alternates: [
-        'Chaos levels rising.',
-        'North Pole incident report filed.',
-        'Gingerbread crimes detected.',
-      ],
+      funnyText: randomItem([
+        `You dropped ${naughtyPoints} spicy replies 😈\nElf Committee is reviewing your case…`,
+        `${naughtyPoints} naughty moments!\nChaos levels rising 🔥`,
+        `North Pole incident report filed.\n${naughtyPoints} violations detected! 📋`,
+        `Gingerbread crimes detected!\n${naughtyPoints} spicy moments 🍪`,
+      ]),
+      alternates: [],
       emoji: '😈',
       color: 'red',
     },
@@ -138,12 +148,13 @@ export const useWrappedData = (stats: UserStats) => {
       title: 'Nice Moments',
       value: nicePoints,
       cleanText: `You had ${nicePoints.toLocaleString()} nice moments.`,
-      funnyText: `You created ${nicePoints.toLocaleString()} moments of joy 🎁\nSanta is proud.`,
-      alternates: [
-        'Pure holiday spirit.',
-        'Certified giver.',
-        'Warm cocoa energy.',
-      ],
+      funnyText: randomItem([
+        `You created ${nicePoints.toLocaleString()} moments of joy 🎁\nSanta is proud!`,
+        `${nicePoints.toLocaleString()} nice moments!\nPure holiday spirit 🎄`,
+        `Certified giver energy!\n${nicePoints.toLocaleString()} good deeds ⭐`,
+        `Warm cocoa energy detected.\n${nicePoints.toLocaleString()} wholesome moments ☕`,
+      ]),
+      alternates: [],
       emoji: '🎁',
       color: 'green',
     },

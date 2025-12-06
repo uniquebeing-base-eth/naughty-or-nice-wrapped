@@ -2,16 +2,16 @@ import { useState, useCallback, useEffect } from 'react';
 import { UserStats } from '@/types/wrapped';
 import { useWrappedData, mockUserStats } from '@/hooks/useWrappedData';
 import Snowfall from './Snowfall';
+import ChristmasLights from './ChristmasLights';
+import ChristmasDecorations from './ChristmasDecorations';
 import WelcomeSlide from './slides/WelcomeSlide';
 import StatSlide from './slides/StatSlide';
 import JudgmentSlide from './slides/JudgmentSlide';
 import SlideNavigation from './SlideNavigation';
-import ModeToggle from './ModeToggle';
 import { useToast } from '@/hooks/use-toast';
 
 const WrappedApp = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isFunnyMode, setIsFunnyMode] = useState(true);
   const [stats] = useState<UserStats>(mockUserStats);
   const { slides, judgment } = useWrappedData(stats);
   const { toast } = useToast();
@@ -87,7 +87,7 @@ const WrappedApp = () => {
     // For now, copy to clipboard
     navigator.clipboard.writeText(shareText);
     toast({
-      title: "Copied to clipboard! 🎄",
+      title: "🎄 Copied to clipboard!",
       description: "Share your Wrapped on Farcaster",
     });
   };
@@ -95,7 +95,7 @@ const WrappedApp = () => {
   const handleGenerateNew = () => {
     setCurrentSlide(0);
     toast({
-      title: "Starting over! 🎅",
+      title: "🎅 Starting over!",
       description: "Let's see your Wrapped again",
     });
   };
@@ -106,7 +106,6 @@ const WrappedApp = () => {
         <WelcomeSlide
           username={stats.username}
           pfp={stats.pfp}
-          isFunnyMode={isFunnyMode}
         />
       );
     }
@@ -127,22 +126,18 @@ const WrappedApp = () => {
       <StatSlide
         key={slides[slideIndex].id}
         slide={slides[slideIndex]}
-        isFunnyMode={isFunnyMode}
       />
     );
   };
 
   return (
-    <div className="relative min-h-screen bg-background overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden">
       <Snowfall />
-      
-      <ModeToggle 
-        isFunnyMode={isFunnyMode} 
-        onToggle={() => setIsFunnyMode(!isFunnyMode)} 
-      />
+      <ChristmasLights />
+      <ChristmasDecorations />
 
       {/* Main content area */}
-      <div className="relative z-10 pb-32">
+      <div className="relative z-10 pb-36 pt-12">
         {renderSlide()}
       </div>
 
