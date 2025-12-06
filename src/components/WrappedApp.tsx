@@ -173,26 +173,38 @@ const WrappedApp = () => {
 
   const handleShare = async () => {
     const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
+    const shareUrl = 'https://naughty-or-nice-wrapped.vercel.app';
     
-    // If in mini app, use SDK to compose cast
+    // If in mini app, use SDK to compose cast with embed
     if (isInMiniApp && sdk) {
       try {
         await sdk.actions.composeCast({
           text: shareText,
-          embeds: ['https://naughty-or-nice-wrapped.vercel.app'],
+          embeds: [shareUrl],
         });
         return;
       } catch (err) {
         console.log('Failed to compose cast:', err);
+        // Try opening URL as fallback
+        try {
+          await sdk.actions.openUrl(shareUrl);
+          return;
+        } catch (urlErr) {
+          console.log('Failed to open URL:', urlErr);
+        }
       }
     }
     
     // Fallback to clipboard
-    navigator.clipboard.writeText(shareText);
-    toast({
-      title: "🎄 Copied to clipboard!",
-      description: "Share your Wrapped on Farcaster",
-    });
+    try {
+      await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
+      toast({
+        title: "🎄 Copied to clipboard!",
+        description: "Share your Wrapped on Farcaster",
+      });
+    } catch (err) {
+      console.log('Failed to copy to clipboard:', err);
+    }
   };
 
   const handleLoadingComplete = useCallback(() => {

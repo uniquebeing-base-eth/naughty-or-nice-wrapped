@@ -4,6 +4,17 @@
     "payload": "eyJkb21haW4iOiJuYXVnaHR5LW9yLW5pY2Utd3JhcHBlZC52ZXJjZWwuYXBwIn0",
     "signature": "yPVksoCeoXjgL0Sr/zXf/EsteR4x02BLIz6xXKhCMfsK631cmnLz4BGASZfAZGAFjh0HnDezpY2+8EqFzMu/7hs="
   },
+  "miniapp": {
+    "version": "1",
+    "name": "Naughty or Nice Wrapped",
+    "iconUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
+    "homeUrl": "https://naughty-or-nice-wrapped.vercel.app",
+    "imageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png",
+    "buttonTitle": "🎄 Check Your Wrapped",
+    "splashImageUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
+    "splashBackgroundColor": "#1a472a",
+    "webhookUrl": "https://api.neynar.com/f/app/8bf7fd64-6415-4d52-b10c-65ffbb56d242/event"
+  },
   "frame": {
     "version": "1",
     "name": "Naughty or Nice Wrapped",
