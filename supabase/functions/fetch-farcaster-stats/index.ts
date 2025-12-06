@@ -216,11 +216,12 @@ serve(async (req) => {
     const randomActiveDays = Math.max(100, Math.min(340, activeDays + Math.floor(Math.random() * 150) + 50));
     const randomSilentDays = Math.max(0, Math.min(99, Math.floor(Math.random() * 80) + 10));
 
-    // Apply minimum thresholds for stats
-    const finalReplies = Math.max(replies, 2000 + Math.floor(Math.random() * 500));
-    const finalLikesGiven = Math.max(likesGiven, 10000 + Math.floor(Math.random() * 2000));
-    const finalRecastsGiven = Math.max(recastsGiven, 2500 + Math.floor(Math.random() * 500));
-    const finalLikesReceived = Math.max(totalLikesReceived, 20000 + Math.floor(Math.random() * 5000));
+    // Apply minimum thresholds for stats WITH MUCH MORE VARIANCE
+    // Use wider random ranges so each user gets truly different numbers
+    const finalReplies = Math.max(replies, 1500 + Math.floor(Math.random() * 3000)); // 1500-4500
+    const finalLikesGiven = Math.max(likesGiven, 5000 + Math.floor(Math.random() * 15000)); // 5000-20000
+    const finalRecastsGiven = Math.max(recastsGiven, 1000 + Math.floor(Math.random() * 5000)); // 1000-6000
+    const finalLikesReceived = Math.max(totalLikesReceived, 10000 + Math.floor(Math.random() * 30000)); // 10000-40000
 
     const stats = {
       replies: finalReplies,
@@ -238,13 +239,12 @@ serve(async (req) => {
     const naughtyPoints = Math.round(finalReplies * 0.2);
     const nicePoints = finalLikesGiven + finalRecastsGiven;
     
-    // Calculate score with randomness for varied outcomes
-    const baseNiceRatio = nicePoints / (nicePoints + naughtyPoints * 5);
-    const randomOffset = (Math.random() - 0.5) * 0.4; // -0.2 to +0.2
-    const finalRatio = Math.max(0.3, Math.min(0.9, baseNiceRatio + randomOffset));
-    const score = Math.round(finalRatio * 100);
+    // MUCH MORE randomness for truly varied outcomes
+    // Score ranges from 30-90 with heavy random influence
+    const baseScore = Math.random() * 60 + 30; // Random base between 30-90
+    const score = Math.round(baseScore);
     
-    // ~45% Naughty, ~55% Nice for balanced outcomes
+    // Roughly 50/50 split for balanced outcomes
     const isNice = score >= 55;
     
     const niceBadges = ['Snowflake Saint', 'Gift Giver', 'Holiday Hero', 'Jolly Elf'];
