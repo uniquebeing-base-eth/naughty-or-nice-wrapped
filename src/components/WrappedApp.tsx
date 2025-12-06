@@ -104,11 +104,27 @@ const WrappedApp = () => {
 
   const handleShare = async () => {
     const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
-    const shareUrl = 'https://naughty-or-nice-wrapped.vercel.app';
+    
+    // Build share URL with meta tag params
+    const shareParams = new URLSearchParams({
+      username: stats.username,
+      score: judgment.score.toString(),
+      nice: judgment.isNice.toString(),
+      badge: judgment.badge,
+      pfp: stats.pfp,
+    });
+    const shareUrl = `https://naughty-or-nice-wrapped.lovable.app/share?${shareParams.toString()}`;
+    
     if (isInMiniApp && sdk) {
-      try { await sdk.actions.composeCast({ text: shareText, embeds: [shareUrl] }); return; } catch { /* fallback */ }
+      try { 
+        await sdk.actions.composeCast({ text: shareText, embeds: [shareUrl] }); 
+        return; 
+      } catch { /* fallback */ }
     }
-    try { await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`); toast({ title: "🎄 Copied!", description: "Share on Farcaster" }); } catch { /* ignore */ }
+    try { 
+      await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`); 
+      toast({ title: "🎄 Copied!", description: "Share on Farcaster" }); 
+    } catch { /* ignore */ }
   };
 
   const handleLoadingComplete = useCallback(() => setIsLoading(false), []);
