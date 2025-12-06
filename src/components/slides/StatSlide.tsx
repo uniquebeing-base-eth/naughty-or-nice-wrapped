@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SlideContent } from '@/types/wrapped';
+import ChristmasCharacterIcon from '../ChristmasCharacterIcon';
 
 interface StatSlideProps {
   slide: SlideContent;
@@ -82,13 +83,13 @@ const StatSlide = ({ slide }: StatSlideProps) => {
         
         {/* Content */}
         <div className="relative z-10">
-          {/* Emoji */}
+          {/* Emoji with Christmas character hugging it */}
           <div 
-            className={`text-7xl mb-6 transition-all duration-700 delay-200 ${
+            className={`mb-6 transition-all duration-700 delay-200 ${
               animate ? 'opacity-100 scale-100 animate-bounce-in' : 'opacity-0 scale-50'
             }`}
           >
-            {slide.emoji}
+            <ChristmasCharacterIcon emoji={slide.emoji} />
           </div>
 
           {/* Title */}
