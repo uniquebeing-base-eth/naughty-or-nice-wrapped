@@ -271,17 +271,17 @@ const WrappedApp = () => {
         />
       ) : (
         <>
-          {/* Tap zone overlay */}
-          <div 
-            className="fixed inset-0 z-20"
-            onClick={handleTap}
-          />
+          {/* Tap zone overlay - hidden on last slide so Share button works */}
+          {!isLastSlide && (
+            <div 
+              className="fixed inset-0 z-20"
+              onClick={handleTap}
+            />
+          )}
 
           {/* Content */}
-          <div className="relative z-10 pb-24 pt-12 min-h-screen pointer-events-none">
-            <div className="pointer-events-auto">
-              {renderSlide()}
-            </div>
+          <div className="relative z-10 pb-24 pt-12 min-h-screen">
+            {renderSlide()}
           </div>
 
           <SlideProgress
