@@ -5,36 +5,33 @@ export const mockUserStats: UserStats = {
   fid: 12345,
   username: 'uniquebeing404',
   pfp: 'https://api.dicebear.com/7.x/avataaars/svg?seed=uniquebeing404',
-  replies: 342,
-  likesGiven: 1289,
-  likesReceived: 2156,
-  recastsGiven: 456,
+  replies: 2000 + Math.floor(Math.random() * 500),
+  likesGiven: 10000 + Math.floor(Math.random() * 2000),
+  likesReceived: 20000 + Math.floor(Math.random() * 5000),
+  recastsGiven: 2500 + Math.floor(Math.random() * 500),
   recastsReceived: 789,
-  activeDays: 247,
-  silentDays: 118,
+  activeDays: 150 + Math.floor(Math.random() * 150),
+  silentDays: 20 + Math.floor(Math.random() * 60),
   timeframe: 'year',
 };
 
 const randomItem = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 export const useWrappedData = (stats: UserStats) => {
-  // Cap values for judgment calculation only (not displayed stats)
-  // Nice moments capped at 8000, naughty moments capped at 3000
-  const cappedNicePoints = Math.min(stats.likesGiven + stats.recastsGiven, 8000);
-  const cappedNaughtyPoints = Math.min(Math.round(stats.replies * 0.2), 3000);
-  
-  // Add randomness to make judgments more varied
-  const randomFactor = 0.7 + Math.random() * 0.6; // 0.7x to 1.3x
-  const adjustedNaughtyPoints = Math.round(cappedNaughtyPoints * randomFactor);
-  
   // Display values (uncapped)
   const naughtyPoints = Math.round(stats.replies * 0.2);
   const nicePoints = stats.likesGiven + stats.recastsGiven;
   
   const judgment: JudgmentResult = useMemo(() => {
-    const totalPoints = cappedNicePoints + adjustedNaughtyPoints;
-    const score = totalPoints > 0 ? Math.round((cappedNicePoints / totalPoints) * 100) : 50;
-    const isNice = score >= 60;
+    // For varied judgments: use a weighted random approach
+    // Base score from activity ratio, but add significant randomness
+    const baseNiceRatio = nicePoints / (nicePoints + naughtyPoints * 5);
+    const randomOffset = (Math.random() - 0.5) * 0.4; // -0.2 to +0.2
+    const finalRatio = Math.max(0.3, Math.min(0.9, baseNiceRatio + randomOffset));
+    const score = Math.round(finalRatio * 100);
+    
+    // ~45% chance of Naughty, ~55% chance of Nice for balanced outcomes
+    const isNice = score >= 55;
     
     const niceBadges = ['Snowflake Saint', 'Gift Giver', 'Holiday Hero', 'Jolly Elf'];
     const naughtyBadges = ['North Pole Rebel', 'Gingerbread Menace', 'Elf Disturber', 'Silent Night Sinner'];
@@ -43,7 +40,7 @@ export const useWrappedData = (stats: UserStats) => {
     const badge = randomItem(badges);
     
     return { score, isNice, badge, nicePoints, naughtyPoints };
-  }, [cappedNicePoints, adjustedNaughtyPoints, nicePoints, naughtyPoints]);
+  }, [nicePoints, naughtyPoints]);
 
   const slides: SlideContent[] = useMemo(() => [
     {
