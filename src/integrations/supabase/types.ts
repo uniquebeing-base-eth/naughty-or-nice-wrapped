@@ -14,7 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      wrapped_stats: {
+        Row: {
+          created_at: string
+          fid: number
+          id: string
+          stats: Json
+          user_data: Json | null
+        }
+        Insert: {
+          created_at?: string
+          fid: number
+          id?: string
+          stats: Json
+          user_data?: Json | null
+        }
+        Update: {
+          created_at?: string
+          fid?: number
+          id?: string
+          stats?: Json
+          user_data?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
