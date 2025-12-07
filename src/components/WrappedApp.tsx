@@ -209,19 +209,21 @@ const WrappedApp = () => {
       console.log('Share image captured and uploaded:', imageUrl);
 
       // Step 3: Compose cast using SDK (works on both Farcaster and Base)
-      // Must await to properly open the composer
       if (sdk?.actions?.composeCast) {
-        try {
-          await sdk.actions.composeCast({ 
-            text: shareText, 
-            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
-          });
-          toast({ title: "🎄 Share your verdict!", description: "Complete your post" });
-        } catch (castError) {
-          console.log('composeCast error:', castError);
-          // Fallback: copy to clipboard
-          await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
-          toast({ title: "🎄 Copied!", description: "Paste to share on Farcaster" });
+        console.log('Opening compose with embeds:', [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app']);
+        
+        // composeCast returns a result - the cast is null if user cancels
+        const result = await sdk.actions.composeCast({ 
+          text: shareText, 
+          embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
+        }) as { cast: { hash: string } | null } | undefined;
+        
+        if (result && result.cast) {
+          console.log('Cast published:', result.cast.hash);
+          toast({ title: "🎄 Shared!", description: "Your verdict is live!" });
+        } else {
+          console.log('Cast cancelled or no result');
+          toast({ title: "Share cancelled", description: "Try again when ready" });
         }
       } else {
         // Fallback: copy to clipboard if SDK not available
