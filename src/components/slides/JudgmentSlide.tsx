@@ -71,7 +71,7 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: 
           <div className={`flex flex-col items-center mb-3 transition-all duration-700 delay-300 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <div className="relative mb-2">
               <div className="absolute inset-0 rounded-full bg-christmas-gold blur-lg opacity-50 scale-125" />
-              <img src={stats.pfp || `https://api.dicebear.com/7.x/avataaars/svg?seed=${stats.username}`} alt={stats.username} className="w-20 h-20 rounded-full border-3 border-christmas-gold shadow-xl relative z-10" onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${stats.username}`; }} />
+              <img src={stats.pfp} alt={stats.username} className="w-20 h-20 rounded-full border-3 border-christmas-gold shadow-xl relative z-10" />
               <div className="absolute -bottom-1 -right-1 text-2xl z-20">{judgment.isNice ? '😇' : '😈'}</div>
             </div>
             <span className="font-bold text-christmas-snow text-base">@{stats.username}</span>
