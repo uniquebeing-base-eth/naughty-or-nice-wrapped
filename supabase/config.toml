@@ -22,3 +22,6 @@ site_url = "http://127.0.0.1:3000"
 
 [functions.fetch-farcaster-stats]
 verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
