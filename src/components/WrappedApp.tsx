@@ -208,7 +208,7 @@ const WrappedApp = () => {
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
-      // Step 3: Compose cast - try SDK first, fallback to Warpcast intent URL
+      // Step 3: Compose cast using SDK (works on both Farcaster and Base)
       if (isInMiniApp && sdk?.actions?.composeCast) {
         try { 
           await sdk.actions.composeCast({ 
@@ -218,17 +218,22 @@ const WrappedApp = () => {
           setIsGeneratingShare(false);
           return; 
         } catch (sdkError) {
-          console.log('SDK composeCast failed, trying intent URL:', sdkError);
+          console.log('SDK composeCast failed, trying openUrl fallback:', sdkError);
+          
+          // Fallback: Use sdk.actions.openUrl for Base compatibility
+          if (sdk?.actions?.openUrl) {
+            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}&embeds[]=${encodeURIComponent('https://naughty-or-nice-wrapped.vercel.app')}`;
+            sdk.actions.openUrl(warpcastUrl);
+            toast({ title: "🎄 Opening Warpcast...", description: "Complete your post there" });
+            setIsGeneratingShare(false);
+            return;
+          }
         }
       }
       
-      // Fallback: Open Warpcast compose intent URL (works on both Farcaster and Base)
-      const encodedText = encodeURIComponent(shareText);
-      const encodedEmbeds = encodeURIComponent(`${imageUrl},https://naughty-or-nice-wrapped.vercel.app`);
-      const warpcastUrl = `https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodeURIComponent(imageUrl)}&embeds[]=${encodeURIComponent('https://naughty-or-nice-wrapped.vercel.app')}`;
-      
-      window.open(warpcastUrl, '_blank');
-      toast({ title: "🎄 Opening Warpcast...", description: "Complete your post there" });
+      // Final fallback for non-mini-app context
+      await navigator.clipboard.writeText(`${shareText}\n\n${imageUrl}`);
+      toast({ title: "🎄 Copied!", description: "Share on Farcaster" });
     } catch (err) {
       console.error('Share error:', err);
       toast({ title: "Failed to generate", description: "Please try again", variant: "destructive" });
