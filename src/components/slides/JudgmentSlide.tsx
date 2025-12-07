@@ -78,22 +78,29 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: 
           </div>
 
           <div className={`relative w-36 h-36 mx-auto mb-3 transition-all duration-1000 delay-500 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-            <svg className="w-full h-full -rotate-90">
-              <circle cx="72" cy="72" r="60" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
-              <circle cx="72" cy="72" r="60" fill="none" stroke={`url(#gradient-${judgment.isNice ? 'nice' : 'naughty'})`} strokeWidth="8" strokeLinecap="round" strokeDasharray={`${(scoreValue / 100) * 377} 377`} className="transition-all duration-1000" style={{ filter: 'drop-shadow(0 0 8px currentColor)' }} />
-              <defs>
-                <linearGradient id="gradient-nice" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="hsl(var(--christmas-green))" />
-                  <stop offset="100%" stopColor="hsl(var(--christmas-green-light))" />
-                </linearGradient>
-                <linearGradient id="gradient-naughty" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="hsl(var(--christmas-red))" />
-                  <stop offset="100%" stopColor="hsl(var(--christmas-red-light))" />
-                </linearGradient>
-              </defs>
-            </svg>
+            {/* CSS-based progress ring for better html2canvas capture */}
+            <div 
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: `conic-gradient(
+                  ${judgment.isNice ? 'hsl(142, 76%, 36%)' : 'hsl(0, 84%, 60%)'} ${scoreValue * 3.6}deg,
+                  hsl(var(--muted)) ${scoreValue * 3.6}deg
+                )`,
+                boxShadow: judgment.isNice 
+                  ? '0 0 30px hsl(142, 76%, 36%, 0.5)' 
+                  : '0 0 30px hsl(0, 84%, 60%, 0.5)',
+              }}
+            />
+            <div className="absolute inset-2 rounded-full bg-[#2a1010]" />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`font-display text-4xl font-bold bg-gradient-to-b ${verdictGradient} bg-clip-text text-transparent`}>{scoreValue}%</span>
+              <span 
+                className="font-display text-4xl font-bold"
+                style={{ 
+                  color: judgment.isNice ? 'hsl(142, 76%, 46%)' : 'hsl(0, 84%, 60%)'
+                }}
+              >
+                {scoreValue}%
+              </span>
               <span className="text-xs text-christmas-gold font-bold uppercase tracking-wider">{judgment.isNice ? 'NICE' : 'NAUGHTY'}</span>
             </div>
           </div>
