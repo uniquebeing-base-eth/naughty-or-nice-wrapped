@@ -12,13 +12,11 @@
     "name": "Naughty or Nice Wrapped",
     "iconUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
     "homeUrl": "https://naughty-or-nice-wrapped.vercel.app",
-    "imageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png",
-    "buttonTitle": "🎄 Check Your Wrapped",
     "splashImageUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
     "splashBackgroundColor": "#1a472a",
     "webhookUrl": "https://api.neynar.com/f/app/8bf7fd64-6415-4d52-b10c-65ffbb56d242/event",
     "primaryCategory": "entertainment",
-    "tags": ["christmas", "wrapped", "farcaster", "yearinreview", "holidays"],
+    "tags": ["christmas", "wrapped", "farcaster", "holidays"],
     "subtitle": "Your Farcaster Year Wrapped",
     "description": "Discover if Santa thinks you have been naughty or nice this year based on your Farcaster activity. Get your personalized Christmas wrapped and share your verdict.",
     "screenshotUrls": [
@@ -27,7 +25,8 @@
     "heroImageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png",
     "tagline": "Are you Naughty or Nice?",
     "ogTitle": "Naughty or Nice Wrapped",
-    "ogDescription": "Discover your Farcaster verdict. Are you naughty or nice? Get your score now."
+    "ogDescription": "Discover your Farcaster verdict. Are you naughty or nice? Get your score now.",
+    "ogImageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png"
   },
   "frame": {
     "version": "1",
@@ -35,7 +34,7 @@
     "iconUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
     "homeUrl": "https://naughty-or-nice-wrapped.vercel.app",
     "imageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png",
-    "buttonTitle": "🎄 Check Your Wrapped",
+    "buttonTitle": "Check Your Wrapped",
     "splashImageUrl": "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
     "splashBackgroundColor": "#1a472a",
     "webhookUrl": "https://api.neynar.com/f/app/8bf7fd64-6415-4d52-b10c-65ffbb56d242/event"
