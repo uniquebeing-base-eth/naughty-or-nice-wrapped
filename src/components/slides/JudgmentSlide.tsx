@@ -77,7 +77,7 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: 
             <span className="font-bold text-christmas-snow text-base">@{stats.username}</span>
           </div>
 
-          <div className={`relative w-36 h-36 mx-auto mb-3 transition-all duration-1000 delay-500 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+          <div className={`relative w-36 h-36 mx-auto mb-4 transition-all duration-1000 delay-500 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
             {/* Simple border-based ring that html2canvas can capture */}
             <div 
               className="absolute inset-0 rounded-full"
@@ -99,16 +99,24 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: 
                 backgroundColor: '#2a1010',
               }}
             />
-            {/* Text content */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {/* Text content - properly centered */}
+            <div 
+              className="absolute flex flex-col items-center justify-center"
+              style={{
+                top: '8px',
+                left: '8px',
+                right: '8px',
+                bottom: '8px',
+              }}
+            >
               <span 
-                className="font-display text-4xl font-bold"
+                className="font-display text-4xl font-bold leading-none"
                 style={{ color: judgment.isNice ? '#22c55e' : '#ef4444' }}
               >
                 {scoreValue}%
               </span>
               <span 
-                className="text-xs font-bold uppercase tracking-wider"
+                className="text-xs font-bold uppercase tracking-wider mt-1"
                 style={{ color: '#fbbf24' }}
               >
                 {judgment.isNice ? 'NICE' : 'NAUGHTY'}
@@ -116,7 +124,14 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: 
             </div>
           </div>
 
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${verdictGradient} text-white font-bold text-sm mb-3 transition-all duration-700 delay-700 shadow-lg ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+          <div 
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-white font-bold text-sm mb-4 transition-all duration-700 delay-700 shadow-lg ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+            style={{
+              background: judgment.isNice 
+                ? 'linear-gradient(to right, #22c55e, #16a34a)' 
+                : 'linear-gradient(to right, #ef4444, #dc2626)',
+            }}
+          >
             <Sparkles className="w-4 h-4" />
             {judgment.badge}
           </div>
