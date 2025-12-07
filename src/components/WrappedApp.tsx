@@ -117,14 +117,61 @@ const WrappedApp = () => {
 
   const [isGeneratingShare, setIsGeneratingShare] = useState(false);
 
+  // Contract address on Base network
+  const CONTRACT_ADDRESS = '0x301dA08F829F9da52eBe7fF1F6d1f0c3E2017d38';
+  const MICRO_AMOUNT = '0x2386F26FC10000'; // 0.01 ETH in hex (10000000000000000 wei)
+
+  const sendMicroTransaction = async (): Promise<boolean> => {
+    if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
+      console.log('Wallet not available, skipping transaction');
+      return true; // Skip if not in mini app
+    }
+
+    try {
+      toast({ title: "🎁 Supporting the app...", description: "Confirm the transaction" });
+      
+      const provider = sdk.wallet.ethProvider;
+      
+      // Request accounts first
+      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+      if (!accounts || accounts.length === 0) {
+        console.log('No accounts available');
+        return true; // Continue without transaction
+      }
+
+      // Send micro transaction on Base (chainId 8453 = 0x2105)
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: accounts[0],
+          to: CONTRACT_ADDRESS,
+          value: MICRO_AMOUNT,
+          chainId: '0x2105', // Base mainnet
+        }],
+      });
+
+      console.log('Transaction sent:', txHash);
+      toast({ title: "✅ Thanks for supporting!", description: "Generating your card..." });
+      return true;
+    } catch (err) {
+      console.log('Transaction skipped or failed:', err);
+      // Continue with share even if transaction fails
+      return true;
+    }
+  };
+
   const handleShare = async () => {
     const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
     
     setIsGeneratingShare(true);
-    toast({ title: "🎨 Generating your card...", description: "This takes a few seconds" });
 
     try {
-      // Capture the judgment card using html2canvas
+      // Step 1: Send micro transaction to support the app
+      await sendMicroTransaction();
+
+      toast({ title: "🎨 Generating your card...", description: "This takes a few seconds" });
+
+      // Step 2: Capture the judgment card using html2canvas
       const cardElement = document.getElementById('judgment-card');
       if (!cardElement) {
         throw new Error('Card element not found');
@@ -161,6 +208,7 @@ const WrappedApp = () => {
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
+      // Step 3: Compose cast on Farcaster
       if (isInMiniApp && sdk) {
         try { 
           await sdk.actions.composeCast({ 
