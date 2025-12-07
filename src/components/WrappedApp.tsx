@@ -208,18 +208,19 @@ const WrappedApp = () => {
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
-      // Step 3: Compose cast using the SDK's native composeCast
-      // This should work on both Farcaster and Base as they share the same SDK
+      // Step 3: Compose cast using the Farcaster SDK
+      // The SDK should work on both Farcaster and Base as they share the same protocol
       if (sdk?.actions?.composeCast) {
-        console.log('Calling sdk.actions.composeCast with:', { text: shareText, embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] });
+        console.log('Using Farcaster SDK composeCast');
         
+        // Use await to properly handle the native compose flow
         try {
-          // Call composeCast - don't await, let it handle the native flow
-          sdk.actions.composeCast({ 
+          const result = await sdk.actions.composeCast({ 
             text: shareText, 
             embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
           });
-          toast({ title: "🎄 Share your verdict!", description: "Complete your post" });
+          console.log('composeCast result:', result);
+          toast({ title: "🎄 Shared!", description: "Your verdict has been posted" });
         } catch (castError) {
           console.error('composeCast error:', castError);
           // Fallback: copy to clipboard
