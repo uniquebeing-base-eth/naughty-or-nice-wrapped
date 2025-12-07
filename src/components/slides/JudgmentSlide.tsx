@@ -78,30 +78,41 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: 
           </div>
 
           <div className={`relative w-36 h-36 mx-auto mb-3 transition-all duration-1000 delay-500 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-            {/* CSS-based progress ring for better html2canvas capture */}
+            {/* Simple border-based ring that html2canvas can capture */}
             <div 
               className="absolute inset-0 rounded-full"
               style={{
-                background: `conic-gradient(
-                  ${judgment.isNice ? 'hsl(142, 76%, 36%)' : 'hsl(0, 84%, 60%)'} ${scoreValue * 3.6}deg,
-                  hsl(var(--muted)) ${scoreValue * 3.6}deg
-                )`,
+                border: `8px solid ${judgment.isNice ? '#22c55e' : '#ef4444'}`,
                 boxShadow: judgment.isNice 
-                  ? '0 0 30px hsl(142, 76%, 36%, 0.5)' 
-                  : '0 0 30px hsl(0, 84%, 60%, 0.5)',
+                  ? '0 0 20px #22c55e, inset 0 0 20px rgba(34, 197, 94, 0.3)' 
+                  : '0 0 20px #ef4444, inset 0 0 20px rgba(239, 68, 68, 0.3)',
               }}
             />
-            <div className="absolute inset-2 rounded-full bg-[#2a1010]" />
+            {/* Inner dark circle */}
+            <div 
+              className="absolute rounded-full"
+              style={{
+                top: '8px',
+                left: '8px',
+                right: '8px',
+                bottom: '8px',
+                backgroundColor: '#2a1010',
+              }}
+            />
+            {/* Text content */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span 
                 className="font-display text-4xl font-bold"
-                style={{ 
-                  color: judgment.isNice ? 'hsl(142, 76%, 46%)' : 'hsl(0, 84%, 60%)'
-                }}
+                style={{ color: judgment.isNice ? '#22c55e' : '#ef4444' }}
               >
                 {scoreValue}%
               </span>
-              <span className="text-xs text-christmas-gold font-bold uppercase tracking-wider">{judgment.isNice ? 'NICE' : 'NAUGHTY'}</span>
+              <span 
+                className="text-xs font-bold uppercase tracking-wider"
+                style={{ color: '#fbbf24' }}
+              >
+                {judgment.isNice ? 'NICE' : 'NAUGHTY'}
+              </span>
             </div>
           </div>
 
