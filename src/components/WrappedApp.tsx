@@ -208,20 +208,28 @@ const WrappedApp = () => {
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
-      // Step 3: Compose cast using the SDK
-      // Use Warpcast intent URL which works reliably across all clients (Farcaster, Base, etc.)
-      const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}&embeds[]=${encodeURIComponent('https://naughty-or-nice-wrapped.vercel.app')}`;
-      
-      console.log('Opening Warpcast compose URL:', warpcastComposeUrl);
-      
-      if (sdk?.actions?.openUrl) {
-        // Use openUrl which reliably opens in native browser/app
-        await sdk.actions.openUrl(warpcastComposeUrl);
-        toast({ title: "🎄 Share your verdict!", description: "Complete your post on Warpcast" });
+      // Step 3: Compose cast using the SDK's native composeCast
+      // This should work on both Farcaster and Base as they share the same SDK
+      if (sdk?.actions?.composeCast) {
+        console.log('Calling sdk.actions.composeCast with:', { text: shareText, embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] });
+        
+        try {
+          // Call composeCast - don't await, let it handle the native flow
+          sdk.actions.composeCast({ 
+            text: shareText, 
+            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
+          });
+          toast({ title: "🎄 Share your verdict!", description: "Complete your post" });
+        } catch (castError) {
+          console.error('composeCast error:', castError);
+          // Fallback: copy to clipboard
+          await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
+          toast({ title: "🎄 Copied!", description: "Paste to share" });
+        }
       } else {
-        // Fallback: open in new tab
-        window.open(warpcastComposeUrl, '_blank');
-        toast({ title: "🎄 Share your verdict!", description: "Complete your post on Warpcast" });
+        // Fallback: copy to clipboard if SDK not available
+        await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
+        toast({ title: "🎄 Copied!", description: "Paste to share" });
       }
     } catch (err) {
       console.error('Share error:', err);
