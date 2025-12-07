@@ -119,7 +119,7 @@ const WrappedApp = () => {
 
   // Contract address on Base network
   const CONTRACT_ADDRESS = '0x301dA08F829F9da52eBe7fF1F6d1f0c3E2017d38';
-  const MICRO_AMOUNT = '0x2386F26FC10000'; // 0.01 ETH in hex (10000000000000000 wei)
+  const MICRO_AMOUNT = '0x2540BE400'; // 0.00000001 ETH in hex (10000000000 wei)
 
   const sendMicroTransaction = async (): Promise<boolean> => {
     if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
