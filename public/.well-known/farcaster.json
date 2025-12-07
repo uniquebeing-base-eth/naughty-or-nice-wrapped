@@ -27,7 +27,7 @@
     "heroImageUrl": "https://naughty-or-nice-wrapped.vercel.app/preview-image.png",
     "tagline": "Are you Naughty or Nice?",
     "ogTitle": "Naughty or Nice Wrapped",
-    "ogDescription": "Discover if Santa thinks you have been naughty or nice this year based on your Farcaster activity throughout the entire year of twenty twenty five. This festive Christmas wrapped experience analyzes your posts, replies, likes, and recasts to determine your holiday verdict. Get your personalized score, unlock a unique badge, and share your judgment card with friends on Farcaster. See how your engagement compares and find out if you made it onto the nice list or if Santa caught you being naughty. Generate your wrapped now and celebrate the holiday season."
+    "ogDescription": "Discover your Farcaster verdict. Are you naughty or nice? Get your score now."
   },
   "frame": {
     "version": "1",
