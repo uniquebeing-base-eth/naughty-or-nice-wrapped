@@ -208,27 +208,20 @@ const WrappedApp = () => {
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
-      // Step 3: Compose cast using SDK (works on both Farcaster and Base)
-      if (sdk?.actions?.composeCast) {
-        console.log('Opening compose with embeds:', [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app']);
-        
-        // composeCast returns a result - the cast is null if user cancels
-        const result = await sdk.actions.composeCast({ 
-          text: shareText, 
-          embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
-        }) as { cast: { hash: string } | null } | undefined;
-        
-        if (result && result.cast) {
-          console.log('Cast published:', result.cast.hash);
-          toast({ title: "🎄 Shared!", description: "Your verdict is live!" });
-        } else {
-          console.log('Cast cancelled or no result');
-          toast({ title: "Share cancelled", description: "Try again when ready" });
-        }
+      // Step 3: Compose cast using the SDK
+      // Use Warpcast intent URL which works reliably across all clients (Farcaster, Base, etc.)
+      const warpcastComposeUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}&embeds[]=${encodeURIComponent('https://naughty-or-nice-wrapped.vercel.app')}`;
+      
+      console.log('Opening Warpcast compose URL:', warpcastComposeUrl);
+      
+      if (sdk?.actions?.openUrl) {
+        // Use openUrl which reliably opens in native browser/app
+        await sdk.actions.openUrl(warpcastComposeUrl);
+        toast({ title: "🎄 Share your verdict!", description: "Complete your post on Warpcast" });
       } else {
-        // Fallback: copy to clipboard if SDK not available
-        await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
-        toast({ title: "🎄 Copied!", description: "Paste to share on Farcaster" });
+        // Fallback: open in new tab
+        window.open(warpcastComposeUrl, '_blank');
+        toast({ title: "🎄 Share your verdict!", description: "Complete your post on Warpcast" });
       }
     } catch (err) {
       console.error('Share error:', err);
