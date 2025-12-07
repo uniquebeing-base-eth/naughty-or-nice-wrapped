@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import html2canvas from 'html2canvas';
 import { ExternalLink } from 'lucide-react';
 
 const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped';
@@ -123,25 +124,42 @@ const WrappedApp = () => {
     toast({ title: "🎨 Generating your card...", description: "This takes a few seconds" });
 
     try {
-      // Generate the share image
-      const { data, error } = await supabase.functions.invoke('generate-share-image', {
-        body: {
-          username: stats.username,
-          pfp: stats.pfp,
-          score: judgment.score,
-          isNice: judgment.isNice,
-          badge: judgment.badge,
-          nicePoints: judgment.nicePoints || 0,
-          naughtyPoints: judgment.naughtyPoints || 0,
-        },
-      });
-
-      if (error || !data?.imageUrl) {
-        throw new Error(error?.message || 'Failed to generate image');
+      // Capture the judgment card using html2canvas
+      const cardElement = document.getElementById('judgment-card');
+      if (!cardElement) {
+        throw new Error('Card element not found');
       }
 
-      const imageUrl = data.imageUrl;
-      console.log('Share image generated:', imageUrl);
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: '#1a0505',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
+
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('Failed to create blob'));
+        }, 'image/png', 0.95);
+      });
+
+      // Upload to Supabase storage
+      const filename = `share-cards/${stats.username}-${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from('share-images')
+        .upload(filename, blob, { contentType: 'image/png', upsert: true });
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage.from('share-images').getPublicUrl(filename);
+      const imageUrl = urlData.publicUrl;
+      console.log('Share image captured and uploaded:', imageUrl);
 
       if (isInMiniApp && sdk) {
         try { 
