@@ -209,13 +209,20 @@ const WrappedApp = () => {
       console.log('Share image captured and uploaded:', imageUrl);
 
       // Step 3: Compose cast using SDK (works on both Farcaster and Base)
-      // According to Base docs, sdk.actions.composeCast() is the correct method
+      // Must await to properly open the composer
       if (sdk?.actions?.composeCast) {
-        sdk.actions.composeCast({ 
-          text: shareText, 
-          embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
-        });
-        toast({ title: "🎄 Share your verdict!", description: "Complete your post" });
+        try {
+          await sdk.actions.composeCast({ 
+            text: shareText, 
+            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
+          });
+          toast({ title: "🎄 Share your verdict!", description: "Complete your post" });
+        } catch (castError) {
+          console.log('composeCast error:', castError);
+          // Fallback: copy to clipboard
+          await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
+          toast({ title: "🎄 Copied!", description: "Paste to share on Farcaster" });
+        }
       } else {
         // Fallback: copy to clipboard if SDK not available
         await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
