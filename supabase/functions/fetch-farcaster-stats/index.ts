@@ -89,8 +89,8 @@ serve(async (req) => {
     if (neynarFailed || !user) {
       console.log('Generating random fallback data for FID:', fid);
       
-      // FIRST decide randomly if user is Naughty or Nice (~50/50)
-      const isNice = Math.random() >= 0.5;
+      // FIRST decide randomly if user is Naughty or Nice (70% Nice, 30% Naughty)
+      const isNice = Math.random() < 0.7;
       
       // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
       const score = isNice 
@@ -321,8 +321,8 @@ serve(async (req) => {
       longest_streak: Math.max(longestStreak, 1),
     };
 
-    // FIRST decide randomly if user is Naughty or Nice (~50/50)
-    const isNice = Math.random() >= 0.5;
+    // FIRST decide randomly if user is Naughty or Nice (70% Nice, 30% Naughty)
+    const isNice = Math.random() < 0.7;
     
     // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
     const score = isNice 
