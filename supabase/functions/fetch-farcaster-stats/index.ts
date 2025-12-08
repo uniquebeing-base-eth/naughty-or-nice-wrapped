@@ -89,8 +89,12 @@ serve(async (req) => {
     if (neynarFailed || !user) {
       console.log('Generating random fallback data for FID:', fid);
       
-      // FIRST decide randomly if user is Naughty or Nice (70% Nice, 30% Naughty)
-      const isNice = Math.random() < 0.7;
+      // FIDs with 6 digits or fewer always get Nice (OG users)
+      const fidDigits = String(fid).length;
+      const isOgUser = fidDigits <= 6;
+      
+      // FIRST decide if user is Naughty or Nice (OG users always Nice, others 70% Nice, 30% Naughty)
+      const isNice = isOgUser ? true : Math.random() < 0.7;
       
       // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
       const score = isNice 
@@ -321,8 +325,12 @@ serve(async (req) => {
       longest_streak: Math.max(longestStreak, 1),
     };
 
-    // FIRST decide randomly if user is Naughty or Nice (70% Nice, 30% Naughty)
-    const isNice = Math.random() < 0.7;
+    // FIDs with 6 digits or fewer always get Nice (OG users)
+    const fidDigits = String(fid).length;
+    const isOgUser = fidDigits <= 6;
+    
+    // FIRST decide if user is Naughty or Nice (OG users always Nice, others 70% Nice, 30% Naughty)
+    const isNice = isOgUser ? true : Math.random() < 0.7;
     
     // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
     const score = isNice 
