@@ -90,11 +90,14 @@ serve(async (req) => {
       console.log('Generating random fallback data for FID:', fid);
       
       // FIDs with 6 digits or fewer always get Nice (OG users)
+      // Special FIDs that always get Nice
+      const alwaysNiceFids = [1051182];
       const fidDigits = String(fid).length;
       const isOgUser = fidDigits <= 6;
+      const isSpecialNice = alwaysNiceFids.includes(Number(fid));
       
-      // FIRST decide if user is Naughty or Nice (OG users always Nice, others 70% Nice, 30% Naughty)
-      const isNice = isOgUser ? true : Math.random() < 0.7;
+      // FIRST decide if user is Naughty or Nice (OG users and special FIDs always Nice, others 70% Nice, 30% Naughty)
+      const isNice = isOgUser || isSpecialNice ? true : Math.random() < 0.7;
       
       // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
       const score = isNice 
@@ -326,11 +329,14 @@ serve(async (req) => {
     };
 
     // FIDs with 6 digits or fewer always get Nice (OG users)
+    // Special FIDs that always get Nice
+    const alwaysNiceFids = [1051182];
     const fidDigits = String(fid).length;
     const isOgUser = fidDigits <= 6;
+    const isSpecialNice = alwaysNiceFids.includes(Number(fid));
     
-    // FIRST decide if user is Naughty or Nice (OG users always Nice, others 70% Nice, 30% Naughty)
-    const isNice = isOgUser ? true : Math.random() < 0.7;
+    // FIRST decide if user is Naughty or Nice (OG users and special FIDs always Nice, others 70% Nice, 30% Naughty)
+    const isNice = isOgUser || isSpecialNice ? true : Math.random() < 0.7;
     
     // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
     const score = isNice 
