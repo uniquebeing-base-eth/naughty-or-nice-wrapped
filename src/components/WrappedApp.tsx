@@ -208,6 +208,9 @@ const WrappedApp = () => {
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
+      // Build share URL with proper OG meta tags for Farcaster preview
+      const sharePageUrl = `https://naughty-or-nice-wrapped.vercel.app/share?username=${encodeURIComponent(stats.username)}&score=${judgment.score}&nice=${judgment.isNice}&badge=${encodeURIComponent(judgment.badge)}&pfp=${encodeURIComponent(stats.pfp)}&image=${encodeURIComponent(imageUrl)}`;
+
       // Step 3: Compose cast using the Farcaster SDK
       // The SDK should work on both Farcaster and Base as they share the same protocol
       if (sdk?.actions?.composeCast) {
@@ -217,7 +220,7 @@ const WrappedApp = () => {
         try {
           const result = await sdk.actions.composeCast({ 
             text: shareText, 
-            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
+            embeds: [imageUrl, sharePageUrl] 
           });
           console.log('composeCast result:', result);
           toast({ title: "🎄 Shared!", description: "Your verdict has been posted" });
