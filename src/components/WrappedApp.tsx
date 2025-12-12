@@ -161,8 +161,7 @@ const WrappedApp = () => {
   };
 
   const handleShare = async () => {
-    // Include the mini app link in the text since we'll only embed the image
-    const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇\nhttps://naughty-or-nice-wrapped.vercel.app`;
+    const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
     
     setIsGeneratingShare(true);
 
@@ -209,23 +208,15 @@ const WrappedApp = () => {
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
-      // Verify image is accessible before sharing (helps with Farcaster caching)
-      try {
-        const checkResponse = await fetch(imageUrl, { method: 'HEAD' });
-        console.log('Image accessibility check:', checkResponse.status, checkResponse.headers.get('content-type'));
-      } catch (checkError) {
-        console.log('Image check failed, continuing anyway:', checkError);
-      }
-
       // Step 3: Compose cast using the Farcaster SDK
-      // Embed the captured image directly - Farcaster will detect it's an image from content-type
+      // Embed both: 1) the captured image, 2) the mini app link
       if (sdk?.actions?.composeCast) {
         console.log('Sharing with image URL:', imageUrl);
         
         try {
           const result = await sdk.actions.composeCast({ 
             text: shareText, 
-            embeds: [imageUrl] 
+            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
           });
           console.log('composeCast result:', result);
           toast({ title: "🎄 Shared!", description: "Your verdict has been posted" });
