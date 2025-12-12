@@ -99,9 +99,9 @@ serve(async (req) => {
       // FIRST decide if user is Naughty or Nice (OG users and special FIDs always Nice, others 70% Nice, 30% Naughty)
       const isNice = isOgUser || isSpecialNice ? true : Math.random() < 0.7;
       
-      // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
+      // Generate score based on verdict (Nice: 75-100, Naughty: 20-54)
       const score = isNice 
-        ? 55 + Math.floor(Math.random() * 41)
+        ? 75 + Math.floor(Math.random() * 26)
         : 20 + Math.floor(Math.random() * 35);
       
       // Generate naughty/nice points that MATCH the verdict
@@ -338,9 +338,9 @@ serve(async (req) => {
     // FIRST decide if user is Naughty or Nice (OG users and special FIDs always Nice, others 70% Nice, 30% Naughty)
     const isNice = isOgUser || isSpecialNice ? true : Math.random() < 0.7;
     
-    // Generate score based on verdict (Nice: 55-95, Naughty: 20-54)
+    // Generate score based on verdict (Nice: 75-100, Naughty: 20-54)
     const score = isNice 
-      ? 55 + Math.floor(Math.random() * 41) // 55-95 for Nice
+      ? 75 + Math.floor(Math.random() * 26) // 75-100 for Nice
       : 20 + Math.floor(Math.random() * 35); // 20-54 for Naughty
     
     // Generate naughty/nice points that MATCH the verdict
