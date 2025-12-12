@@ -6,8 +6,9 @@ export const useChristmasMusic = () => {
   const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
-    // Create audio element
-    const audio = new Audio('/christmas-music.mp3');
+    // Create audio element - load from Supabase storage to reduce Vercel bandwidth
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const audio = new Audio(`${supabaseUrl}/storage/v1/object/public/assets/christmas-music.mp3`);
     audio.loop = true;
     audio.volume = 0.3;
     audioRef.current = audio;
