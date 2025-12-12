@@ -42,12 +42,29 @@ const Share = () => {
         <meta name="twitter:description" content={`${badge} - Find out if you've been Naughty or Nice on Farcaster in 2025!`} />
         <meta name="twitter:image" content={imageUrl || 'https://naughty-or-nice-wrapped.vercel.app/preview-image.png'} />
         
-        {/* Farcaster Frame */}
+        {/* Farcaster Frame - this is what displays the image in the cast */}
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content={imageUrl || 'https://naughty-or-nice-wrapped.vercel.app/preview-image.png'} />
+        <meta property="fc:frame:image:aspect_ratio" content="1:1" />
         <meta property="fc:frame:button:1" content="Get Your Wrapped 🎄" />
         <meta property="fc:frame:button:1:action" content="link" />
         <meta property="fc:frame:button:1:target" content="https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped" />
+        
+        {/* Farcaster Mini App Embed - newer format */}
+        <meta name="fc:miniapp" content={JSON.stringify({
+          version: "1",
+          imageUrl: imageUrl || 'https://naughty-or-nice-wrapped.vercel.app/preview-image.png',
+          button: {
+            title: "Get Your Wrapped 🎄",
+            action: {
+              type: "launch_miniapp",
+              url: "https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped",
+              name: "Naughty or Nice Wrapped",
+              splashImageUrl: "https://naughty-or-nice-wrapped.vercel.app/splash-icon.png",
+              splashBackgroundColor: "#1a472a"
+            }
+          }
+        })} />
       </Helmet>
 
       <div className="min-h-screen bg-christmas-dark flex flex-col items-center justify-center p-6 text-center">
