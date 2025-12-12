@@ -161,7 +161,8 @@ const WrappedApp = () => {
   };
 
   const handleShare = async () => {
-    const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
+    // Include the mini app link in the text since we'll only embed the image
+    const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇\nhttps://naughty-or-nice-wrapped.vercel.app`;
     
     setIsGeneratingShare(true);
 
@@ -208,19 +209,23 @@ const WrappedApp = () => {
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
-      // Build share page URL with the image for proper Farcaster embed display
-      // Farcaster fetches HTML and reads fc:frame meta tags to display embeds
-      const sharePageUrl = `https://naughty-or-nice-wrapped.vercel.app/share?username=${encodeURIComponent(stats.username)}&score=${judgment.score}&nice=${judgment.isNice}&badge=${encodeURIComponent(judgment.badge)}&pfp=${encodeURIComponent(stats.pfp)}&image=${encodeURIComponent(imageUrl)}`;
+      // Verify image is accessible before sharing (helps with Farcaster caching)
+      try {
+        const checkResponse = await fetch(imageUrl, { method: 'HEAD' });
+        console.log('Image accessibility check:', checkResponse.status, checkResponse.headers.get('content-type'));
+      } catch (checkError) {
+        console.log('Image check failed, continuing anyway:', checkError);
+      }
 
       // Step 3: Compose cast using the Farcaster SDK
-      // Only embed the share page URL - Farcaster will read its meta tags to show the image
+      // Embed the captured image directly - Farcaster will detect it's an image from content-type
       if (sdk?.actions?.composeCast) {
-        console.log('Using Farcaster SDK composeCast with share page:', sharePageUrl);
+        console.log('Sharing with image URL:', imageUrl);
         
         try {
           const result = await sdk.actions.composeCast({ 
             text: shareText, 
-            embeds: [sharePageUrl] 
+            embeds: [imageUrl] 
           });
           console.log('composeCast result:', result);
           toast({ title: "🎄 Shared!", description: "Your verdict has been posted" });
