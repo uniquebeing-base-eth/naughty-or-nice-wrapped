@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { UserStats, JudgmentResult } from '@/types/wrapped';
 import { useWrappedData } from '@/hooks/useWrappedData';
+import { useEnergyQuiz } from '@/hooks/useEnergyQuiz';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useChristmasMusic } from '@/hooks/useChristmasMusic';
 import Snowfall from './Snowfall';
@@ -10,6 +11,9 @@ import LoadingScreen from './LoadingScreen';
 import WelcomeSlide from './slides/WelcomeSlide';
 import StatSlide from './slides/StatSlide';
 import JudgmentSlide from './slides/JudgmentSlide';
+import EnergyIntroSlide from './slides/EnergyIntroSlide';
+import EnergyQuizSlide from './slides/EnergyQuizSlide';
+import EnergyRevealSlide from './slides/EnergyRevealSlide';
 import SlideProgress from './SlideProgress';
 import MusicControl from './MusicControl';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +53,10 @@ const WrappedApp = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { isMuted, toggleMute } = useChristmasMusic();
   const { toast } = useToast();
+
+  // Energy quiz state
+  const energyQuiz = useEnergyQuiz();
+  const [energyQuizStarted, setEnergyQuizStarted] = useState(false);
 
   const [stats, setStats] = useState<UserStats>({
     fid: user?.fid || 12345,
@@ -91,29 +99,61 @@ const WrappedApp = () => {
   // Use saved judgment if available, otherwise use calculated (for new users or fallback)
   const judgment = savedJudgment || calculatedJudgment;
   
-  const totalSlides = 1 + slides.length + 1;
+  // Slide structure:
+  // 0: Welcome
+  // 1 to slides.length: Stats slides
+  // slides.length + 1: Judgment slide
+  // slides.length + 2: Energy intro slide
+  // slides.length + 3 to slides.length + 7: Quiz questions (5)
+  // slides.length + 8: Energy reveal slide
+  const judgmentSlideIndex = slides.length + 1;
+  const energyIntroSlideIndex = slides.length + 2;
+  const energyQuizStartIndex = slides.length + 3;
+  const energyRevealSlideIndex = slides.length + 8;
+  const totalSlides = slides.length + 9; // Welcome + stats + judgment + energy intro + 5 questions + reveal
+  
+  const isJudgmentSlide = currentSlide === judgmentSlideIndex;
+  const isEnergyIntroSlide = currentSlide === energyIntroSlideIndex;
+  const isEnergyQuizSlide = currentSlide >= energyQuizStartIndex && currentSlide < energyRevealSlideIndex;
+  const isEnergyRevealSlide = currentSlide === energyRevealSlideIndex;
   const isLastSlide = currentSlide === totalSlides - 1;
   const isFirstSlide = currentSlide === 0;
 
-  const handleNext = useCallback(() => { if (currentSlide < totalSlides - 1) setCurrentSlide(prev => prev + 1); }, [currentSlide, totalSlides]);
-  const handlePrev = useCallback(() => { if (currentSlide > 0) setCurrentSlide(prev => prev - 1); }, [currentSlide]);
+  const handleNext = useCallback(() => { 
+    if (currentSlide < totalSlides - 1) setCurrentSlide(prev => prev + 1); 
+  }, [currentSlide, totalSlides]);
+  
+  const handlePrev = useCallback(() => { 
+    if (currentSlide > 0) setCurrentSlide(prev => prev - 1); 
+  }, [currentSlide]);
 
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('button') || target.closest('a')) return;
+    
+    // Don't allow tap navigation during quiz questions or on special slides
+    if (isEnergyQuizSlide || isJudgmentSlide || isEnergyIntroSlide || isEnergyRevealSlide) return;
+    
     const clientX = 'touches' in e ? e.changedTouches?.[0]?.clientX || 0 : (e as React.MouseEvent).clientX;
     const tapZone = clientX / window.innerWidth;
     if (tapZone < 0.4) { if (!isFirstSlide) handlePrev(); } else { if (!isLastSlide) handleNext(); }
-  }, [handleNext, handlePrev, isLastSlide, isFirstSlide]);
+  }, [handleNext, handlePrev, isLastSlide, isFirstSlide, isEnergyQuizSlide, isJudgmentSlide, isEnergyIntroSlide, isEnergyRevealSlide]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { if (!isLastSlide) handleNext(); }
-      else if (e.key === 'ArrowLeft') { if (!isFirstSlide) handlePrev(); }
+      // Don't allow keyboard nav during quiz
+      if (isEnergyQuizSlide) return;
+      
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { 
+        if (!isLastSlide && !isJudgmentSlide && !isEnergyIntroSlide && !isEnergyRevealSlide) handleNext(); 
+      }
+      else if (e.key === 'ArrowLeft') { 
+        if (!isFirstSlide) handlePrev(); 
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNext, handlePrev, isLastSlide, isFirstSlide]);
+  }, [handleNext, handlePrev, isLastSlide, isFirstSlide, isEnergyQuizSlide, isJudgmentSlide, isEnergyIntroSlide, isEnergyRevealSlide]);
 
   const [isGeneratingShare, setIsGeneratingShare] = useState(false);
 
@@ -124,29 +164,26 @@ const WrappedApp = () => {
   const sendMicroTransaction = async (): Promise<boolean> => {
     if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
       console.log('Wallet not available, skipping transaction');
-      return true; // Skip if not in mini app
+      return true;
     }
 
     try {
       toast({ title: "🎁 Supporting the app...", description: "Confirm the transaction" });
       
       const provider = sdk.wallet.ethProvider;
-      
-      // Request accounts first
       const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
       if (!accounts || accounts.length === 0) {
         console.log('No accounts available');
-        return true; // Continue without transaction
+        return true;
       }
 
-      // Send micro transaction on Base (chainId 8453 = 0x2105)
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
           from: accounts[0],
           to: CONTRACT_ADDRESS,
           value: MICRO_AMOUNT,
-          chainId: '0x2105', // Base mainnet
+          chainId: '0x2105',
         }],
       });
 
@@ -155,7 +192,6 @@ const WrappedApp = () => {
       return true;
     } catch (err) {
       console.log('Transaction skipped or failed:', err);
-      // Continue with share even if transaction fails
       return true;
     }
   };
@@ -166,16 +202,11 @@ const WrappedApp = () => {
     setIsGeneratingShare(true);
 
     try {
-      // Step 1: Send micro transaction to support the app
       await sendMicroTransaction();
-
       toast({ title: "🎨 Generating your card...", description: "This takes a few seconds" });
 
-      // Step 2: Capture the judgment card using html2canvas
       const cardElement = document.getElementById('judgment-card');
-      if (!cardElement) {
-        throw new Error('Card element not found');
-      }
+      if (!cardElement) throw new Error('Card element not found');
 
       const canvas = await html2canvas(cardElement, {
         backgroundColor: '#1a0505',
@@ -185,7 +216,6 @@ const WrappedApp = () => {
         logging: false,
       });
 
-      // Convert canvas to blob
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((b) => {
           if (b) resolve(b);
@@ -193,26 +223,18 @@ const WrappedApp = () => {
         }, 'image/png', 0.95);
       });
 
-      // Upload to Supabase storage
       const filename = `share-cards/${stats.username}-${Date.now()}.png`;
       const { error: uploadError } = await supabase.storage
         .from('share-images')
         .upload(filename, blob, { contentType: 'image/png', upsert: true });
 
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
-      // Get public URL
       const { data: urlData } = supabase.storage.from('share-images').getPublicUrl(filename);
       const imageUrl = urlData.publicUrl;
       console.log('Share image captured and uploaded:', imageUrl);
 
-      // Step 3: Compose cast using the Farcaster SDK
-      // Embed both: 1) the captured image, 2) the mini app link
       if (sdk?.actions?.composeCast) {
-        console.log('Sharing with image URL:', imageUrl);
-        
         try {
           const result = await sdk.actions.composeCast({ 
             text: shareText, 
@@ -222,12 +244,10 @@ const WrappedApp = () => {
           toast({ title: "🎄 Shared!", description: "Your verdict has been posted" });
         } catch (castError) {
           console.error('composeCast error:', castError);
-          // Fallback: copy to clipboard
           await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
           toast({ title: "🎄 Copied!", description: "Paste to share" });
         }
       } else {
-        // Fallback: copy to clipboard if SDK not available
         await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
         toast({ title: "🎄 Copied!", description: "Paste to share" });
       }
@@ -239,6 +259,99 @@ const WrappedApp = () => {
     }
   };
 
+  // Energy share handler
+  const handleEnergyShare = async () => {
+    if (!energyQuiz.result) return;
+    
+    const personality = energyQuiz.result;
+    const shareText = `🎅✨ Naughty-or-Nice-Wrapped by @uniquebeing404 read my energy! Apparently I'm ${personality.name} — ${personality.shareCaption}\n\nDiscover yours 👇`;
+    
+    setIsGeneratingShare(true);
+
+    try {
+      await sendMicroTransaction();
+      toast({ title: "✨ Generating your energy card...", description: "This takes a few seconds" });
+
+      const cardElement = document.getElementById('energy-card');
+      if (!cardElement) throw new Error('Card element not found');
+
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: '#1a0505',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('Failed to create blob'));
+        }, 'image/png', 0.95);
+      });
+
+      const filename = `energy-cards/${stats.username}-${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from('share-images')
+        .upload(filename, blob, { contentType: 'image/png', upsert: true });
+
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+      const { data: urlData } = supabase.storage.from('share-images').getPublicUrl(filename);
+      const imageUrl = urlData.publicUrl;
+      console.log('Energy card captured and uploaded:', imageUrl);
+
+      if (sdk?.actions?.composeCast) {
+        try {
+          const result = await sdk.actions.composeCast({ 
+            text: shareText, 
+            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
+          });
+          console.log('composeCast result:', result);
+          toast({ title: "✨ Shared!", description: "Your energy has been posted" });
+        } catch (castError) {
+          console.error('composeCast error:', castError);
+          await navigator.clipboard.writeText(`${shareText}\n\nMy Energy: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
+          toast({ title: "✨ Copied!", description: "Paste to share" });
+        }
+      } else {
+        await navigator.clipboard.writeText(`${shareText}\n\nMy Energy: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
+        toast({ title: "✨ Copied!", description: "Paste to share" });
+      }
+    } catch (err) {
+      console.error('Share error:', err);
+      toast({ title: "Failed to generate", description: "Please try again", variant: "destructive" });
+    } finally {
+      setIsGeneratingShare(false);
+    }
+  };
+
+  // Handle proceeding from judgment to energy quiz
+  const handleProceedToEnergy = useCallback(() => {
+    setCurrentSlide(energyIntroSlideIndex);
+  }, [energyIntroSlideIndex]);
+
+  // Handle starting energy quiz
+  const handleStartEnergyQuiz = useCallback(() => {
+    setEnergyQuizStarted(true);
+    setCurrentSlide(energyQuizStartIndex);
+  }, [energyQuizStartIndex]);
+
+  // Handle quiz answer selection - auto advances through quiz
+  const handleQuizAnswer = useCallback((optionLabel: string) => {
+    energyQuiz.selectAnswer(optionLabel);
+    
+    // Auto-advance handled by hook, but we need to update slide
+    setTimeout(() => {
+      if (energyQuiz.currentQuestionIndex < energyQuiz.totalQuestions - 1) {
+        setCurrentSlide(prev => prev + 1);
+      } else {
+        // Move to reveal slide
+        setCurrentSlide(energyRevealSlideIndex);
+      }
+    }, 400);
+  }, [energyQuiz, energyRevealSlideIndex]);
+
   const handleLoadingComplete = useCallback(() => setIsLoading(false), []);
 
   if (isSDKLoaded && !isInMiniApp) return <FarcasterOnlyGuard />;
@@ -248,19 +361,111 @@ const WrappedApp = () => {
   }
 
   const renderSlide = () => {
-    if (currentSlide === 0) return <WelcomeSlide username={stats.username} pfp={stats.pfp} />;
-    if (currentSlide === totalSlides - 1) return <JudgmentSlide stats={stats} judgment={judgment} onShare={handleShare} isGeneratingShare={isGeneratingShare} />;
-    return <StatSlide key={slides[currentSlide - 1].id} slide={slides[currentSlide - 1]} />;
+    // Welcome slide
+    if (currentSlide === 0) {
+      return <WelcomeSlide username={stats.username} pfp={stats.pfp} />;
+    }
+    
+    // Stats slides
+    if (currentSlide >= 1 && currentSlide <= slides.length) {
+      return <StatSlide key={slides[currentSlide - 1].id} slide={slides[currentSlide - 1]} />;
+    }
+    
+    // Judgment slide
+    if (currentSlide === judgmentSlideIndex) {
+      return (
+        <JudgmentSlide 
+          stats={stats} 
+          judgment={judgment} 
+          onShare={handleShare} 
+          isGeneratingShare={isGeneratingShare}
+          onProceedToEnergy={handleProceedToEnergy}
+        />
+      );
+    }
+    
+    // Energy intro slide
+    if (currentSlide === energyIntroSlideIndex) {
+      return <EnergyIntroSlide onStart={handleStartEnergyQuiz} />;
+    }
+    
+    // Energy quiz slides
+    if (currentSlide >= energyQuizStartIndex && currentSlide < energyRevealSlideIndex) {
+      const questionIndex = currentSlide - energyQuizStartIndex;
+      const question = energyQuiz.currentQuestion;
+      
+      // Make sure we show the correct question based on slide
+      if (question && questionIndex === energyQuiz.currentQuestionIndex) {
+        return (
+          <EnergyQuizSlide
+            question={question}
+            questionIndex={questionIndex}
+            totalQuestions={energyQuiz.totalQuestions}
+            selectedAnswer={energyQuiz.getSelectedAnswer(question.id)}
+            onSelectAnswer={handleQuizAnswer}
+          />
+        );
+      }
+      
+      // Fallback for viewing previous questions
+      const questions = [1, 2, 3, 4, 5];
+      const qId = questions[questionIndex];
+      const q = { id: qId, question: '', options: [] };
+      return (
+        <EnergyQuizSlide
+          question={energyQuiz.currentQuestion || q as any}
+          questionIndex={questionIndex}
+          totalQuestions={5}
+          selectedAnswer={null}
+          onSelectAnswer={() => {}}
+        />
+      );
+    }
+    
+    // Energy reveal slide
+    if (currentSlide === energyRevealSlideIndex && energyQuiz.result) {
+      return (
+        <EnergyRevealSlide
+          personality={energyQuiz.result}
+          stats={stats}
+          onShare={handleEnergyShare}
+          isGeneratingShare={isGeneratingShare}
+        />
+      );
+    }
+
+    return <WelcomeSlide username={stats.username} pfp={stats.pfp} />;
   };
+
+  // Calculate progress - don't count quiz internals in main progress
+  const getProgressSlide = () => {
+    if (currentSlide <= judgmentSlideIndex) {
+      return currentSlide;
+    }
+    if (currentSlide === energyIntroSlideIndex) {
+      return judgmentSlideIndex + 1;
+    }
+    if (isEnergyQuizSlide) {
+      return judgmentSlideIndex + 2;
+    }
+    if (currentSlide === energyRevealSlideIndex) {
+      return judgmentSlideIndex + 3;
+    }
+    return currentSlide;
+  };
+
+  const progressTotalSlides = judgmentSlideIndex + 4; // Welcome + stats + judgment + energy intro + quiz + reveal
 
   return (
     <div className="relative min-h-screen overflow-hidden">
       <Snowfall /><ChristmasLights /><ChristmasDecorations /><MusicControl isMuted={isMuted} onToggle={toggleMute} />
       {isLoading ? <LoadingScreen onComplete={handleLoadingComplete} username={stats.username} pfp={stats.pfp} /> : (
         <>
-          {!isLastSlide && <div className="fixed inset-0 z-20" onClick={handleTap} />}
+          {!isLastSlide && !isJudgmentSlide && !isEnergyIntroSlide && !isEnergyQuizSlide && !isEnergyRevealSlide && (
+            <div className="fixed inset-0 z-20" onClick={handleTap} />
+          )}
           <div className="relative z-10 pb-24 pt-12 min-h-screen">{renderSlide()}</div>
-          <SlideProgress currentSlide={currentSlide} totalSlides={totalSlides} />
+          <SlideProgress currentSlide={getProgressSlide()} totalSlides={progressTotalSlides} />
         </>
       )}
     </div>
