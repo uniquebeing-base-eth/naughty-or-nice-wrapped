@@ -128,8 +128,8 @@ export const ENERGY_PERSONALITIES: Record<EnergyType, EnergyPersonality> = {
     ],
     affirmation: "You're forging a path only you can walk.",
     shareCaption: 'forging a path only I can walk.',
-    gradient: 'from-cyan-500 via-blue-500 to-indigo-500',
-    glowColor: 'blue',
+    gradient: 'from-teal-400 via-cyan-400 to-sky-400',
+    glowColor: 'teal',
   },
   'glow-up-loading': {
     id: 'glow-up-loading',
