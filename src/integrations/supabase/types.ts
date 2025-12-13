@@ -17,6 +17,7 @@ export type Database = {
       wrapped_stats: {
         Row: {
           created_at: string
+          energy_result: Json | null
           fid: number
           id: string
           stats: Json
@@ -24,6 +25,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          energy_result?: Json | null
           fid: number
           id?: string
           stats: Json
@@ -31,6 +33,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          energy_result?: Json | null
           fid?: number
           id?: string
           stats?: Json
