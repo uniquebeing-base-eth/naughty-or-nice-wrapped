@@ -8,9 +8,10 @@ interface JudgmentSlideProps {
   judgment: JudgmentResult;
   onShare: () => void;
   isGeneratingShare?: boolean;
+  onProceedToEnergy?: () => void;
 }
 
-const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: JudgmentSlideProps) => {
+const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false, onProceedToEnergy }: JudgmentSlideProps) => {
   const [animate, setAnimate] = useState(false);
   const [scoreValue, setScoreValue] = useState(0);
 
@@ -151,7 +152,7 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: 
         </div>
       </div>
 
-      <div className={`mt-4 transition-all duration-700 delay-1000 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <div className={`mt-4 flex flex-col gap-3 transition-all duration-700 delay-1000 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <Button 
           onClick={(e) => { e.stopPropagation(); onShare(); }} 
           disabled={isGeneratingShare}
@@ -169,6 +170,16 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false }: 
             </>
           )}
         </Button>
+        
+        {onProceedToEnergy && (
+          <Button 
+            onClick={(e) => { e.stopPropagation(); onProceedToEnergy(); }} 
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-purple-500/30 border-2 border-purple-400/30 pointer-events-auto"
+          >
+            <Sparkles className="w-4 h-4" />
+            Reveal My Energy ✨
+          </Button>
+        )}
       </div>
 
       <p className={`mt-3 text-xs text-christmas-gold/80 font-medium transition-all duration-700 delay-1100 ${animate ? 'opacity-100' : 'opacity-0'}`}>
