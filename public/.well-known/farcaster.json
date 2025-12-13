@@ -17,7 +17,7 @@
     "webhookUrl": "https://api.neynar.com/f/app/8bf7fd64-6415-4d52-b10c-65ffbb56d242/event",
     "subtitle": "Your Farcaster Year Wrapped",
     "description": "Discover if Santa thinks you have been naughty or nice this year based on your Farcaster activity",
-    "primaryCategory": "entertainment",
+    "primaryCategory": "social",
     "tags": [
       "christmas",
       "wrapped",
