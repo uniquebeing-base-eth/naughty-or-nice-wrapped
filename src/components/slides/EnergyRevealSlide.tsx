@@ -31,15 +31,16 @@ const EnergyRevealSlide = ({
     };
   }, [personality.id]);
 
-  const glowColors: Record<string, string> = {
-    purple: 'shadow-[0_0_120px_hsl(280_70%_50%/0.7)]',
-    slate: 'shadow-[0_0_120px_hsl(215_20%_50%/0.7)]',
-    orange: 'shadow-[0_0_120px_hsl(25_90%_55%/0.7)]',
-    gold: 'shadow-[0_0_120px_hsl(45_100%_55%/0.7)]',
-    teal: 'shadow-[0_0_60px_hsl(175_70%_45%/0.5)]',
-    pink: 'shadow-[0_0_120px_hsl(330_80%_60%/0.7)]',
-    emerald: 'shadow-[0_0_120px_hsl(160_80%_45%/0.7)]',
-    violet: 'shadow-[0_0_120px_hsl(270_70%_55%/0.7)]',
+  // Solid text colors for better html2canvas capture (no gradient text)
+  const textColors: Record<string, string> = {
+    purple: 'text-purple-400',
+    slate: 'text-slate-300',
+    orange: 'text-orange-400',
+    gold: 'text-yellow-400',
+    teal: 'text-teal-400',
+    pink: 'text-pink-400',
+    emerald: 'text-emerald-400',
+    violet: 'text-violet-400',
   };
 
   const borderColors: Record<string, string> = {
@@ -58,7 +59,7 @@ const EnergyRevealSlide = ({
       {/* Main Card */}
       <div 
         id="energy-card"
-        className={`relative christmas-card ${glowColors[personality.glowColor]} border-2 ${borderColors[personality.glowColor]} w-full max-w-[340px] overflow-hidden transition-all duration-1000 p-5 ${
+        className={`relative christmas-card border-2 ${borderColors[personality.glowColor]} w-full max-w-[340px] overflow-hidden transition-all duration-1000 p-5 ${
           animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
         }`}
       >
@@ -96,7 +97,7 @@ const EnergyRevealSlide = ({
           {/* Energy type name */}
           <div className={`mb-4 transition-all duration-1000 delay-500 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
             <div className="text-5xl mb-2">{personality.emoji}</div>
-            <h2 className={`font-display text-2xl font-bold bg-gradient-to-r ${personality.gradient} bg-clip-text text-transparent`}>
+            <h2 className={`font-display text-2xl font-bold ${textColors[personality.glowColor]}`}>
               {personality.name}
             </h2>
           </div>
