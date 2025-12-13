@@ -57,6 +57,7 @@ const WrappedApp = () => {
   // Energy quiz state
   const energyQuiz = useEnergyQuiz();
   const [energyQuizStarted, setEnergyQuizStarted] = useState(false);
+  const [savedEnergyResult, setSavedEnergyResult] = useState<typeof energyQuiz.result>(null);
 
   const [stats, setStats] = useState<UserStats>({
     fid: user?.fid || 12345,
@@ -85,6 +86,12 @@ const WrappedApp = () => {
           // Use saved judgment if available
           if (data.stats.judgment) {
             setSavedJudgment(data.stats.judgment);
+          }
+          
+          // Load saved energy result if available
+          if (data.energy_result) {
+            console.log('Found saved energy result:', data.energy_result);
+            setSavedEnergyResult(data.energy_result);
           }
         }
       } catch {
@@ -261,9 +268,9 @@ const WrappedApp = () => {
 
   // Energy share handler
   const handleEnergyShare = async () => {
-    if (!energyQuiz.result) return;
+    const personality = savedEnergyResult || energyQuiz.result;
+    if (!personality) return;
     
-    const personality = energyQuiz.result;
     const shareText = `🎅✨ Naughty-or-Nice-Wrapped by @uniquebeing404 read my energy! Apparently I'm ${personality.name} — ${personality.shareCaption}\n\nDiscover yours 👇`;
     
     setIsGeneratingShare(true);
@@ -331,11 +338,31 @@ const WrappedApp = () => {
     setCurrentSlide(energyIntroSlideIndex);
   }, [energyIntroSlideIndex]);
 
-  // Handle starting energy quiz
+  // Handle starting energy quiz - skip if already have saved result
   const handleStartEnergyQuiz = useCallback(() => {
-    setEnergyQuizStarted(true);
-    setCurrentSlide(energyQuizStartIndex);
-  }, [energyQuizStartIndex]);
+    if (savedEnergyResult) {
+      // Skip directly to reveal if we have saved result
+      setCurrentSlide(energyRevealSlideIndex);
+    } else {
+      setEnergyQuizStarted(true);
+      setCurrentSlide(energyQuizStartIndex);
+    }
+  }, [energyQuizStartIndex, energyRevealSlideIndex, savedEnergyResult]);
+
+  // Save energy result when quiz completes
+  const saveEnergyResult = useCallback(async (result: typeof energyQuiz.result) => {
+    if (!result || !user?.fid) return;
+    
+    try {
+      const { error } = await supabase.functions.invoke('save-energy-result', { 
+        body: { fid: user.fid, energy_result: result } 
+      });
+      if (error) console.error('Failed to save energy result:', error);
+      else console.log('Energy result saved successfully');
+    } catch (err) {
+      console.error('Error saving energy result:', err);
+    }
+  }, [user?.fid]);
 
   // Handle quiz answer selection - auto advances through quiz
   const handleQuizAnswer = useCallback((optionLabel: string) => {
@@ -346,11 +373,19 @@ const WrappedApp = () => {
       if (energyQuiz.currentQuestionIndex < energyQuiz.totalQuestions - 1) {
         setCurrentSlide(prev => prev + 1);
       } else {
-        // Move to reveal slide
+        // Move to reveal slide and save result
         setCurrentSlide(energyRevealSlideIndex);
       }
     }, 400);
   }, [energyQuiz, energyRevealSlideIndex]);
+
+  // Save result when quiz completes
+  useEffect(() => {
+    if (energyQuiz.isQuizComplete && energyQuiz.result && !savedEnergyResult) {
+      saveEnergyResult(energyQuiz.result);
+      setSavedEnergyResult(energyQuiz.result);
+    }
+  }, [energyQuiz.isQuizComplete, energyQuiz.result, savedEnergyResult, saveEnergyResult]);
 
   const handleLoadingComplete = useCallback(() => setIsLoading(false), []);
 
@@ -422,11 +457,12 @@ const WrappedApp = () => {
       );
     }
     
-    // Energy reveal slide
-    if (currentSlide === energyRevealSlideIndex && energyQuiz.result) {
+    // Energy reveal slide - use saved result or quiz result
+    const energyResultToShow = savedEnergyResult || energyQuiz.result;
+    if (currentSlide === energyRevealSlideIndex && energyResultToShow) {
       return (
         <EnergyRevealSlide
-          personality={energyQuiz.result}
+          personality={energyResultToShow}
           stats={stats}
           onShare={handleEnergyShare}
           isGeneratingShare={isGeneratingShare}
