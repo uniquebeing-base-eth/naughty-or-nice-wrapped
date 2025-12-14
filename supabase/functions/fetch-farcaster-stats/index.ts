@@ -49,8 +49,7 @@ serve(async (req) => {
       console.log(`Found existing stats for FID ${fid}, returning saved data`);
       return new Response(JSON.stringify({ 
         stats: existingData.stats, 
-        user: existingData.user_data,
-        energy_result: existingData.energy_result 
+        user: existingData.user_data 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
