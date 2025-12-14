@@ -1,12 +1,24 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Gift, Share2, ExternalLink, X } from 'lucide-react';
+import { Gift, Share2, ExternalLink, X, Loader2 } from 'lucide-react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useToast } from '@/hooks/use-toast';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 
-// ENB Blast partner gift
+// ENB Blast partner gift contract
+const GIFT_CONTRACT_ADDRESS = '0x071720494fD6e68463acA7700016D276cf43dD08';
+const BASE_CHAIN_ID = '0x2105'; // Base mainnet
+
+// ABI for the claim function
+const CLAIM_ABI = [{
+  "inputs": [],
+  "name": "claim",
+  "outputs": [],
+  "stateMutability": "nonpayable",
+  "type": "function"
+}];
+
 const TODAY_GIFT = {
   id: 1,
   day: 14,
@@ -15,10 +27,10 @@ const TODAY_GIFT = {
     icon: enbBlastIcon,
     link: 'https://farcaster.xyz/miniapps/0z7FDSc-9NU_/enb-blast',
     description: 'Drag your avatar and collect ENBs',
-    contractAddress: '0x071720494fD6e68463acA7700016D276cf43dD08',
+    contractAddress: GIFT_CONTRACT_ADDRESS,
   },
   santaMessage: "Ho ho ho! The ENB elves have been blasting joy across the blockchain! Drag, collect, and spread the holiday cheer! 🎄✨",
-  reward: 'ENB Tokens',
+  reward: '1,000 ENB Tokens',
   claimed: false,
 };
 
@@ -28,14 +40,85 @@ const BloomersGifts = () => {
   const [gift, setGift] = useState(TODAY_GIFT);
   const [hasShared, setHasShared] = useState(false);
   const [showSharePopup, setShowSharePopup] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
-  const handleClaimGift = () => {
-    setGift(prev => ({ ...prev, claimed: true }));
-    setShowSharePopup(true);
-    toast({
-      title: "🎁 Gift Claimed!",
-      description: "Santa smiles 🌸 Bloomers grow brighter when joy is shared",
-    });
+  const handleClaimGift = async () => {
+    if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
+      toast({
+        title: "Wallet Required",
+        description: "Please open this in Farcaster to claim tokens",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsClaiming(true);
+
+    try {
+      const provider = sdk.wallet.ethProvider;
+
+      // Switch to Base network
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: BASE_CHAIN_ID }],
+        });
+      } catch (switchError: any) {
+        console.log('Network switch error:', switchError);
+      }
+
+      // Get user's address
+      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+      const userAddress = accounts[0];
+
+      // Encode the claim function call
+      const claimData = '0x4e71d92d'; // keccak256("claim()") first 4 bytes
+
+      // Send the claim transaction
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: userAddress,
+          to: GIFT_CONTRACT_ADDRESS,
+          data: claimData,
+          value: '0x0',
+        }],
+      });
+
+      console.log('Claim transaction sent:', txHash);
+
+      setGift(prev => ({ ...prev, claimed: true }));
+      setShowSharePopup(true);
+      toast({
+        title: "🎁 1,000 ENB Tokens Claimed!",
+        description: "Santa smiles 🌸 Bloomers grow brighter when joy is shared",
+      });
+    } catch (error: any) {
+      console.error('Claim error:', error);
+      
+      // Check if user already claimed
+      if (error?.message?.includes('already claimed') || error?.code === 'ACTION_REJECTED') {
+        toast({
+          title: "Already Claimed",
+          description: "You've already claimed today's gift!",
+          variant: "destructive",
+        });
+      } else if (error?.code === 4001) {
+        toast({
+          title: "Transaction Cancelled",
+          description: "You cancelled the transaction",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Claim Failed",
+          description: error?.message || "Something went wrong. Try again!",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsClaiming(false);
+    }
   };
 
   const handleShare = async () => {
@@ -184,10 +267,20 @@ const BloomersGifts = () => {
           {!gift.claimed ? (
             <Button 
               onClick={handleClaimGift}
-              className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-black font-bold py-6 rounded-xl"
+              disabled={isClaiming}
+              className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-black font-bold py-6 rounded-xl disabled:opacity-70"
             >
-              <Gift className="w-5 h-5 mr-2" />
-              Open Today's Gift
+              {isClaiming ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Claiming...
+                </>
+              ) : (
+                <>
+                  <Gift className="w-5 h-5 mr-2" />
+                  Claim {gift.reward}
+                </>
+              )}
             </Button>
           ) : (
             <div className="space-y-3">
