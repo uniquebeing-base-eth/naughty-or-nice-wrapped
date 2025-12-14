@@ -10,8 +10,8 @@ import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 const GIFT_CONTRACT_ADDRESS = '0x4C1e7de7bae1820b0A34bC14810bD0e8daE8aE7f';
 const BASE_CHAIN_ID = '0x2105'; // Base mainnet (8453)
 
-// claimGift() function selector
-const CLAIM_GIFT_DATA = '0x4e71d92d';
+// claimGift() function selector - keccak256("claimGift()") first 4 bytes
+const CLAIM_GIFT_DATA = '0x7a6d298d';
 
 const TODAY_GIFT = {
   id: 1,
