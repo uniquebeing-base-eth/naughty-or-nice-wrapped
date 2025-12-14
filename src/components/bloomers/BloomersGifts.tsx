@@ -7,17 +7,11 @@ import { useToast } from '@/hooks/use-toast';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 
 // ENB Blast partner gift contract
-const GIFT_CONTRACT_ADDRESS = '0x071720494fD6e68463acA7700016D276cf43dD08';
+const GIFT_CONTRACT_ADDRESS = '0xEC6faD2Ae2F23BF574411711c622c1Ba68A973b6';
 const BASE_CHAIN_ID = '0x2105'; // Base mainnet
 
-// Helper to encode claimGift(uint256 day) function call
-const encodeClaimGift = (day: number): string => {
-  // Function selector: keccak256("claimGift(uint256)") = 0x2c3a00e5 (first 4 bytes)
-  const functionSelector = '2c3a00e5';
-  // Encode day as uint256 (32 bytes, padded)
-  const dayHex = day.toString(16).padStart(64, '0');
-  return '0x' + functionSelector + dayHex;
-};
+// claimGift() function selector - keccak256("claimGift()") first 4 bytes
+const CLAIM_GIFT_DATA = '0x13966505';
 
 const TODAY_GIFT = {
   id: 1,
@@ -71,8 +65,8 @@ const BloomersGifts = () => {
       const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
       const userAddress = accounts[0];
 
-      // Encode the claimGift(day) function call
-      const claimData = encodeClaimGift(gift.day);
+      // Simple claimGift() function call (no parameters)
+      const claimData = CLAIM_GIFT_DATA;
 
       // Send the claim transaction
       const txHash = await provider.request({
