@@ -295,25 +295,34 @@ const BloomersGifts = () => {
                 <p className="text-christmas-green font-semibold">✓ Gift Claimed!</p>
               </div>
 
-              {/* Share prompt */}
-              {!hasShared ? (
-                <>
-                  <Button 
-                    onClick={handleShare}
-                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold py-4 rounded-xl"
-                  >
-                    <Share2 className="w-5 h-5 mr-2" />
-                    Share on Farcaster
-                  </Button>
-                  <p className="text-center text-christmas-snow/40 text-xs">
-                    Santa is watching kindly… Bloomers remember generosity 🎅✨
-                  </p>
-                </>
-              ) : (
-                <div className="text-center py-2">
-                  <p className="text-christmas-gold text-sm">Thank you for sharing! 🌸</p>
-                </div>
-              )}
+              {/* Sponsor thank you */}
+              <div className="text-center py-3 bg-muted/20 rounded-xl">
+                <p className="text-christmas-snow/70 text-sm mb-2">
+                  🎁 Thank you to our sponsor!
+                </p>
+                <a 
+                  href={gift.partner.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-christmas-gold hover:text-christmas-gold/80 font-semibold text-sm transition-colors"
+                >
+                  <img src={gift.partner.icon} alt={gift.partner.name} className="w-5 h-5 rounded-full" />
+                  Visit {gift.partner.name}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              {/* Share button - always visible */}
+              <Button 
+                onClick={handleShare}
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold py-4 rounded-xl"
+              >
+                <Share2 className="w-5 h-5 mr-2" />
+                Share on Farcaster
+              </Button>
+              <p className="text-center text-christmas-snow/40 text-xs">
+                Santa is watching kindly… Bloomers remember generosity 🎅✨
+              </p>
             </div>
           )}
         </div>
