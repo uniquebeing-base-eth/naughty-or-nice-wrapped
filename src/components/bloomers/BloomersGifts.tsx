@@ -131,7 +131,7 @@ const BloomersGifts = () => {
   };
 
   const handleShare = async () => {
-    const shareText = `🎅 Ho ho ho! Spread love to stay in Santa's good books! 💝\n\n🎁 Just claimed my daily gift from ${gift.partner.name}!\n\n🌸 Every gift helps my Bloomer bloom brighter ✨`;
+    const shareText = `🎅 Ho ho ho! Spread love to stay in Santa's good books! 💝\n\n🎁 Just claimed my daily gift of $ENB from ENB Blast!\n\n🌸 Every gift helps my Bloomer bloom brighter 🌌\n\nnaughty-or-nice-wrapped by @uniquebeing404`;
     
     if (isInMiniApp && sdk?.actions?.composeCast) {
       try {
