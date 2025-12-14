@@ -7,6 +7,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { FarcasterProvider } from "@/contexts/FarcasterContext";
 import Index from "./pages/Index";
 import Share from "./pages/Share";
+import Bloomers from "./pages/Bloomers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/share" element={<Share />} />
+              <Route path="/bloomers" element={<Bloomers />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
