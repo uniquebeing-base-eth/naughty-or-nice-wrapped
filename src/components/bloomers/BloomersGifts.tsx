@@ -5,20 +5,11 @@ import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useToast } from '@/hooks/use-toast';
 import { encodeFunctionData } from 'viem';
+import { supabase } from '@/integrations/supabase/client';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
+import { BLOOMERS_VERDICT_ADDRESS, BLOOMERS_VERDICT_ABI } from '@/config/wagmi';
 
-// Contract address on Base
-const GIFT_CONTRACT_ADDRESS = '0x4C1e7de7bae1820b0A34bC14810bD0e8daE8aE7f';
 const BASE_CHAIN_ID = '0x2105';
-
-// ABI for claimGift function
-const CLAIM_ABI = [{
-  name: 'claimGift',
-  type: 'function',
-  stateMutability: 'nonpayable',
-  inputs: [],
-  outputs: [],
-}] as const;
 
 const TODAY_GIFT = {
   id: 1,
@@ -34,7 +25,7 @@ const TODAY_GIFT = {
 };
 
 const BloomersGifts = () => {
-  const { isInMiniApp } = useFarcaster();
+  const { isInMiniApp, user } = useFarcaster();
   const { toast } = useToast();
   
   const [gift, setGift] = useState(TODAY_GIFT);
@@ -47,6 +38,15 @@ const BloomersGifts = () => {
       toast({
         title: "Farcaster Required",
         description: "Please open this in Farcaster to claim tokens",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user?.fid) {
+      toast({
+        title: "Not Connected",
+        description: "Please connect your Farcaster account",
         variant: "destructive",
       });
       return;
@@ -76,18 +76,34 @@ const BloomersGifts = () => {
         throw new Error('No wallet address');
       }
 
-      // Encode the claimGift() call properly
+      const userAddress = accounts[0];
+      console.log('Requesting signature for:', userAddress, 'FID:', user.fid);
+
+      // Get signature from backend (verifies user has verdict)
+      const { data: signData, error: signError } = await supabase.functions.invoke('sign-verdict-claim', {
+        body: { userAddress, fid: user.fid }
+      });
+
+      if (signError || !signData?.signature) {
+        console.error('Sign error:', signError, signData);
+        throw new Error(signData?.error || 'Failed to verify eligibility');
+      }
+
+      console.log('Got signature, sending claim tx...');
+
+      // Encode the claimReward(signature) call
       const data = encodeFunctionData({
-        abi: CLAIM_ABI,
-        functionName: 'claimGift',
+        abi: BLOOMERS_VERDICT_ABI,
+        functionName: 'claimReward',
+        args: [signData.signature as `0x${string}`],
       });
 
       // Send claim transaction
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
-          from: accounts[0],
-          to: GIFT_CONTRACT_ADDRESS,
+          from: userAddress,
+          to: BLOOMERS_VERDICT_ADDRESS,
           data: data,
           value: '0x0',
         }],
@@ -114,8 +130,14 @@ const BloomersGifts = () => {
         });
       } else if (msg.includes('Already claimed') || msg.includes('already claimed') || msg.includes('execution reverted')) {
         toast({
-          title: "Already Claimed",
-          description: "You've already claimed this gift!",
+          title: "Already Claimed Today",
+          description: "Come back tomorrow for your next gift!",
+          variant: "destructive",
+        });
+      } else if (msg.includes('No verdict') || msg.includes('eligibility')) {
+        toast({
+          title: "No Verdict Found",
+          description: "Complete your Naughty or Nice Wrapped first!",
           variant: "destructive",
         });
       } else {
