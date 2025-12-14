@@ -43,17 +43,20 @@ serve(async (req) => {
       );
     }
 
-    // Check if stats contains judgment (judgment.isNice field means they have a verdict)
+    // Check if stats contains judgment - both Nice (true) and Naughty (false) users can claim
     const stats = userData.stats as any;
-    if (stats?.judgment?.isNice === undefined) {
-      console.log('User has no judgment verdict:', fid);
+    const hasVerdict = stats?.judgment !== undefined && typeof stats?.judgment?.isNice === 'boolean';
+    
+    if (!hasVerdict) {
+      console.log('User has no judgment verdict:', fid, 'stats:', JSON.stringify(stats?.judgment));
       return new Response(
         JSON.stringify({ error: 'No verdict found. Complete your wrapped first!' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('User verdict found:', { fid, isNice: stats.judgment.isNice, score: stats.judgment.score });
+    const verdictType = stats.judgment.isNice ? 'Nice' : 'Naughty';
+    console.log('User verdict found:', { fid, verdictType, score: stats.judgment.score });
 
     console.log('User has verdict, signing claim for:', userAddress);
 
