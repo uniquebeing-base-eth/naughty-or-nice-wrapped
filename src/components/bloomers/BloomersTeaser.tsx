@@ -70,9 +70,6 @@ const BloomersTeaser = () => {
           <p className="font-display text-lg text-christmas-gold font-semibold">
             {CREATURE_TYPES[activeIndex].name}
           </p>
-          <p className="text-christmas-snow/60 text-sm">
-            {CREATURE_TYPES[activeIndex].desc}
-          </p>
         </div>
 
         {/* Traits preview */}
