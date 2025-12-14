@@ -4,15 +4,10 @@ import { Gift, Share2, ExternalLink, X, Loader2 } from 'lucide-react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useToast } from '@/hooks/use-toast';
+import { useFarcasterWallet } from '@/hooks/useFarcasterWallet';
+import { BLOOMERS_GIFTS_ADDRESS, BLOOMERS_GIFTS_ABI } from '@/config/wagmi';
+import { base } from 'viem/chains';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
-
-// ENB Blast partner gift contract
-const GIFT_CONTRACT_ADDRESS = '0x4C1e7de7bae1820b0A34bC14810bD0e8daE8aE7f';
-const BASE_CHAIN_ID = '0x2105'; // Base mainnet
-
-// Function selector for claimGift() - computed from keccak256("claimGift()")
-// First 4 bytes = 0x4e71d92d, but we need to pad it to 32 bytes for proper ABI encoding
-const CLAIM_GIFT_SELECTOR = '0x4e71d92d';
 
 const TODAY_GIFT = {
   id: 1,
@@ -21,7 +16,6 @@ const TODAY_GIFT = {
     icon: enbBlastIcon,
     link: 'https://farcaster.xyz/miniapps/0z7FDSc-9NU_/enb-blast',
     description: 'Drag your avatar and collect ENBs',
-    contractAddress: GIFT_CONTRACT_ADDRESS,
   },
   santaMessage: "Ho ho ho! The ENB elves have been blasting joy across the blockchain! Drag, collect, and spread the holiday cheer! 🎄✨",
   reward: '1,000 ENB Tokens',
@@ -31,15 +25,17 @@ const TODAY_GIFT = {
 const BloomersGifts = () => {
   const { isInMiniApp } = useFarcaster();
   const { toast } = useToast();
+  const { address, isConnected, walletClient, connect, isConnecting } = useFarcasterWallet();
+  
   const [gift, setGift] = useState(TODAY_GIFT);
   const [hasShared, setHasShared] = useState(false);
   const [showSharePopup, setShowSharePopup] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
 
   const handleClaimGift = async () => {
-    if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
+    if (!isInMiniApp) {
       toast({
-        title: "Wallet Required",
+        title: "Farcaster Required",
         description: "Please open this in Farcaster to claim tokens",
         variant: "destructive",
       });
@@ -49,35 +45,33 @@ const BloomersGifts = () => {
     setIsClaiming(true);
 
     try {
-      const provider = sdk.wallet.ethProvider;
-
-      // Switch to Base network
-      try {
-        await provider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: BASE_CHAIN_ID }],
-        });
-      } catch (switchError: any) {
-        console.log('Network switch error:', switchError);
+      // Connect wallet if not connected
+      let client = walletClient;
+      let userAddress = address;
+      
+      if (!isConnected || !walletClient) {
+        const result = await connect();
+        if (!result) {
+          throw new Error('Failed to connect wallet');
+        }
+        client = result.client;
+        userAddress = result.address;
       }
 
-      // Get user's address
-      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
-      const userAddress = accounts[0];
+      if (!client || !userAddress) {
+        throw new Error('Wallet not connected');
+      }
 
-      // claimGift() function call - just the 4-byte selector, no parameters needed
-      // Send the claim transaction
-      const txHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: userAddress,
-          to: GIFT_CONTRACT_ADDRESS,
-          data: CLAIM_GIFT_SELECTOR,
-          gas: '0x30D40', // 200000 gas limit
-        }],
+      // Use viem to write contract
+      const hash = await client.writeContract({
+        address: BLOOMERS_GIFTS_ADDRESS,
+        abi: BLOOMERS_GIFTS_ABI,
+        functionName: 'claimGift',
+        account: userAddress,
+        chain: base,
       });
 
-      console.log('Claim transaction sent:', txHash);
+      console.log('Claim transaction sent:', hash);
 
       setGift(prev => ({ ...prev, claimed: true }));
       setShowSharePopup(true);
@@ -88,23 +82,31 @@ const BloomersGifts = () => {
     } catch (error: any) {
       console.error('Claim error:', error);
       
-      // Check if user already claimed
-      if (error?.message?.includes('already claimed') || error?.code === 'ACTION_REJECTED') {
-        toast({
-          title: "Already Claimed",
-          description: "You've already claimed today's gift!",
-          variant: "destructive",
-        });
-      } else if (error?.code === 4001) {
+      const errorMessage = error?.message || '';
+      
+      // Handle specific error cases
+      if (errorMessage.includes('User rejected') || errorMessage.includes('denied') || error?.code === 4001) {
         toast({
           title: "Transaction Cancelled",
           description: "You cancelled the transaction",
           variant: "destructive",
         });
+      } else if (errorMessage.includes('already claimed') || errorMessage.includes('Already claimed')) {
+        toast({
+          title: "Already Claimed",
+          description: "You've already claimed today's gift!",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes('execution reverted')) {
+        toast({
+          title: "Already Claimed",
+          description: "You've already claimed this gift!",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Claim Failed",
-          description: error?.message || "Something went wrong. Try again!",
+          description: errorMessage || "Something went wrong. Try again!",
           variant: "destructive",
         });
       }
@@ -256,13 +258,13 @@ const BloomersGifts = () => {
           {!gift.claimed ? (
             <Button 
               onClick={handleClaimGift}
-              disabled={isClaiming}
+              disabled={isClaiming || isConnecting}
               className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-black font-bold py-6 rounded-xl disabled:opacity-70"
             >
-              {isClaiming ? (
+              {isClaiming || isConnecting ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Claiming...
+                  {isConnecting ? 'Connecting...' : 'Claiming...'}
                 </>
               ) : (
                 <>
