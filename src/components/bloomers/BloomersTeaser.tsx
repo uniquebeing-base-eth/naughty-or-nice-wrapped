@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 
 // Import Bloomer images
-import bloomerFoxGolden from '@/assets/bloomers/bloomer-fox-golden.png';
-import bloomerDragonBlue from '@/assets/bloomers/bloomer-dragon-blue.png';
-import bloomerFoxWhite from '@/assets/bloomers/bloomer-fox-white.png';
-import bloomerFairyPink from '@/assets/bloomers/bloomer-fairy-pink.png';
-import bloomerOwlIce from '@/assets/bloomers/bloomer-owl-ice.png';
+import bloomerCelestialFox from '@/assets/bloomers/bloomer-celestial-fox.png';
+import bloomerMysticKitsune from '@/assets/bloomers/bloomer-mystic-kitsune.png';
+import bloomerBlossomFairy from '@/assets/bloomers/bloomer-blossom-fairy.png';
+import bloomerGoldenSpirit from '@/assets/bloomers/bloomer-golden-spirit.png';
+import bloomerFrostGuardian from '@/assets/bloomers/bloomer-frost-guardian.png';
 
 const CREATURE_TYPES = [
-  { image: bloomerFoxGolden, name: 'Sunfire Fox', desc: 'Swift and radiant companions' },
-  { image: bloomerDragonBlue, name: 'Frostscale Dragon', desc: 'Guardians of winter wonder' },
-  { image: bloomerFoxWhite, name: 'Crystal Kitsune', desc: 'Mystical nine-tailed spirits' },
-  { image: bloomerFairyPink, name: 'Blossom Fairy', desc: 'Keepers of springtime magic' },
-  { image: bloomerOwlIce, name: 'Aurora Owl', desc: 'Wise watchers of the night sky' },
+  { image: bloomerCelestialFox, name: 'Celestial Fox', desc: 'Angelic guardians with golden wings' },
+  { image: bloomerMysticKitsune, name: 'Mystic Kitsune', desc: 'Crystal spirits of the winter realm' },
+  { image: bloomerBlossomFairy, name: 'Blossom Fairy', desc: 'Keepers of eternal spring magic' },
+  { image: bloomerGoldenSpirit, name: 'Golden Spirit', desc: 'Radiant beings of pure light' },
+  { image: bloomerFrostGuardian, name: 'Frost Guardian', desc: 'Protectors of the frozen wonderland' },
 ];
 
 const BloomersTeaser = () => {
@@ -60,7 +60,7 @@ const BloomersTeaser = () => {
 
         {/* Active creature description */}
         <div className="christmas-card p-4 border border-christmas-gold/20 transition-all duration-500">
-          <div className="w-24 h-24 mx-auto rounded-xl overflow-hidden mb-3">
+          <div className="w-28 h-28 mx-auto rounded-xl overflow-hidden mb-3 shadow-lg">
             <img 
               src={CREATURE_TYPES[activeIndex].image}
               alt={CREATURE_TYPES[activeIndex].name}

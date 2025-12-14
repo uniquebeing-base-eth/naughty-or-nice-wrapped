@@ -3,18 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 
 // Import Bloomer images
-import bloomerFoxGolden from '@/assets/bloomers/bloomer-fox-golden.png';
-import bloomerDragonBlue from '@/assets/bloomers/bloomer-dragon-blue.png';
-import bloomerFoxWhite from '@/assets/bloomers/bloomer-fox-white.png';
-import bloomerFairyPink from '@/assets/bloomers/bloomer-fairy-pink.png';
-import bloomerOwlIce from '@/assets/bloomers/bloomer-owl-ice.png';
+import bloomerCelestialFox from '@/assets/bloomers/bloomer-celestial-fox.png';
+import bloomerMysticKitsune from '@/assets/bloomers/bloomer-mystic-kitsune.png';
+import bloomerBlossomFairy from '@/assets/bloomers/bloomer-blossom-fairy.png';
+import bloomerGoldenSpirit from '@/assets/bloomers/bloomer-golden-spirit.png';
+import bloomerFrostGuardian from '@/assets/bloomers/bloomer-frost-guardian.png';
 
 const BLOOMER_VARIATIONS = [
-  { image: bloomerFoxGolden, color: 'from-amber-400 to-orange-500', name: 'Sunfire Fox' },
-  { image: bloomerDragonBlue, color: 'from-purple-500 to-pink-500', name: 'Frostscale Dragon' },
-  { image: bloomerFoxWhite, color: 'from-cyan-400 to-blue-500', name: 'Crystal Kitsune' },
-  { image: bloomerFairyPink, color: 'from-pink-400 to-purple-500', name: 'Blossom Fairy' },
-  { image: bloomerOwlIce, color: 'from-sky-400 to-blue-600', name: 'Aurora Owl' },
+  { image: bloomerCelestialFox, color: 'from-amber-400 to-yellow-500', name: 'Celestial Fox' },
+  { image: bloomerMysticKitsune, color: 'from-purple-500 to-pink-500', name: 'Mystic Kitsune' },
+  { image: bloomerBlossomFairy, color: 'from-pink-400 to-rose-500', name: 'Blossom Fairy' },
+  { image: bloomerGoldenSpirit, color: 'from-yellow-400 to-amber-500', name: 'Golden Spirit' },
+  { image: bloomerFrostGuardian, color: 'from-cyan-400 to-blue-500', name: 'Frost Guardian' },
 ];
 
 const VERDICT_TITLES = [
@@ -87,12 +87,12 @@ const BloomersHero = () => {
       <div className="relative mb-8">
         {/* Outer glow */}
         <div 
-          className={`absolute inset-0 bg-gradient-to-r ${current.color} blur-3xl opacity-40 scale-150 transition-all duration-500`}
+          className={`absolute inset-0 bg-gradient-to-r ${current.color} blur-3xl opacity-50 scale-150 transition-all duration-500`}
         />
         
         {/* Bloomer container */}
         <div 
-          className={`relative w-64 h-64 md:w-80 md:h-80 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
+          className={`relative w-72 h-72 md:w-96 md:h-96 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
             isTransitioning ? 'opacity-0 scale-90' : 'opacity-100 scale-100'
           }`}
         >
@@ -104,8 +104,8 @@ const BloomersHero = () => {
           />
           
           {/* Name overlay */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-            <p className="text-white font-display text-lg font-semibold text-center">
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
+            <p className="text-white font-display text-xl font-semibold text-center drop-shadow-lg">
               {current.name}
             </p>
           </div>
