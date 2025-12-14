@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { EnergyPersonality } from '@/types/energy';
 import { UserStats } from '@/types/wrapped';
 import { Button } from '@/components/ui/button';
-import { Share2, Sparkles } from 'lucide-react';
+import { Share2, Sparkles, Flower2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface EnergyRevealSlideProps {
   personality: EnergyPersonality;
@@ -144,8 +145,8 @@ const EnergyRevealSlide = ({
         </div>
       </div>
 
-      {/* Share button */}
-      <div className={`mt-5 transition-all duration-700 delay-1200 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      {/* Action buttons */}
+      <div className={`mt-5 flex flex-col gap-3 transition-all duration-700 delay-1200 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <Button 
           onClick={(e) => { e.stopPropagation(); onShare(); }} 
           disabled={isGeneratingShare}
@@ -163,6 +164,15 @@ const EnergyRevealSlide = ({
             </>
           )}
         </Button>
+        
+        <Link to="/bloomers" onClick={(e) => e.stopPropagation()}>
+          <Button 
+            className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-400 hover:via-purple-400 hover:to-indigo-400 text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-purple-500/30 border-2 border-pink-400/30 pointer-events-auto"
+          >
+            <Flower2 className="w-4 h-4" />
+            Mint Your Bloomer 🌸
+          </Button>
+        </Link>
       </div>
 
       <p className={`mt-3 text-xs text-purple-300/80 font-medium transition-all duration-700 delay-1300 ${animate ? 'opacity-100' : 'opacity-0'}`}>
