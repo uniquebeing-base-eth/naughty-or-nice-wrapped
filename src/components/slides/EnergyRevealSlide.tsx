@@ -56,11 +56,11 @@ const EnergyRevealSlide = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-start text-center px-4 py-4 h-[calc(100vh-120px)] overflow-y-auto">
+    <div className="flex flex-col items-center justify-start text-center px-3 py-2 h-[calc(100vh-100px)] overflow-y-auto">
       {/* Main Card */}
       <div 
         id="energy-card"
-        className={`relative christmas-card border-2 ${borderColors[personality.glowColor]} w-full max-w-[340px] overflow-hidden transition-all duration-1000 p-5 ${
+        className={`relative christmas-card border-2 ${borderColors[personality.glowColor]} w-full max-w-[320px] overflow-hidden transition-all duration-1000 p-4 ${
           animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
         }`}
       >
@@ -119,15 +119,15 @@ const EnergyRevealSlide = ({
 
           {/* Predictions section */}
           {showPredictions && (
-            <div className={`mt-4 pt-4 border-t border-white/10 transition-all duration-700 ${showPredictions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-              <h3 className="text-xs uppercase tracking-widest text-purple-300 font-bold mb-3 flex items-center justify-center gap-2">
+            <div className={`mt-3 pt-3 border-t border-white/10 transition-all duration-700 ${showPredictions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              <h3 className="text-[10px] uppercase tracking-widest text-purple-300 font-bold mb-2 flex items-center justify-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 Your Prediction
                 <Sparkles className="w-3 h-3" />
               </h3>
-              <div className="space-y-2 text-left">
+              <div className="space-y-1.5 text-left">
                 {personality.predictions.map((prediction, index) => (
-                  <p key={index} className="text-sm text-christmas-snow/80 flex items-start gap-2">
+                  <p key={index} className="text-xs text-christmas-snow/80 flex items-start gap-1.5">
                     <span className="text-yellow-400">✦</span>
                     {prediction}
                   </p>
@@ -137,20 +137,20 @@ const EnergyRevealSlide = ({
           )}
 
           {/* Affirmation */}
-          <div className={`mt-4 py-3 px-4 rounded-xl bg-gradient-to-r ${personality.gradient} transition-all duration-700 delay-1000 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
-            <p className="text-sm font-bold text-white italic">
+          <div className={`mt-3 py-2 px-3 rounded-xl bg-gradient-to-r ${personality.gradient} transition-all duration-700 delay-1000 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+            <p className="text-xs font-bold text-white italic">
               "{personality.affirmation}"
             </p>
           </div>
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className={`mt-5 flex flex-col gap-3 transition-all duration-700 delay-1200 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      {/* Action buttons - more compact */}
+      <div className={`mt-3 flex flex-col gap-2 w-full max-w-[320px] transition-all duration-700 delay-1200 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <Button 
           onClick={(e) => { e.stopPropagation(); onShare(); }} 
           disabled={isGeneratingShare}
-          className={`bg-gradient-to-r ${personality.gradient} hover:brightness-110 text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg border-2 border-white/20 pointer-events-auto disabled:opacity-70`}
+          className={`bg-gradient-to-r ${personality.gradient} hover:brightness-110 text-white px-5 py-2.5 rounded-full font-bold gap-2 text-sm shadow-lg border-2 border-white/20 pointer-events-auto disabled:opacity-70`}
         >
           {isGeneratingShare ? (
             <>
@@ -165,9 +165,9 @@ const EnergyRevealSlide = ({
           )}
         </Button>
         
-        <Link to="/bloomers" onClick={(e) => e.stopPropagation()}>
+        <Link to="/bloomers" onClick={(e) => e.stopPropagation()} className="w-full">
           <Button 
-            className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-400 hover:via-purple-400 hover:to-indigo-400 text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-purple-500/30 border-2 border-pink-400/30 pointer-events-auto"
+            className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-400 hover:via-purple-400 hover:to-indigo-400 text-white px-5 py-2.5 rounded-full font-bold gap-2 text-sm shadow-lg shadow-purple-500/30 border-2 border-pink-400/30 pointer-events-auto"
           >
             <Flower2 className="w-4 h-4" />
             Mint Your Bloomer 🌸
@@ -175,7 +175,7 @@ const EnergyRevealSlide = ({
         </Link>
       </div>
 
-      <p className={`mt-3 text-xs text-purple-300/80 font-medium transition-all duration-700 delay-1300 ${animate ? 'opacity-100' : 'opacity-0'}`}>
+      <p className={`mt-2 text-[10px] text-purple-300/80 font-medium transition-all duration-700 delay-1300 ${animate ? 'opacity-100' : 'opacity-0'}`}>
         Made with ✨ by @uniquebeing404
       </p>
     </div>

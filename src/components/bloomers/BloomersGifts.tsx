@@ -10,8 +10,9 @@ import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 const GIFT_CONTRACT_ADDRESS = '0x4C1e7de7bae1820b0A34bC14810bD0e8daE8aE7f';
 const BASE_CHAIN_ID = '0x2105'; // Base mainnet
 
-// claimGift() function selector - keccak256("claimGift()") first 4 bytes = 0x4e71d92d
-const CLAIM_GIFT_DATA = '0x4e71d92d';
+// Function selector for claimGift() - computed from keccak256("claimGift()")
+// First 4 bytes = 0x4e71d92d, but we need to pad it to 32 bytes for proper ABI encoding
+const CLAIM_GIFT_SELECTOR = '0x4e71d92d';
 
 const TODAY_GIFT = {
   id: 1,
@@ -64,17 +65,15 @@ const BloomersGifts = () => {
       const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
       const userAddress = accounts[0];
 
-      // Simple claimGift() function call (no parameters)
-      const claimData = CLAIM_GIFT_DATA;
-
+      // claimGift() function call - just the 4-byte selector, no parameters needed
       // Send the claim transaction
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
           from: userAddress,
           to: GIFT_CONTRACT_ADDRESS,
-          data: claimData,
-          value: '0x0',
+          data: CLAIM_GIFT_SELECTOR,
+          gas: '0x30D40', // 200000 gas limit
         }],
       });
 
