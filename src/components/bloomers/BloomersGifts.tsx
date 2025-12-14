@@ -10,14 +10,14 @@ import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 const GIFT_CONTRACT_ADDRESS = '0x071720494fD6e68463acA7700016D276cf43dD08';
 const BASE_CHAIN_ID = '0x2105'; // Base mainnet
 
-// ABI for the claim function
-const CLAIM_ABI = [{
-  "inputs": [],
-  "name": "claim",
-  "outputs": [],
-  "stateMutability": "nonpayable",
-  "type": "function"
-}];
+// Helper to encode claimGift(uint256 day) function call
+const encodeClaimGift = (day: number): string => {
+  // Function selector: keccak256("claimGift(uint256)") = 0x2c3a00e5 (first 4 bytes)
+  const functionSelector = '2c3a00e5';
+  // Encode day as uint256 (32 bytes, padded)
+  const dayHex = day.toString(16).padStart(64, '0');
+  return '0x' + functionSelector + dayHex;
+};
 
 const TODAY_GIFT = {
   id: 1,
@@ -71,8 +71,8 @@ const BloomersGifts = () => {
       const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
       const userAddress = accounts[0];
 
-      // Encode the claim function call
-      const claimData = '0x4e71d92d'; // keccak256("claim()") first 4 bytes
+      // Encode the claimGift(day) function call
+      const claimData = encodeClaimGift(gift.day);
 
       // Send the claim transaction
       const txHash = await provider.request({
