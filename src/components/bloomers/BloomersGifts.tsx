@@ -62,13 +62,14 @@ const BloomersGifts = () => {
         throw new Error('Wallet not connected');
       }
 
-      // Use viem to write contract
+      // Use viem to write contract with minimal gas
       const hash = await client.writeContract({
         address: BLOOMERS_GIFTS_ADDRESS,
         abi: BLOOMERS_GIFTS_ABI,
         functionName: 'claimGift',
         account: userAddress,
         chain: base,
+        gas: 50000n, // Low gas limit for simple claim function
       });
 
       console.log('Claim transaction sent:', hash);
