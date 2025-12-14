@@ -11,16 +11,26 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  * @title BloomersGiftClaim
  * @dev Secure token claiming contract with owner-controlled reset functionality
  * 
- * DEPLOYMENT PARAMETERS:
- * - _rewardToken: ENB token address (0xf73978b3a7d1d4974abae11f696c1b4408c027a0)
- * - _rewardAmount: tokens per claim (e.g., 1000000000000000000000 for 1000 ENB with 18 decimals)
+ * DEPLOYMENT PARAMETERS (in Remix, enter these values):
+ * 
+ * 1. tokenAddress: The ERC20 token users will receive
+ *    Example: 0xf73978b3a7d1d4974abae11f696c1b4408c027a0 (ENB on Base)
+ * 
+ * 2. tokensPerClaim: Amount of tokens each user receives (in wei/smallest unit)
+ *    For 1000 tokens with 18 decimals: 1000000000000000000000
+ *    For 100 tokens with 18 decimals:  100000000000000000000
+ *    For 10 tokens with 18 decimals:   10000000000000000000
+ * 
+ * AFTER DEPLOYMENT:
+ * - Send tokens to the contract address
+ * - Users can then call claimGift() to receive tokens
  * 
  * OWNER CONTROLS:
- * - resetClaim(address): Reset one user's claim status
- * - resetAllClaims(): Reset everyone (starts new period)
- * - setRewardAmount(uint256): Change reward amount
- * - pause()/unpause(): Emergency controls
- * - withdrawTokens(address, uint256): Recover funds
+ * - resetClaim(address): Allow a specific user to claim again
+ * - resetAllClaims(): Allow ALL users to claim again (new period)
+ * - setRewardAmount(uint256): Change how many tokens per claim
+ * - pause()/unpause(): Emergency stop/start
+ * - withdrawTokens(address, uint256): Recover any tokens
  */
 contract BloomersGiftClaim is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -41,15 +51,19 @@ contract BloomersGiftClaim is Ownable, ReentrancyGuard, Pausable {
     event AllClaimsReset(uint256 newPeriod);
     event TokensWithdrawn(address indexed token, uint256 amount);
 
+    /**
+     * @param tokenAddress The ERC20 token contract address (e.g., ENB token)
+     * @param tokensPerClaim How many tokens each user receives per claim (in wei)
+     */
     constructor(
-        address _rewardToken,
-        uint256 _rewardAmount
+        address tokenAddress,
+        uint256 tokensPerClaim
     ) Ownable(msg.sender) {
-        require(_rewardToken != address(0), "Invalid token address");
-        require(_rewardAmount > 0, "Reward must be > 0");
+        require(tokenAddress != address(0), "Invalid token address");
+        require(tokensPerClaim > 0, "Tokens per claim must be > 0");
         
-        rewardToken = IERC20(_rewardToken);
-        rewardAmount = _rewardAmount;
+        rewardToken = IERC20(tokenAddress);
+        rewardAmount = tokensPerClaim;
         claimPeriod = 1;
     }
 
