@@ -4,10 +4,14 @@ import { Gift, Share2, ExternalLink, X, Loader2 } from 'lucide-react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useToast } from '@/hooks/use-toast';
-import { useFarcasterWallet } from '@/hooks/useFarcasterWallet';
-import { BLOOMERS_GIFTS_ADDRESS, BLOOMERS_GIFTS_ABI } from '@/config/wagmi';
-import { base } from 'viem/chains';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
+
+// Contract details
+const GIFT_CONTRACT_ADDRESS = '0x4C1e7de7bae1820b0A34bC14810bD0e8daE8aE7f';
+const BASE_CHAIN_ID = '0x2105'; // Base mainnet (8453)
+
+// claimGift() function selector
+const CLAIM_GIFT_DATA = '0x4e71d92d';
 
 const TODAY_GIFT = {
   id: 1,
@@ -25,7 +29,6 @@ const TODAY_GIFT = {
 const BloomersGifts = () => {
   const { isInMiniApp } = useFarcaster();
   const { toast } = useToast();
-  const { address, isConnected, walletClient, connect, isConnecting } = useFarcasterWallet();
   
   const [gift, setGift] = useState(TODAY_GIFT);
   const [hasShared, setHasShared] = useState(false);
@@ -33,7 +36,7 @@ const BloomersGifts = () => {
   const [isClaiming, setIsClaiming] = useState(false);
 
   const handleClaimGift = async () => {
-    if (!isInMiniApp) {
+    if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
       toast({
         title: "Farcaster Required",
         description: "Please open this in Farcaster to claim tokens",
@@ -45,34 +48,42 @@ const BloomersGifts = () => {
     setIsClaiming(true);
 
     try {
-      // Connect wallet if not connected
-      let client = walletClient;
-      let userAddress = address;
+      const provider = sdk.wallet.ethProvider;
+
+      // Switch to Base network
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: BASE_CHAIN_ID }],
+        });
+      } catch (switchError) {
+        console.log('Chain switch:', switchError);
+      }
+
+      // Get user address
+      const accounts = await provider.request({ 
+        method: 'eth_requestAccounts' 
+      }) as string[];
       
-      if (!isConnected || !walletClient) {
-        const result = await connect();
-        if (!result) {
-          throw new Error('Failed to connect wallet');
-        }
-        client = result.client;
-        userAddress = result.address;
+      if (!accounts?.[0]) {
+        throw new Error('No wallet address');
       }
 
-      if (!client || !userAddress) {
-        throw new Error('Wallet not connected');
-      }
-
-      // Use viem to write contract with minimal gas
-      const hash = await client.writeContract({
-        address: BLOOMERS_GIFTS_ADDRESS,
-        abi: BLOOMERS_GIFTS_ABI,
-        functionName: 'claimGift',
-        account: userAddress,
-        chain: base,
-        gas: 50000n, // Low gas limit for simple claim function
+      // Send claim transaction with minimal gas
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: accounts[0],
+          to: GIFT_CONTRACT_ADDRESS,
+          data: CLAIM_GIFT_DATA,
+          value: '0x0',
+          gas: '0xC350', // 50000 gas limit
+          maxFeePerGas: '0x5F5E100', // 0.1 gwei
+          maxPriorityFeePerGas: '0x5F5E100', // 0.1 gwei
+        }],
       });
 
-      console.log('Claim transaction sent:', hash);
+      console.log('Claim tx:', txHash);
 
       setGift(prev => ({ ...prev, claimed: true }));
       setShowSharePopup(true);
@@ -83,22 +94,15 @@ const BloomersGifts = () => {
     } catch (error: any) {
       console.error('Claim error:', error);
       
-      const errorMessage = error?.message || '';
+      const msg = error?.message || '';
       
-      // Handle specific error cases
-      if (errorMessage.includes('User rejected') || errorMessage.includes('denied') || error?.code === 4001) {
+      if (msg.includes('User rejected') || msg.includes('denied') || error?.code === 4001) {
         toast({
           title: "Transaction Cancelled",
           description: "You cancelled the transaction",
           variant: "destructive",
         });
-      } else if (errorMessage.includes('already claimed') || errorMessage.includes('Already claimed')) {
-        toast({
-          title: "Already Claimed",
-          description: "You've already claimed today's gift!",
-          variant: "destructive",
-        });
-      } else if (errorMessage.includes('execution reverted')) {
+      } else if (msg.includes('Already claimed') || msg.includes('already claimed') || msg.includes('execution reverted')) {
         toast({
           title: "Already Claimed",
           description: "You've already claimed this gift!",
@@ -106,8 +110,8 @@ const BloomersGifts = () => {
         });
       } else {
         toast({
-          title: "Claim Failed",
-          description: errorMessage || "Something went wrong. Try again!",
+          title: "Claim Failed", 
+          description: msg || "Something went wrong. Try again!",
           variant: "destructive",
         });
       }
@@ -259,13 +263,13 @@ const BloomersGifts = () => {
           {!gift.claimed ? (
             <Button 
               onClick={handleClaimGift}
-              disabled={isClaiming || isConnecting}
+              disabled={isClaiming}
               className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-black font-bold py-6 rounded-xl disabled:opacity-70"
             >
-              {isClaiming || isConnecting ? (
+              {isClaiming ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  {isConnecting ? 'Connecting...' : 'Claiming...'}
+                  Claiming...
                 </>
               ) : (
                 <>
