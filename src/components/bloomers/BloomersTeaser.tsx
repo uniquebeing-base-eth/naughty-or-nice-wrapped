@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 
+// Import Bloomer images
+import bloomerFoxGolden from '@/assets/bloomers/bloomer-fox-golden.png';
+import bloomerDragonBlue from '@/assets/bloomers/bloomer-dragon-blue.png';
+import bloomerFoxWhite from '@/assets/bloomers/bloomer-fox-white.png';
+import bloomerFairyPink from '@/assets/bloomers/bloomer-fairy-pink.png';
+import bloomerOwlIce from '@/assets/bloomers/bloomer-owl-ice.png';
+
 const CREATURE_TYPES = [
-  { emoji: '🧝', name: 'Enchanted Elf', desc: 'Magical helpers with holiday spirit' },
-  { emoji: '🐉', name: 'Frost Dragon', desc: 'Guardians of winter wonder' },
-  { emoji: '🧚', name: 'Starlight Fairy', desc: 'Keepers of Christmas magic' },
-  { emoji: '🦊', name: 'Arctic Fox', desc: 'Swift and clever companions' },
-  { emoji: '🦌', name: 'Golden Reindeer', desc: 'Noble creatures of the North' },
-  { emoji: '🐱', name: 'Crystal Cat', desc: 'Mystical feline friends' },
-  { emoji: '🦅', name: 'Phoenix', desc: 'Eternal flames of joy' },
-  { emoji: '🐺', name: 'Snow Wolf', desc: 'Loyal protectors of peace' },
+  { image: bloomerFoxGolden, name: 'Sunfire Fox', desc: 'Swift and radiant companions' },
+  { image: bloomerDragonBlue, name: 'Frostscale Dragon', desc: 'Guardians of winter wonder' },
+  { image: bloomerFoxWhite, name: 'Crystal Kitsune', desc: 'Mystical nine-tailed spirits' },
+  { image: bloomerFairyPink, name: 'Blossom Fairy', desc: 'Keepers of springtime magic' },
+  { image: bloomerOwlIce, name: 'Aurora Owl', desc: 'Wise watchers of the night sky' },
 ];
 
 const BloomersTeaser = () => {
@@ -35,24 +39,34 @@ const BloomersTeaser = () => {
         </div>
 
         {/* Creature grid showcase */}
-        <div className="grid grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-5 gap-2 mb-8">
           {CREATURE_TYPES.map((creature, idx) => (
             <div
               key={creature.name}
-              className={`aspect-square rounded-2xl flex items-center justify-center text-3xl transition-all duration-500 ${
+              className={`aspect-square rounded-xl overflow-hidden transition-all duration-500 ${
                 idx === activeIndex
-                  ? 'bg-gradient-to-br from-christmas-gold/30 to-amber-600/20 scale-110 shadow-lg shadow-christmas-gold/30'
-                  : 'bg-muted/30 opacity-60'
+                  ? 'scale-110 shadow-lg shadow-christmas-gold/40 ring-2 ring-christmas-gold/50'
+                  : 'opacity-60'
               }`}
             >
-              {creature.emoji}
+              <img 
+                src={creature.image} 
+                alt={creature.name}
+                className="w-full h-full object-cover"
+              />
             </div>
           ))}
         </div>
 
         {/* Active creature description */}
         <div className="christmas-card p-4 border border-christmas-gold/20 transition-all duration-500">
-          <p className="text-2xl mb-2">{CREATURE_TYPES[activeIndex].emoji}</p>
+          <div className="w-24 h-24 mx-auto rounded-xl overflow-hidden mb-3">
+            <img 
+              src={CREATURE_TYPES[activeIndex].image}
+              alt={CREATURE_TYPES[activeIndex].name}
+              className="w-full h-full object-cover"
+            />
+          </div>
           <p className="font-display text-lg text-christmas-gold font-semibold">
             {CREATURE_TYPES[activeIndex].name}
           </p>
