@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 
 // ENB Blast partner gift contract
-const GIFT_CONTRACT_ADDRESS = '0xEC6faD2Ae2F23BF574411711c622c1Ba68A973b6';
+const GIFT_CONTRACT_ADDRESS = '0x4C1e7de7bae1820b0A34bC14810bD0e8daE8aE7f';
 const BASE_CHAIN_ID = '0x2105'; // Base mainnet
 
 // claimGift() function selector - keccak256("claimGift()") first 4 bytes = 0x4e71d92d
@@ -15,7 +15,6 @@ const CLAIM_GIFT_DATA = '0x4e71d92d';
 
 const TODAY_GIFT = {
   id: 1,
-  day: 14,
   partner: {
     name: 'ENB Blast',
     icon: enbBlastIcon,
@@ -222,11 +221,8 @@ const BloomersGifts = () => {
             ? 'border-christmas-green/40 shadow-lg shadow-christmas-green/20' 
             : 'border-christmas-gold/30 animate-pulse-glow'
         }`}>
-          {/* Day indicator */}
-          <div className="flex items-center justify-between mb-4">
-            <span className="px-3 py-1 rounded-full bg-christmas-red/20 text-christmas-red text-sm font-semibold">
-              Day {gift.day}
-            </span>
+          {/* Gift indicator */}
+          <div className="flex items-center justify-end mb-4">
             <Gift className={`w-6 h-6 ${gift.claimed ? 'text-christmas-green' : 'text-christmas-gold animate-bounce'}`} />
           </div>
 
