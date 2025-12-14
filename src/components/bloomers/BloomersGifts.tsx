@@ -4,14 +4,21 @@ import { Gift, Share2, ExternalLink, X, Loader2 } from 'lucide-react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useToast } from '@/hooks/use-toast';
+import { encodeFunctionData } from 'viem';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 
-// Contract details - BloomersGiftClaim deployed on Base
-const GIFT_CONTRACT_ADDRESS = '0x071720494fD6e68463acA7700016D276cf43dD08';
-const BASE_CHAIN_ID = '0x2105'; // Base mainnet (8453)
+// Contract address on Base
+const GIFT_CONTRACT_ADDRESS = '0x4C1e7de7bae1820b0A34bC14810bD0e8daE8aE7f';
+const BASE_CHAIN_ID = '0x2105';
 
-// claimGift() function selector
-const CLAIM_GIFT_DATA = '0x7a6d298d';
+// ABI for claimGift function
+const CLAIM_ABI = [{
+  name: 'claimGift',
+  type: 'function',
+  stateMutability: 'nonpayable',
+  inputs: [],
+  outputs: [],
+}] as const;
 
 const TODAY_GIFT = {
   id: 1,
@@ -69,13 +76,19 @@ const BloomersGifts = () => {
         throw new Error('No wallet address');
       }
 
-      // Send claim transaction - let wallet estimate gas
+      // Encode the claimGift() call properly
+      const data = encodeFunctionData({
+        abi: CLAIM_ABI,
+        functionName: 'claimGift',
+      });
+
+      // Send claim transaction
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
           from: accounts[0],
           to: GIFT_CONTRACT_ADDRESS,
-          data: CLAIM_GIFT_DATA,
+          data: data,
           value: '0x0',
         }],
       });
