@@ -6,11 +6,11 @@ import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useToast } from '@/hooks/use-toast';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 
-// Contract details
-const GIFT_CONTRACT_ADDRESS = '0x4C1e7de7bae1820b0A34bC14810bD0e8daE8aE7f';
+// Contract details - BloomersGiftClaim deployed on Base
+const GIFT_CONTRACT_ADDRESS = '0x071720494fD6e68463acA7700016D276cf43dD08';
 const BASE_CHAIN_ID = '0x2105'; // Base mainnet (8453)
 
-// claimGift() function selector - keccak256("claimGift()") first 4 bytes
+// claimGift() function selector
 const CLAIM_GIFT_DATA = '0x7a6d298d';
 
 const TODAY_GIFT = {
@@ -69,7 +69,7 @@ const BloomersGifts = () => {
         throw new Error('No wallet address');
       }
 
-      // Send claim transaction with minimal gas
+      // Send claim transaction - let wallet estimate gas
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
@@ -77,9 +77,6 @@ const BloomersGifts = () => {
           to: GIFT_CONTRACT_ADDRESS,
           data: CLAIM_GIFT_DATA,
           value: '0x0',
-          gas: '0xC350', // 50000 gas limit
-          maxFeePerGas: '0x5F5E100', // 0.1 gwei
-          maxPriorityFeePerGas: '0x5F5E100', // 0.1 gwei
         }],
       });
 
