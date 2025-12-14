@@ -2,13 +2,19 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 
+// Import Bloomer images
+import bloomerFoxGolden from '@/assets/bloomers/bloomer-fox-golden.png';
+import bloomerDragonBlue from '@/assets/bloomers/bloomer-dragon-blue.png';
+import bloomerFoxWhite from '@/assets/bloomers/bloomer-fox-white.png';
+import bloomerFairyPink from '@/assets/bloomers/bloomer-fairy-pink.png';
+import bloomerOwlIce from '@/assets/bloomers/bloomer-owl-ice.png';
+
 const BLOOMER_VARIATIONS = [
-  { emoji: '🦊', color: 'from-amber-400 to-orange-500', name: 'Foxfire Bloomer' },
-  { emoji: '🐉', color: 'from-purple-500 to-pink-500', name: 'Stardust Dragon' },
-  { emoji: '🦋', color: 'from-cyan-400 to-blue-500', name: 'Crystalwing Fairy' },
-  { emoji: '🦄', color: 'from-pink-400 to-purple-500', name: 'Moonbeam Unicorn' },
-  { emoji: '🐺', color: 'from-slate-400 to-blue-600', name: 'Frostfang Guardian' },
-  { emoji: '🦅', color: 'from-yellow-400 to-amber-600', name: 'Goldenfeather Phoenix' },
+  { image: bloomerFoxGolden, color: 'from-amber-400 to-orange-500', name: 'Sunfire Fox' },
+  { image: bloomerDragonBlue, color: 'from-purple-500 to-pink-500', name: 'Frostscale Dragon' },
+  { image: bloomerFoxWhite, color: 'from-cyan-400 to-blue-500', name: 'Crystal Kitsune' },
+  { image: bloomerFairyPink, color: 'from-pink-400 to-purple-500', name: 'Blossom Fairy' },
+  { image: bloomerOwlIce, color: 'from-sky-400 to-blue-600', name: 'Aurora Owl' },
 ];
 
 const VERDICT_TITLES = [
@@ -17,7 +23,6 @@ const VERDICT_TITLES = [
   'Winter Guardian',
   'Joy Bringer',
   'Frost Whisperer',
-  'Star Seeker',
 ];
 
 const BloomersHero = () => {
@@ -82,23 +87,25 @@ const BloomersHero = () => {
       <div className="relative mb-8">
         {/* Outer glow */}
         <div 
-          className={`absolute inset-0 bg-gradient-to-r ${current.color} blur-3xl opacity-30 scale-150 transition-all duration-500`}
+          className={`absolute inset-0 bg-gradient-to-r ${current.color} blur-3xl opacity-40 scale-150 transition-all duration-500`}
         />
         
         {/* Bloomer container */}
         <div 
-          className={`relative w-64 h-64 md:w-80 md:h-80 rounded-3xl bg-gradient-to-br ${current.color} p-1 shadow-2xl transition-all duration-500 ${
+          className={`relative w-64 h-64 md:w-80 md:h-80 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${
             isTransitioning ? 'opacity-0 scale-90' : 'opacity-100 scale-100'
           }`}
         >
-          <div className="w-full h-full rounded-3xl bg-gradient-to-br from-black/20 to-black/40 backdrop-blur-sm flex flex-col items-center justify-center">
-            {/* Creature emoji placeholder */}
-            <div className="text-8xl md:text-9xl mb-4 animate-bounce-in">
-              {current.emoji}
-            </div>
-            
-            {/* Name */}
-            <p className="text-white font-display text-lg font-semibold text-center px-4">
+          {/* Bloomer image */}
+          <img 
+            src={current.image} 
+            alt={current.name}
+            className="w-full h-full object-cover"
+          />
+          
+          {/* Name overlay */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+            <p className="text-white font-display text-lg font-semibold text-center">
               {current.name}
             </p>
           </div>
