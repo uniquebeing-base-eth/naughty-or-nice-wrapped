@@ -34,3 +34,6 @@ verify_jwt = false
 
 [functions.bloomer-metadata]
 verify_jwt = false
+
+[functions.backfill-bloomer-metadata]
+verify_jwt = false
