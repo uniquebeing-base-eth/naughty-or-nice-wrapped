@@ -15,7 +15,12 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
-    const tokenId = pathParts[pathParts.length - 1];
+    let tokenId = pathParts[pathParts.length - 1];
+    
+    // Strip .json suffix if present (wallets often request tokenId.json)
+    if (tokenId.endsWith('.json')) {
+      tokenId = tokenId.replace('.json', '');
+    }
 
     console.log(`Fetching metadata for token ID: ${tokenId}`);
 
