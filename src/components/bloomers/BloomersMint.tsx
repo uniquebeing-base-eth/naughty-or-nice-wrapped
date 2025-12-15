@@ -279,6 +279,41 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
             }
           }
           
+          // Upload static JSON metadata file to storage
+          // Get token ID by counting all minted bloomers (0-indexed)
+          const { count } = await supabase
+            .from('minted_bloomers')
+            .select('*', { count: 'exact', head: true })
+            .not('tx_hash', 'is', null);
+          
+          const tokenId = (count || 1) - 1; // Latest mint is count-1
+          
+          const metadata = {
+            name: `Bloomer #${tokenId}`,
+            description: "A magical Bloomer creature from Naughty or Nice Wrapped. Each Bloomer is uniquely generated based on its owner's profile, making it a one-of-a-kind digital companion.",
+            image: generatedBloomer,
+            external_url: "https://naughty-or-nice-wrapped.vercel.app/bloomers",
+            attributes: [
+              { trait_type: "Collection", value: "Naughty or Nice Wrapped" },
+              { trait_type: "Season", value: "Christmas 2024" },
+              { trait_type: "Minted By", value: userAddr }
+            ]
+          };
+          
+          const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+          const { error: uploadError } = await supabase.storage
+            .from('bloomers-metadata')
+            .upload(`${tokenId}.json`, metadataBlob, {
+              contentType: 'application/json',
+              upsert: true
+            });
+          
+          if (uploadError) {
+            console.error('[Mint] Failed to upload metadata:', uploadError);
+          } else {
+            console.log(`[Mint] Uploaded metadata for token ${tokenId}`);
+          }
+          
           // Notify parent to refresh gallery
           onMinted?.(generatedBloomer);
           setPendingBloomerId(null);
