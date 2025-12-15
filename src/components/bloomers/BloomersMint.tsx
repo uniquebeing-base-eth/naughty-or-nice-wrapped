@@ -85,8 +85,20 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
   };
 
   const handleMint = async () => {
+    console.log('handleMint called');
+    console.log('sdk:', sdk);
+    console.log('sdk.wallet:', sdk?.wallet);
+    console.log('sdk.wallet.ethProvider:', sdk?.wallet?.ethProvider);
+    
     if (!sdk?.wallet?.ethProvider) {
-      console.error('No wallet provider');
+      console.error('No wallet provider available');
+      // Try to initialize wallet connection
+      try {
+        const context = await sdk.context;
+        console.log('SDK context:', context);
+      } catch (e) {
+        console.error('Failed to get SDK context:', e);
+      }
       return;
     }
 
