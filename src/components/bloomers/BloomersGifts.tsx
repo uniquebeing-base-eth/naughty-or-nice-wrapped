@@ -161,7 +161,7 @@ const BloomersGifts = () => {
           text: shareText,
           embeds: [
             'https://farcaster.xyz/miniapps/0z7FDSc-9NU_/enb-blast',
-            'https://naughty-or-nice-wrapped.vercel.app/bloomers'
+            'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'
           ],
         });
         setHasShared(true);
