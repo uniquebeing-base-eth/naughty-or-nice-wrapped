@@ -53,9 +53,19 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
             
             if (pendingBloomer) {
               console.log('Found pending bloomer:', pendingBloomer.image_url);
-              setGeneratedBloomer(pendingBloomer.image_url);
-              setPendingBloomerId(pendingBloomer.id);
-              setMintState('preview');
+              // Preload the image before showing
+              const img = new Image();
+              img.onload = () => {
+                setGeneratedBloomer(pendingBloomer.image_url);
+                setPendingBloomerId(pendingBloomer.id);
+                setImageLoaded(true);
+                setMintState('preview');
+              };
+              img.onerror = () => {
+                console.error('Failed to load pending bloomer image');
+                // If image fails, don't show it - let user regenerate
+              };
+              img.src = pendingBloomer.image_url;
             }
             
             // Get mint price for user
@@ -118,8 +128,19 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       if (error) throw error;
       
       if (data?.imageUrl) {
-        setGeneratedBloomer(data.imageUrl);
-        setMintState('preview');
+        // Preload the image before showing preview
+        const img = new Image();
+        img.onload = () => {
+          setGeneratedBloomer(data.imageUrl);
+          setImageLoaded(true);
+          setMintState('preview');
+        };
+        img.onerror = () => {
+          console.error('Failed to load generated image');
+          setError('Failed to load Bloomer image. Please try again.');
+          setMintState('idle');
+        };
+        img.src = data.imageUrl;
       } else {
         throw new Error('No image generated');
       }
@@ -353,17 +374,10 @@ Your turn to bloom 🌸👇`;
           {generatedBloomer && (mintState === 'preview' || mintState === 'paying' || mintState === 'minted') && (
             <div className="mb-6">
               <div className="relative w-48 h-48 mx-auto rounded-2xl overflow-hidden border-2 border-christmas-gold/40 shadow-lg">
-                {!imageLoaded && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500/30 to-pink-500/30">
-                    <Loader2 className="w-8 h-8 text-christmas-gold animate-spin" />
-                  </div>
-                )}
                 <img 
                   src={generatedBloomer} 
                   alt="Your Generated Bloomer" 
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                  onLoad={() => setImageLoaded(true)}
-                  onError={() => setImageLoaded(true)}
+                  className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               </div>
