@@ -115,7 +115,13 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
       return;
     }
 
+    console.log('[Mint] Starting mint process...');
+    console.log('[Mint] SDK available:', !!sdk);
+    console.log('[Mint] SDK wallet:', !!sdk?.wallet);
+    console.log('[Mint] ethProvider:', !!sdk?.wallet?.ethProvider);
+
     if (!sdk?.wallet?.ethProvider) {
+      console.error('[Mint] No ethProvider available');
       setError('Wallet not available. Please try again.');
       return;
     }
@@ -124,26 +130,36 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
     setError(null);
     
     try {
+      const provider = sdk.wallet.ethProvider;
+      
       // Get user address
-      const accounts = await sdk.wallet.ethProvider.request({ 
+      console.log('[Mint] Requesting accounts...');
+      const accounts = await provider.request({ 
         method: 'eth_requestAccounts' 
       }) as string[];
+      
+      console.log('[Mint] Accounts received:', accounts);
       
       if (!accounts?.[0]) {
         throw new Error('No wallet connected');
       }
 
       const userAddr = accounts[0];
+      console.log('[Mint] User address:', userAddr);
 
       // Switch to Base network
+      console.log('[Mint] Switching to Base network...');
       try {
-        await sdk.wallet.ethProvider.request({
+        await provider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: '0x2105' }]
         });
+        console.log('[Mint] Network switch successful');
       } catch (switchError: any) {
+        console.log('[Mint] Network switch error:', switchError);
         if (switchError.code === 4902) {
-          await sdk.wallet.ethProvider.request({
+          console.log('[Mint] Adding Base network...');
+          await provider.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: '0x2105',
@@ -156,35 +172,48 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
         }
       }
 
-      // Get the mint price for this user
-      const priceResult = await sdk.wallet.ethProvider.request({
-        method: 'eth_call',
-        params: [{
-          to: BLOOMERS_NFT_ADDRESS,
-          data: `0xa945bf80${userAddr.slice(2).padStart(64, '0')}`
-        }, 'latest']
-      }) as string;
+      // Use the mint price we already determined
+      const mintPriceWei = parseEther(mintPrice);
+      console.log('[Mint] Mint price in Wei:', mintPriceWei.toString());
+      console.log('[Mint] Contract address:', BLOOMERS_NFT_ADDRESS);
 
-      const mintPriceWei = priceResult && priceResult !== '0x' 
-        ? BigInt(priceResult) 
-        : parseEther('0.0004');
+      // Build transaction
+      const txParams = {
+        from: userAddr,
+        to: BLOOMERS_NFT_ADDRESS,
+        value: `0x${mintPriceWei.toString(16)}`,
+        data: '0x1249c58b' // mint() function selector
+      };
+      
+      console.log('[Mint] Transaction params:', JSON.stringify(txParams, null, 2));
 
       // Send mint transaction
-      const hash = await sdk.wallet.ethProvider.request({
+      console.log('[Mint] Sending transaction...');
+      const hash = await provider.request({
         method: 'eth_sendTransaction',
-        params: [{
-          from: userAddr,
-          to: BLOOMERS_NFT_ADDRESS,
-          value: `0x${mintPriceWei.toString(16)}`,
-          data: '0x1249c58b' // mint() function selector
-        }]
+        params: [txParams]
       }) as string;
 
+      console.log('[Mint] Transaction hash:', hash);
       setTxHash(hash);
       setMintState('minted');
-    } catch (err) {
-      console.error('Mint failed:', err);
-      setError('Mint failed. Please try again.');
+    } catch (err: any) {
+      console.error('[Mint] Error:', err);
+      console.error('[Mint] Error message:', err?.message);
+      console.error('[Mint] Error code:', err?.code);
+      console.error('[Mint] Error data:', err?.data);
+      
+      // More specific error messages
+      let errorMessage = 'Mint failed. Please try again.';
+      if (err?.message?.includes('rejected') || err?.code === 4001) {
+        errorMessage = 'Transaction was rejected.';
+      } else if (err?.message?.includes('insufficient funds')) {
+        errorMessage = 'Insufficient ETH balance.';
+      } else if (err?.message) {
+        errorMessage = `Error: ${err.message.slice(0, 100)}`;
+      }
+      
+      setError(errorMessage);
       setMintState('preview');
     }
   };
