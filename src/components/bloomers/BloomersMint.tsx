@@ -1,7 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Lock, Upload, ExternalLink, Share2, Loader2 } from 'lucide-react';
+import { Sparkles, Upload, ExternalLink, Share2, Loader2, Gift } from 'lucide-react';
 import sdk from '@farcaster/miniapp-sdk';
+import { BLOOMERS_NFT_ADDRESS, BLOOMERS_NFT_ABI } from '@/config/wagmi';
+import { parseEther, formatEther } from 'viem';
 
 interface BloomersMintProps {
   userPfp?: string;
@@ -14,9 +16,58 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [generatedBloomer, setGeneratedBloomer] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [mintPrice, setMintPrice] = useState<string>('0.0004');
+  const [hasDiscount, setHasDiscount] = useState(false);
+  const [userAddress, setUserAddress] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const displayImage = customImage || userPfp || 'https://api.dicebear.com/7.x/avataaars/svg?seed=bloomer';
+
+  // Get user wallet and check discount eligibility
+  useEffect(() => {
+    const checkWalletAndDiscount = async () => {
+      try {
+        if (sdk?.wallet?.ethProvider) {
+          const accounts = await sdk.wallet.ethProvider.request({ 
+            method: 'eth_requestAccounts' 
+          }) as string[];
+          
+          if (accounts?.[0]) {
+            setUserAddress(accounts[0]);
+            
+            // Check if user has discount
+            const discountResult = await sdk.wallet.ethProvider.request({
+              method: 'eth_call',
+              params: [{
+                to: BLOOMERS_NFT_ADDRESS,
+                data: `0x${BLOOMERS_NFT_ABI.find(f => f.name === 'hasDiscount')?.name ? '6352211e' : ''}${accounts[0].slice(2).padStart(64, '0')}`
+              }, 'latest']
+            });
+            
+            // For now, just check the mint price directly
+            const priceResult = await sdk.wallet.ethProvider.request({
+              method: 'eth_call',
+              params: [{
+                to: BLOOMERS_NFT_ADDRESS,
+                data: `0xa945bf80${accounts[0].slice(2).padStart(64, '0')}` // getMintPrice(address)
+              }, 'latest']
+            }) as string;
+            
+            if (priceResult && priceResult !== '0x') {
+              const priceInWei = BigInt(priceResult);
+              const priceInEth = formatEther(priceInWei);
+              setMintPrice(priceInEth);
+              setHasDiscount(priceInWei === parseEther('0.0002'));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check wallet:', error);
+      }
+    };
+    
+    checkWalletAndDiscount();
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,23 +84,82 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
     fileInputRef.current?.click();
   };
 
-  // This will be enabled when minting goes live
   const handleMint = async () => {
-    // Flow: Pay → Generate → Mint
+    if (!sdk?.wallet?.ethProvider) {
+      console.error('No wallet provider');
+      return;
+    }
+
     setMintState('paying');
     
     try {
-      // 1. Process payment transaction
-      // await processPayment();
+      // Get user address
+      const accounts = await sdk.wallet.ethProvider.request({ 
+        method: 'eth_requestAccounts' 
+      }) as string[];
       
-      // 2. Generate Bloomer with AI based on traits
+      if (!accounts?.[0]) {
+        throw new Error('No wallet connected');
+      }
+
+      const userAddr = accounts[0];
+
+      // Switch to Base network
+      try {
+        await sdk.wallet.ethProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x2105' }] // Base chainId
+        });
+      } catch (switchError: any) {
+        // If chain doesn't exist, add it
+        if (switchError.code === 4902) {
+          await sdk.wallet.ethProvider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x2105',
+              chainName: 'Base',
+              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://mainnet.base.org'],
+              blockExplorerUrls: ['https://basescan.org']
+            }]
+          });
+        }
+      }
+
+      // Get the mint price for this user
+      const priceResult = await sdk.wallet.ethProvider.request({
+        method: 'eth_call',
+        params: [{
+          to: BLOOMERS_NFT_ADDRESS,
+          data: `0xa945bf80${userAddr.slice(2).padStart(64, '0')}` // getMintPrice(address)
+        }, 'latest']
+      }) as string;
+
+      const mintPriceWei = priceResult && priceResult !== '0x' 
+        ? BigInt(priceResult) 
+        : parseEther('0.0004');
+
+      // Send mint transaction
+      const txHash = await sdk.wallet.ethProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: userAddr,
+          to: BLOOMERS_NFT_ADDRESS,
+          value: `0x${mintPriceWei.toString(16)}`,
+          data: '0x1249c58b' // mint() function selector
+        }]
+      }) as string;
+
+      setTxHash(txHash);
+      
+      // Wait for generation (simulated for now - in production this would call AI)
       setMintState('generating');
-      // const bloomer = await generateBloomer(displayImage);
-      // setGeneratedBloomer(bloomer);
       
-      // 3. Mint NFT
-      // const hash = await mintNFT(bloomer);
-      // setTxHash(hash);
+      // Simulate Bloomer generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // For now, use a placeholder - in production, this would be AI-generated
+      setGeneratedBloomer(displayImage);
       
       setMintState('minted');
     } catch (error) {
@@ -79,8 +189,6 @@ Your turn to bloom 🌸👇`;
       console.error('Share failed:', error);
     }
   };
-
-  const mintingEnabled = false; // Toggle when ready to go live
 
   return (
     <section className="py-16 px-6">
@@ -175,28 +283,31 @@ Your turn to bloom 🌸👇`;
           {/* Price */}
           <div className="text-center mb-6">
             <p className="text-christmas-snow/50 text-xs">Mint Price</p>
-            <p className="font-display text-2xl text-christmas-gold font-bold">0.0004 ETH</p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="font-display text-2xl text-christmas-gold font-bold">{mintPrice} ETH</p>
+              {hasDiscount && (
+                <span className="px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-medium flex items-center gap-1">
+                  <Gift className="w-3 h-3" />
+                  50% OFF
+                </span>
+              )}
+            </div>
             <p className="text-christmas-snow/40 text-xs">on Base</p>
+            {hasDiscount && (
+              <p className="text-green-400/70 text-xs mt-1">
+                ENB holder discount applied! 🎉
+              </p>
+            )}
           </div>
 
           {/* Mint States */}
           {mintState === 'idle' && (
             <Button 
-              disabled={!mintingEnabled}
               onClick={handleMint}
-              className="w-full bg-gradient-to-r from-christmas-gold/30 to-amber-600/30 text-christmas-snow/60 py-6 rounded-xl font-bold text-lg border border-christmas-gold/30 cursor-not-allowed disabled:opacity-70"
+              className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-christmas-pine py-6 rounded-xl font-bold text-lg"
             >
-              {mintingEnabled ? (
-                <>
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Pay to Mint
-                </>
-              ) : (
-                <>
-                  <Lock className="w-5 h-5 mr-2" />
-                  Minting Opens Soon 🎄
-                </>
-              )}
+              <Sparkles className="w-5 h-5 mr-2" />
+              Pay to Mint
             </Button>
           )}
 
