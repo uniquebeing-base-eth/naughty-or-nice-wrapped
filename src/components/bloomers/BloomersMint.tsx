@@ -23,6 +23,7 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingBloomerId, setPendingBloomerId] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const displayImage = customImage || userPfp || 'https://api.dicebear.com/7.x/avataaars/svg?seed=bloomer';
@@ -104,6 +105,7 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
   const handleGenerate = async () => {
     setMintState('generating');
     setError(null);
+    setImageLoaded(false);
     
     try {
       const { data, error } = await supabase.functions.invoke('generate-bloomer', {
@@ -276,6 +278,7 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       setPendingBloomerId(null);
     }
     setGeneratedBloomer(null);
+    setImageLoaded(false);
     setMintState('idle');
   };
 
@@ -350,10 +353,17 @@ Your turn to bloom 🌸👇`;
           {generatedBloomer && (mintState === 'preview' || mintState === 'paying' || mintState === 'minted') && (
             <div className="mb-6">
               <div className="relative w-48 h-48 mx-auto rounded-2xl overflow-hidden border-2 border-christmas-gold/40 shadow-lg">
+                {!imageLoaded && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500/30 to-pink-500/30">
+                    <Loader2 className="w-8 h-8 text-christmas-gold animate-spin" />
+                  </div>
+                )}
                 <img 
                   src={generatedBloomer} 
                   alt="Your Generated Bloomer" 
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => setImageLoaded(true)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               </div>
