@@ -2,8 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -15,7 +13,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  * @notice Users with 100,000+ ENB tokens get 50% off mint price
  * @notice Unlimited supply - anyone can mint as many as they want
  */
-contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, ReentrancyGuard, Pausable {
+contract BloomersNFT is ERC721, Ownable, ReentrancyGuard, Pausable {
     
     // ENB Token contract address on Base
     IERC20 public immutable enbToken;
@@ -32,6 +30,9 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
     
     // Base URI for metadata
     string private _baseTokenURI;
+    
+    // Max batch mint size
+    uint256 public constant MAX_BATCH_SIZE = 20;
     
     // Events
     event Minted(address indexed to, uint256 indexed tokenId, bool discounted, uint256 pricePaid);
@@ -71,9 +72,8 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
     
     /**
      * @dev Mint a Bloomer NFT
-     * @param tokenURI The metadata URI for the NFT
      */
-    function mint(string calldata tokenURI) external payable nonReentrant whenNotPaused {
+    function mint() external payable nonReentrant whenNotPaused {
         uint256 requiredPrice = getMintPrice(msg.sender);
         require(msg.value >= requiredPrice, "Insufficient payment");
         
@@ -81,18 +81,23 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
         _tokenIdCounter++;
         
         _safeMint(msg.sender, tokenId);
-        _setTokenURI(tokenId, tokenURI);
         
-        emit Minted(msg.sender, tokenId, hasDiscount(msg.sender), msg.value);
+        emit Minted(msg.sender, tokenId, hasDiscount(msg.sender), requiredPrice);
+        
+        // Refund excess ETH
+        uint256 refund = msg.value - requiredPrice;
+        if (refund > 0) {
+            payable(msg.sender).transfer(refund);
+        }
     }
     
     /**
-     * @dev Batch mint multiple Bloomers (no refunds, no limits)
-     * @param tokenURIs Array of metadata URIs
+     * @dev Batch mint multiple Bloomers
+     * @param count Number of NFTs to mint
      */
-    function batchMint(string[] calldata tokenURIs) external payable nonReentrant whenNotPaused {
-        uint256 count = tokenURIs.length;
+    function batchMint(uint256 count) external payable nonReentrant whenNotPaused {
         require(count > 0, "Must mint at least 1");
+        require(count <= MAX_BATCH_SIZE, "Exceeds max batch size");
         
         uint256 pricePerToken = getMintPrice(msg.sender);
         uint256 totalPrice = pricePerToken * count;
@@ -104,8 +109,13 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
             uint256 tokenId = _tokenIdCounter;
             _tokenIdCounter++;
             _safeMint(msg.sender, tokenId);
-            _setTokenURI(tokenId, tokenURIs[i]);
             emit Minted(msg.sender, tokenId, discounted, pricePerToken);
+        }
+        
+        // Refund excess ETH
+        uint256 refund = msg.value - totalPrice;
+        if (refund > 0) {
+            payable(msg.sender).transfer(refund);
         }
     }
     
@@ -212,19 +222,17 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
         return _baseTokenURI;
     }
     
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(tokenId);
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        _requireOwned(tokenId);
+        
+        string memory baseURI = _baseURI();
+        return bytes(baseURI).length > 0 
+            ? string(abi.encodePacked(baseURI, Strings.toString(tokenId), ".json"))
+            : "";
     }
     
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage, ERC721Enumerable) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
+    // ============ Receive & Fallback ============
     
-    function _update(address to, uint256 tokenId, address auth) internal override(ERC721, ERC721Enumerable) returns (address) {
-        return super._update(to, tokenId, auth);
-    }
-    
-    function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
-        super._increaseBalance(account, value);
-    }
+    receive() external payable {}
+    fallback() external payable {}
 }
