@@ -100,7 +100,7 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
      */
     function batchMint(string[] calldata tokenURIs) external payable nonReentrant whenNotPaused {
         uint256 count = tokenURIs.length;
-        require(count > 0 && count <= 20, "Invalid batch size (1-20)");
+        require(count > 0, "Must mint at least 1");
         require(maxSupply == 0 || _tokenIdCounter + count <= maxSupply, "Exceeds max supply");
         
         uint256 pricePerToken = getMintPrice(msg.sender);
