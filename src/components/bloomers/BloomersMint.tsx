@@ -243,25 +243,47 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       // Update the pending bloomer with the tx_hash, or insert if no pending
       if (generatedBloomer) {
         try {
-          if (pendingBloomerId) {
+          // First, try to find and update any pending bloomer for this user with this image
+          const { data: existingPending } = await supabase
+            .from('minted_bloomers')
+            .select('id')
+            .eq('user_address', userAddr.toLowerCase())
+            .eq('image_url', generatedBloomer)
+            .is('tx_hash', null)
+            .single();
+
+          if (existingPending) {
             // Update existing pending bloomer
-            await supabase
+            const { error: updateError } = await supabase
               .from('minted_bloomers')
               .update({ tx_hash: hash })
-              .eq('id', pendingBloomerId);
-            console.log('[Mint] Updated pending bloomer with tx_hash');
+              .eq('id', existingPending.id);
+            
+            if (updateError) {
+              console.error('[Mint] Failed to update pending bloomer:', updateError);
+            } else {
+              console.log('[Mint] Updated pending bloomer with tx_hash');
+            }
           } else {
             // Insert new minted bloomer
-            await supabase.from('minted_bloomers').insert({
+            const { error: insertError } = await supabase.from('minted_bloomers').insert({
               user_address: userAddr.toLowerCase(),
               image_url: generatedBloomer,
               tx_hash: hash
             });
-            console.log('[Mint] Saved new bloomer to database');
+            
+            if (insertError) {
+              console.error('[Mint] Failed to insert bloomer:', insertError);
+            } else {
+              console.log('[Mint] Saved new bloomer to database');
+            }
           }
+          
           // Notify parent to refresh gallery
           onMinted?.(generatedBloomer);
           setPendingBloomerId(null);
+          // Reset custom image back to PFP after minting
+          setCustomImage(null);
         } catch (saveErr) {
           console.error('[Mint] Failed to save bloomer:', saveErr);
         }
@@ -299,7 +321,9 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       setPendingBloomerId(null);
     }
     setGeneratedBloomer(null);
+    setCustomImage(null); // Reset to PFP
     setImageLoaded(false);
+    setTxHash(null);
     setMintState('idle');
   };
 
