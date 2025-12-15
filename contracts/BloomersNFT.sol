@@ -91,43 +91,7 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
         _safeMint(msg.sender, tokenId);
         _setTokenURI(tokenId, tokenURI);
         
-        // Refund excess payment
-        if (msg.value > requiredPrice) {
-            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - requiredPrice}("");
-            require(refundSuccess, "Refund failed");
-        }
-        
-        emit Minted(msg.sender, tokenId, hasDiscount(msg.sender), requiredPrice);
-    }
-    
-    /**
-     * @dev Batch mint multiple Bloomers
-     * @param tokenURIs Array of metadata URIs
-     */
-    function batchMint(string[] calldata tokenURIs) external payable nonReentrant whenNotPaused {
-        uint256 count = tokenURIs.length;
-        require(count > 0 && count <= 10, "Invalid batch size");
-        require(maxSupply == 0 || _tokenIdCounter + count <= maxSupply, "Exceeds max supply");
-        
-        uint256 pricePerToken = getMintPrice(msg.sender);
-        uint256 totalPrice = pricePerToken * count;
-        require(msg.value >= totalPrice, "Insufficient payment");
-        
-        bool discounted = hasDiscount(msg.sender);
-        
-        for (uint256 i = 0; i < count; i++) {
-            uint256 tokenId = _tokenIdCounter;
-            _tokenIdCounter++;
-            _safeMint(msg.sender, tokenId);
-            _setTokenURI(tokenId, tokenURIs[i]);
-            emit Minted(msg.sender, tokenId, discounted, pricePerToken);
-        }
-        
-        // Refund excess payment
-        if (msg.value > totalPrice) {
-            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - totalPrice}("");
-            require(refundSuccess, "Refund failed");
-        }
+        emit Minted(msg.sender, tokenId, hasDiscount(msg.sender), msg.value);
     }
     
     // ============ Owner Functions ============
