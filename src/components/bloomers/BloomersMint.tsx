@@ -220,6 +220,17 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       console.log('[Mint] Mint price in Wei:', mintPriceWei.toString());
       console.log('[Mint] Contract address:', BLOOMERS_NFT_ADDRESS);
 
+      // Get current totalMinted from contract BEFORE minting to know the tokenId
+      const totalMintedData = await provider.request({
+        method: 'eth_call',
+        params: [{
+          to: BLOOMERS_NFT_ADDRESS,
+          data: '0xa2309ff8' // totalMinted() function selector
+        }, 'latest']
+      }) as string;
+      const nextTokenId = parseInt(totalMintedData, 16);
+      console.log('[Mint] Next token ID will be:', nextTokenId);
+
       // Build transaction
       const txParams = {
         from: userAddr,
@@ -279,14 +290,9 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
             }
           }
           
-          // Upload static JSON metadata file to storage
-          // Get token ID by counting all minted bloomers (0-indexed)
-          const { count } = await supabase
-            .from('minted_bloomers')
-            .select('*', { count: 'exact', head: true })
-            .not('tx_hash', 'is', null);
-          
-          const tokenId = (count || 1) - 1; // Latest mint is count-1
+          // Use the nextTokenId we got from the contract before minting
+          const tokenId = nextTokenId;
+          console.log('[Mint] Uploading metadata for tokenId:', tokenId);
           
           const metadata = {
             name: `Bloomer #${tokenId}`,
