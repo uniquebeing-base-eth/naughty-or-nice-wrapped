@@ -1,15 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Upload, ExternalLink, Share2, Loader2, Gift } from 'lucide-react';
+import { Sparkles, Upload, ExternalLink, Share2, Loader2, Gift, RefreshCw } from 'lucide-react';
 import sdk from '@farcaster/miniapp-sdk';
-import { BLOOMERS_NFT_ADDRESS, BLOOMERS_NFT_ABI } from '@/config/wagmi';
+import { BLOOMERS_NFT_ADDRESS } from '@/config/wagmi';
 import { parseEther, formatEther } from 'viem';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BloomersMintProps {
   userPfp?: string;
 }
 
-type MintState = 'idle' | 'paying' | 'generating' | 'minted';
+type MintState = 'idle' | 'generating' | 'preview' | 'paying' | 'minted';
 
 const BloomersMint = ({ userPfp }: BloomersMintProps) => {
   const [mintState, setMintState] = useState<MintState>('idle');
@@ -19,6 +20,7 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
   const [mintPrice, setMintPrice] = useState<string>('0.0004');
   const [hasDiscount, setHasDiscount] = useState(false);
   const [userAddress, setUserAddress] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const displayImage = customImage || userPfp || 'https://api.dicebear.com/7.x/avataaars/svg?seed=bloomer';
@@ -35,21 +37,12 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
           if (accounts?.[0]) {
             setUserAddress(accounts[0]);
             
-            // Check if user has discount
-            const discountResult = await sdk.wallet.ethProvider.request({
-              method: 'eth_call',
-              params: [{
-                to: BLOOMERS_NFT_ADDRESS,
-                data: `0x${BLOOMERS_NFT_ABI.find(f => f.name === 'hasDiscount')?.name ? '6352211e' : ''}${accounts[0].slice(2).padStart(64, '0')}`
-              }, 'latest']
-            });
-            
-            // For now, just check the mint price directly
+            // Get mint price for user
             const priceResult = await sdk.wallet.ethProvider.request({
               method: 'eth_call',
               params: [{
                 to: BLOOMERS_NFT_ADDRESS,
-                data: `0xa945bf80${accounts[0].slice(2).padStart(64, '0')}` // getMintPrice(address)
+                data: `0xa945bf80${accounts[0].slice(2).padStart(64, '0')}`
               }, 'latest']
             }) as string;
             
@@ -75,6 +68,9 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setCustomImage(reader.result as string);
+        // Reset state when new image uploaded
+        setGeneratedBloomer(null);
+        setMintState('idle');
       };
       reader.readAsDataURL(file);
     }
@@ -84,25 +80,48 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
     fileInputRef.current?.click();
   };
 
-  const handleMint = async () => {
-    console.log('handleMint called');
-    console.log('sdk:', sdk);
-    console.log('sdk.wallet:', sdk?.wallet);
-    console.log('sdk.wallet.ethProvider:', sdk?.wallet?.ethProvider);
+  // Step 1: Generate the Bloomer using AI
+  const handleGenerate = async () => {
+    setMintState('generating');
+    setError(null);
     
-    if (!sdk?.wallet?.ethProvider) {
-      console.error('No wallet provider available');
-      // Try to initialize wallet connection
-      try {
-        const context = await sdk.context;
-        console.log('SDK context:', context);
-      } catch (e) {
-        console.error('Failed to get SDK context:', e);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-bloomer', {
+        body: { 
+          sourceImage: displayImage,
+          userAddress: userAddress
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.imageUrl) {
+        setGeneratedBloomer(data.imageUrl);
+        setMintState('preview');
+      } else {
+        throw new Error('No image generated');
       }
+    } catch (err) {
+      console.error('Generation failed:', err);
+      setError('Failed to generate Bloomer. Please try again.');
+      setMintState('idle');
+    }
+  };
+
+  // Step 2: Mint the generated Bloomer on-chain
+  const handleMint = async () => {
+    if (!generatedBloomer) {
+      setError('Please generate a Bloomer first');
+      return;
+    }
+
+    if (!sdk?.wallet?.ethProvider) {
+      setError('Wallet not available. Please try again.');
       return;
     }
 
     setMintState('paying');
+    setError(null);
     
     try {
       // Get user address
@@ -120,10 +139,9 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
       try {
         await sdk.wallet.ethProvider.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x2105' }] // Base chainId
+          params: [{ chainId: '0x2105' }]
         });
       } catch (switchError: any) {
-        // If chain doesn't exist, add it
         if (switchError.code === 4902) {
           await sdk.wallet.ethProvider.request({
             method: 'wallet_addEthereumChain',
@@ -143,7 +161,7 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
         method: 'eth_call',
         params: [{
           to: BLOOMERS_NFT_ADDRESS,
-          data: `0xa945bf80${userAddr.slice(2).padStart(64, '0')}` // getMintPrice(address)
+          data: `0xa945bf80${userAddr.slice(2).padStart(64, '0')}`
         }, 'latest']
       }) as string;
 
@@ -152,7 +170,7 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
         : parseEther('0.0004');
 
       // Send mint transaction
-      const txHash = await sdk.wallet.ethProvider.request({
+      const hash = await sdk.wallet.ethProvider.request({
         method: 'eth_sendTransaction',
         params: [{
           from: userAddr,
@@ -162,22 +180,18 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
         }]
       }) as string;
 
-      setTxHash(txHash);
-      
-      // Wait for generation (simulated for now - in production this would call AI)
-      setMintState('generating');
-      
-      // Simulate Bloomer generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // For now, use a placeholder - in production, this would be AI-generated
-      setGeneratedBloomer(displayImage);
-      
+      setTxHash(hash);
       setMintState('minted');
-    } catch (error) {
-      console.error('Mint failed:', error);
-      setMintState('idle');
+    } catch (err) {
+      console.error('Mint failed:', err);
+      setError('Mint failed. Please try again.');
+      setMintState('preview');
     }
+  };
+
+  const handleRegenerate = () => {
+    setGeneratedBloomer(null);
+    setMintState('idle');
   };
 
   const handleShare = async () => {
@@ -197,8 +211,8 @@ Your turn to bloom 🌸👇`;
           ]
         });
       }
-    } catch (error) {
-      console.error('Share failed:', error);
+    } catch (err) {
+      console.error('Share failed:', err);
     }
   };
 
@@ -220,10 +234,9 @@ Your turn to bloom 🌸👇`;
 
         {/* Preview card */}
         <div className="christmas-card p-6 border border-christmas-gold/20 mb-6">
-          {/* User DNA preview */}
+          {/* Image Preview */}
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="relative">
-              {/* Source Image (User PFP or Custom Upload) */}
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-christmas-gold/30">
                 <img 
                   src={displayImage} 
@@ -234,10 +247,8 @@ Your turn to bloom 🌸👇`;
               <div className="absolute -bottom-1 -right-1 text-lg">✨</div>
             </div>
             
-            {/* Arrow */}
             <div className="text-2xl text-christmas-gold animate-pulse">→</div>
             
-            {/* Bloomer preview */}
             <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center border-2 border-christmas-gold/30 overflow-hidden">
               {generatedBloomer ? (
                 <img src={generatedBloomer} alt="Your Bloomer" className="w-full h-full object-cover" />
@@ -250,86 +261,98 @@ Your turn to bloom 🌸👇`;
             </div>
           </div>
 
-          <p className="text-center text-christmas-snow/60 text-sm mb-4">
-            Your profile traits will shape your Bloomer's appearance
-          </p>
-
-          {/* DNA Traits */}
-          <div className="flex flex-wrap justify-center gap-2 mb-4">
-            <span className="px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-medium">
-              Color DNA
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-pink-500/20 border border-pink-500/30 text-pink-300 text-xs font-medium">
-              Pattern DNA
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium">
-              Mood DNA
-            </span>
-          </div>
-
-          {/* Custom Image Upload */}
-          <div className="mb-6">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              accept="image/*"
-              className="hidden"
-            />
-            <button
-              onClick={handleUploadClick}
-              className="w-full py-3 rounded-xl border border-dashed border-christmas-gold/30 bg-muted/10 hover:bg-muted/20 transition-colors flex items-center justify-center gap-2 text-christmas-snow/70 hover:text-christmas-snow"
-            >
-              <Upload className="w-4 h-4" />
-              <span className="text-sm">
-                {customImage ? 'Change Custom Image' : 'Upload Custom Image for Traits'}
-              </span>
-            </button>
-            {customImage && (
-              <p className="text-center text-christmas-snow/50 text-xs mt-2">
-                Using custom image for trait extraction
+          {/* Generated Bloomer Large Preview */}
+          {generatedBloomer && (mintState === 'preview' || mintState === 'paying' || mintState === 'minted') && (
+            <div className="mb-6">
+              <div className="relative w-48 h-48 mx-auto rounded-2xl overflow-hidden border-2 border-christmas-gold/40 shadow-lg">
+                <img 
+                  src={generatedBloomer} 
+                  alt="Your Generated Bloomer" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              </div>
+              <p className="text-center text-christmas-gold text-sm mt-3 font-medium">
+                ✨ Your Bloomer is ready! ✨
               </p>
-            )}
-          </div>
-
-          {/* Price */}
-          <div className="text-center mb-6">
-            <p className="text-christmas-snow/50 text-xs">Mint Price</p>
-            <div className="flex items-center justify-center gap-2">
-              <p className="font-display text-2xl text-christmas-gold font-bold">{mintPrice} ETH</p>
-              {hasDiscount && (
-                <span className="px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-medium flex items-center gap-1">
-                  <Gift className="w-3 h-3" />
-                  50% OFF
-                </span>
-              )}
             </div>
-            <p className="text-christmas-snow/40 text-xs">on Base</p>
-            {hasDiscount && (
-              <p className="text-green-400/70 text-xs mt-1">
-                ENB holder discount applied! 🎉
-              </p>
-            )}
-          </div>
-
-          {/* Mint States */}
-          {mintState === 'idle' && (
-            <Button 
-              onClick={handleMint}
-              className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-christmas-pine py-6 rounded-xl font-bold text-lg"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Pay to Mint
-            </Button>
           )}
 
-          {mintState === 'paying' && (
+          {!generatedBloomer && (
+            <>
+              <p className="text-center text-christmas-snow/60 text-sm mb-4">
+                Your profile traits will shape your Bloomer's appearance
+              </p>
+
+              {/* DNA Traits */}
+              <div className="flex flex-wrap justify-center gap-2 mb-4">
+                <span className="px-3 py-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-medium">
+                  Color DNA
+                </span>
+                <span className="px-3 py-1.5 rounded-full bg-pink-500/20 border border-pink-500/30 text-pink-300 text-xs font-medium">
+                  Pattern DNA
+                </span>
+                <span className="px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium">
+                  Mood DNA
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* Custom Image Upload - only show when not generated */}
+          {mintState === 'idle' && (
+            <div className="mb-6">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <button
+                onClick={handleUploadClick}
+                className="w-full py-3 rounded-xl border border-dashed border-christmas-gold/30 bg-muted/10 hover:bg-muted/20 transition-colors flex items-center justify-center gap-2 text-christmas-snow/70 hover:text-christmas-snow"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="text-sm">
+                  {customImage ? 'Change Custom Image' : 'Upload Custom Image for Traits'}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Price - show when preview or paying */}
+          {(mintState === 'preview' || mintState === 'paying') && (
+            <div className="text-center mb-6">
+              <p className="text-christmas-snow/50 text-xs">Mint Price</p>
+              <div className="flex items-center justify-center gap-2">
+                <p className="font-display text-2xl text-christmas-gold font-bold">{mintPrice} ETH</p>
+                {hasDiscount && (
+                  <span className="px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-medium flex items-center gap-1">
+                    <Gift className="w-3 h-3" />
+                    50% OFF
+                  </span>
+                )}
+              </div>
+              <p className="text-christmas-snow/40 text-xs">on Base</p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Action Buttons based on state */}
+          {mintState === 'idle' && (
             <Button 
-              disabled
-              className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 text-christmas-pine py-6 rounded-xl font-bold text-lg"
+              onClick={handleGenerate}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-6 rounded-xl font-bold text-lg"
             >
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Confirm Payment...
+              <Sparkles className="w-5 h-5 mr-2" />
+              Generate My Bloomer
             </Button>
           )}
 
@@ -339,7 +362,37 @@ Your turn to bloom 🌸👇`;
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-6 rounded-xl font-bold text-lg"
             >
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Generating Your Bloomer...
+              Creating Your Bloomer...
+            </Button>
+          )}
+
+          {mintState === 'preview' && (
+            <div className="space-y-3">
+              <Button 
+                onClick={handleMint}
+                className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-christmas-pine py-6 rounded-xl font-bold text-lg"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                Mint for {mintPrice} ETH
+              </Button>
+              <Button 
+                onClick={handleRegenerate}
+                variant="outline"
+                className="w-full border-christmas-gold/30 text-christmas-snow/70 hover:text-christmas-snow py-4 rounded-xl"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Generate Different Bloomer
+              </Button>
+            </div>
+          )}
+
+          {mintState === 'paying' && (
+            <Button 
+              disabled
+              className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 text-christmas-pine py-6 rounded-xl font-bold text-lg"
+            >
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Confirm in Wallet...
             </Button>
           )}
 
@@ -364,6 +417,15 @@ Your turn to bloom 🌸👇`;
               >
                 <Share2 className="w-4 h-4 mr-2" />
                 Share on Farcaster
+              </Button>
+
+              <Button 
+                onClick={handleRegenerate}
+                variant="outline"
+                className="w-full border-christmas-gold/30 text-christmas-snow/70 hover:text-christmas-snow py-4 rounded-xl"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Mint Another Bloomer
               </Button>
             </div>
           )}
