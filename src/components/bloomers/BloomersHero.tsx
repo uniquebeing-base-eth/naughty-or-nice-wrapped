@@ -130,13 +130,15 @@ const BloomersHero = () => {
         </div>
       </div>
 
-      {/* Coming soon button */}
+      {/* Mint now button */}
       <Button 
-        disabled 
-        className="bg-gradient-to-r from-christmas-gold/30 to-amber-600/30 text-christmas-snow/60 px-8 py-6 rounded-full font-bold text-lg border border-christmas-gold/30 cursor-not-allowed"
+        onClick={() => {
+          document.getElementById('mint-section')?.scrollIntoView({ behavior: 'smooth' });
+        }}
+        className="bg-gradient-to-r from-christmas-gold to-amber-600 text-white px-8 py-6 rounded-full font-bold text-lg border border-christmas-gold/50 hover:scale-105 transition-transform"
       >
         <Sparkles className="w-5 h-5 mr-2" />
-        Minting Soon
+        Mint Now
       </Button>
 
       {/* Scroll indicator */}
