@@ -264,7 +264,7 @@ Your turn to bloom 🌸👇`;
   };
 
   return (
-    <section className="py-16 px-6">
+    <section id="mint-section" className="py-16 px-6">
       <div className="max-w-md mx-auto">
         {/* Title */}
         <div className="text-center mb-8">
