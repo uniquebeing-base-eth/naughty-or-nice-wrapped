@@ -103,6 +103,7 @@ const Bloomers = () => {
               .from('minted_bloomers')
               .select('image_url')
               .eq('user_address', accounts[0].toLowerCase())
+              .not('tx_hash', 'is', null)  // Only show minted ones, not pending
               .order('created_at', { ascending: false });
             
             if (bloomersData) {
