@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  * @title BloomersNFT
  * @dev NFT contract for Bloomers with ENB token discount
  * @notice Users with 100,000+ ENB tokens get 50% off mint price
+ * @notice Unlimited supply - anyone can mint as many as they want
  */
 contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, ReentrancyGuard, Pausable {
     
@@ -29,9 +30,6 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
     // Token ID counter
     uint256 private _tokenIdCounter;
     
-    // Max supply (0 = unlimited)
-    uint256 public maxSupply;
-    
     // Base URI for metadata
     string private _baseTokenURI;
     
@@ -39,22 +37,18 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
     event Minted(address indexed to, uint256 indexed tokenId, bool discounted, uint256 pricePaid);
     event MintPriceUpdated(uint256 newPrice, uint256 newDiscountedPrice);
     event ENBThresholdUpdated(uint256 newThreshold);
-    event MaxSupplyUpdated(uint256 newMaxSupply);
     event FundsWithdrawn(address indexed to, uint256 amount);
     event BaseURIUpdated(string newBaseURI);
     
     /**
      * @dev Constructor
      * @param _enbTokenAddress ENB token contract address
-     * @param _maxSupply Maximum supply (0 for unlimited)
      */
     constructor(
-        address _enbTokenAddress,
-        uint256 _maxSupply
+        address _enbTokenAddress
     ) ERC721("Bloomers", "BLOOM") Ownable(msg.sender) {
         require(_enbTokenAddress != address(0), "Invalid ENB token address");
         enbToken = IERC20(_enbTokenAddress);
-        maxSupply = _maxSupply;
     }
     
     /**
@@ -80,8 +74,6 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
      * @param tokenURI The metadata URI for the NFT
      */
     function mint(string calldata tokenURI) external payable nonReentrant whenNotPaused {
-        require(maxSupply == 0 || _tokenIdCounter < maxSupply, "Max supply reached");
-        
         uint256 requiredPrice = getMintPrice(msg.sender);
         require(msg.value >= requiredPrice, "Insufficient payment");
         
@@ -95,13 +87,12 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
     }
     
     /**
-     * @dev Batch mint multiple Bloomers (no refunds)
+     * @dev Batch mint multiple Bloomers (no refunds, no limits)
      * @param tokenURIs Array of metadata URIs
      */
     function batchMint(string[] calldata tokenURIs) external payable nonReentrant whenNotPaused {
         uint256 count = tokenURIs.length;
         require(count > 0, "Must mint at least 1");
-        require(maxSupply == 0 || _tokenIdCounter + count <= maxSupply, "Exceeds max supply");
         
         uint256 pricePerToken = getMintPrice(msg.sender);
         uint256 totalPrice = pricePerToken * count;
@@ -167,16 +158,6 @@ contract BloomersNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable, Ree
         require(newThreshold > 0, "Threshold must be > 0");
         enbThreshold = newThreshold;
         emit ENBThresholdUpdated(newThreshold);
-    }
-    
-    /**
-     * @dev Update max supply
-     * @param newMaxSupply New max supply (0 for unlimited)
-     */
-    function setMaxSupply(uint256 newMaxSupply) external onlyOwner {
-        require(newMaxSupply == 0 || newMaxSupply >= _tokenIdCounter, "Cannot reduce below current supply");
-        maxSupply = newMaxSupply;
-        emit MaxSupplyUpdated(newMaxSupply);
     }
     
     /**
