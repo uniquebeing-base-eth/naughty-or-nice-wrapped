@@ -396,23 +396,13 @@ Your turn to bloom 🌸👇`;
           )}
 
           {mintState === 'preview' && (
-            <div className="space-y-3">
-              <Button 
-                onClick={handleMint}
-                className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-christmas-pine py-6 rounded-xl font-bold text-lg"
-              >
-                <Sparkles className="w-5 h-5 mr-2" />
-                Mint for {mintPrice} ETH
-              </Button>
-              <Button 
-                onClick={handleRegenerate}
-                variant="outline"
-                className="w-full border-christmas-gold/30 text-christmas-snow/70 hover:text-christmas-snow py-4 rounded-xl"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Generate Different Bloomer
-              </Button>
-            </div>
+            <Button 
+              onClick={handleMint}
+              className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-christmas-pine py-6 rounded-xl font-bold text-lg"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Mint for {mintPrice} ETH
+            </Button>
           )}
 
           {mintState === 'paying' && (
@@ -450,11 +440,10 @@ Your turn to bloom 🌸👇`;
 
               <Button 
                 onClick={handleRegenerate}
-                variant="outline"
-                className="w-full border-christmas-gold/30 text-christmas-snow/70 hover:text-christmas-snow py-4 rounded-xl"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-4 rounded-xl font-bold"
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Mint Another Bloomer
+                <Sparkles className="w-4 h-4 mr-2" />
+                Bloom My Bloomer
               </Button>
             </div>
           )}
