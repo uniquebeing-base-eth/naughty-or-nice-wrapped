@@ -8,11 +8,12 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface BloomersMintProps {
   userPfp?: string;
+  onMinted?: (imageUrl: string) => void;
 }
 
 type MintState = 'idle' | 'generating' | 'preview' | 'paying' | 'minted';
 
-const BloomersMint = ({ userPfp }: BloomersMintProps) => {
+const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
   const [mintState, setMintState] = useState<MintState>('idle');
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [generatedBloomer, setGeneratedBloomer] = useState<string | null>(null);
@@ -196,6 +197,23 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
 
       console.log('[Mint] Transaction hash:', hash);
       setTxHash(hash);
+
+      // Save minted bloomer to database
+      if (generatedBloomer) {
+        try {
+          await supabase.from('minted_bloomers').insert({
+            user_address: userAddr.toLowerCase(),
+            image_url: generatedBloomer,
+            tx_hash: hash
+          });
+          console.log('[Mint] Saved bloomer to database');
+          // Notify parent to refresh gallery
+          onMinted?.(generatedBloomer);
+        } catch (saveErr) {
+          console.error('[Mint] Failed to save bloomer:', saveErr);
+        }
+      }
+
       setMintState('minted');
     } catch (err: any) {
       console.error('[Mint] Error:', err);

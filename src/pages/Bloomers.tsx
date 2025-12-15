@@ -55,9 +55,9 @@ const Bloomers = () => {
   const [mintedBloomers, setMintedBloomers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user's verdict from their wrapped stats
+  // Fetch user's verdict and minted bloomers
   useEffect(() => {
-    const fetchVerdict = async () => {
+    const fetchData = async () => {
       if (!user?.fid) {
         // Default mock verdict for testing
         setVerdict({
@@ -71,6 +71,7 @@ const Bloomers = () => {
       }
 
       try {
+        // Fetch verdict
         const { data, error } = await supabase
           .from('wrapped_stats')
           .select('stats')
@@ -88,14 +89,35 @@ const Bloomers = () => {
             });
           }
         }
+
+        // Fetch minted bloomers by wallet address
+        // We need to get wallet from SDK
+        const sdk = (await import('@farcaster/miniapp-sdk')).default;
+        if (sdk?.wallet?.ethProvider) {
+          const accounts = await sdk.wallet.ethProvider.request({ 
+            method: 'eth_accounts' 
+          }) as string[];
+          
+          if (accounts?.[0]) {
+            const { data: bloomersData } = await supabase
+              .from('minted_bloomers')
+              .select('image_url')
+              .eq('user_address', accounts[0].toLowerCase())
+              .order('created_at', { ascending: false });
+            
+            if (bloomersData) {
+              setMintedBloomers(bloomersData.map(b => b.image_url));
+            }
+          }
+        }
       } catch (err) {
-        console.error('Error fetching verdict:', err);
+        console.error('Error fetching data:', err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (isSDKLoaded) fetchVerdict();
+    if (isSDKLoaded) fetchData();
   }, [user?.fid, isSDKLoaded]);
 
   if (isSDKLoaded && !isInMiniApp) return <FarcasterOnlyGuard />;
@@ -143,7 +165,10 @@ const Bloomers = () => {
         {verdict && <BloomersVerdict verdict={verdict} />}
 
         {/* Mint Section */}
-        <BloomersMint userPfp={user?.pfpUrl} />
+        <BloomersMint 
+          userPfp={user?.pfpUrl} 
+          onMinted={(imageUrl) => setMintedBloomers(prev => [imageUrl, ...prev])}
+        />
 
         {/* Daily Gifts Section */}
         <BloomersGifts />

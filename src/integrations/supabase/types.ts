@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      minted_bloomers: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          tx_hash: string | null
+          user_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          tx_hash?: string | null
+          user_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          tx_hash?: string | null
+          user_address?: string
+        }
+        Relationships: []
+      }
       wrapped_stats: {
         Row: {
           created_at: string
