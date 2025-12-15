@@ -88,7 +88,8 @@ contract BloomersNFT is ERC721, Ownable, ReentrancyGuard, Pausable {
         // Refund excess ETH
         uint256 refund = msg.value - requiredPrice;
         if (refund > 0) {
-            payable(msg.sender).transfer(refund);
+            (bool success, ) = payable(msg.sender).call{value: refund}("");
+            require(success, "Refund failed");
         }
     }
     
@@ -116,7 +117,8 @@ contract BloomersNFT is ERC721, Ownable, ReentrancyGuard, Pausable {
         // Refund excess ETH
         uint256 refund = msg.value - totalPrice;
         if (refund > 0) {
-            payable(msg.sender).transfer(refund);
+            (bool success, ) = payable(msg.sender).call{value: refund}("");
+            require(success, "Refund failed");
         }
     }
     
