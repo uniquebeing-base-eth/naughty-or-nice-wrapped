@@ -31,3 +31,6 @@ verify_jwt = false
 
 [functions.generate-bloomer]
 verify_jwt = false
+
+[functions.bloomer-metadata]
+verify_jwt = false
