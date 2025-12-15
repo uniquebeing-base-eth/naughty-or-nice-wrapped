@@ -22,11 +22,12 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
   const [hasDiscount, setHasDiscount] = useState(false);
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingBloomerId, setPendingBloomerId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const displayImage = customImage || userPfp || 'https://api.dicebear.com/7.x/avataaars/svg?seed=bloomer';
 
-  // Get user wallet and check discount eligibility
+  // Get user wallet, check discount eligibility, and load pending bloomer
   useEffect(() => {
     const checkWalletAndDiscount = async () => {
       try {
@@ -36,14 +37,32 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
           }) as string[];
           
           if (accounts?.[0]) {
-            setUserAddress(accounts[0]);
+            const addr = accounts[0];
+            setUserAddress(addr);
+            
+            // Check for pending bloomer (generated but not minted)
+            const { data: pendingBloomer } = await supabase
+              .from('minted_bloomers')
+              .select('*')
+              .eq('user_address', addr.toLowerCase())
+              .is('tx_hash', null)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (pendingBloomer) {
+              console.log('Found pending bloomer:', pendingBloomer.image_url);
+              setGeneratedBloomer(pendingBloomer.image_url);
+              setPendingBloomerId(pendingBloomer.id);
+              setMintState('preview');
+            }
             
             // Get mint price for user
             const priceResult = await sdk.wallet.ethProvider.request({
               method: 'eth_call',
               params: [{
                 to: BLOOMERS_NFT_ADDRESS,
-                data: `0xa945bf80${accounts[0].slice(2).padStart(64, '0')}`
+                data: `0xa945bf80${addr.slice(2).padStart(64, '0')}`
               }, 'latest']
             }) as string;
             
@@ -198,17 +217,28 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       console.log('[Mint] Transaction hash:', hash);
       setTxHash(hash);
 
-      // Save minted bloomer to database
+      // Update the pending bloomer with the tx_hash, or insert if no pending
       if (generatedBloomer) {
         try {
-          await supabase.from('minted_bloomers').insert({
-            user_address: userAddr.toLowerCase(),
-            image_url: generatedBloomer,
-            tx_hash: hash
-          });
-          console.log('[Mint] Saved bloomer to database');
+          if (pendingBloomerId) {
+            // Update existing pending bloomer
+            await supabase
+              .from('minted_bloomers')
+              .update({ tx_hash: hash })
+              .eq('id', pendingBloomerId);
+            console.log('[Mint] Updated pending bloomer with tx_hash');
+          } else {
+            // Insert new minted bloomer
+            await supabase.from('minted_bloomers').insert({
+              user_address: userAddr.toLowerCase(),
+              image_url: generatedBloomer,
+              tx_hash: hash
+            });
+            console.log('[Mint] Saved new bloomer to database');
+          }
           // Notify parent to refresh gallery
           onMinted?.(generatedBloomer);
+          setPendingBloomerId(null);
         } catch (saveErr) {
           console.error('[Mint] Failed to save bloomer:', saveErr);
         }
@@ -236,7 +266,15 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
     }
   };
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
+    // Delete the pending bloomer from database
+    if (pendingBloomerId) {
+      await supabase
+        .from('minted_bloomers')
+        .delete()
+        .eq('id', pendingBloomerId);
+      setPendingBloomerId(null);
+    }
     setGeneratedBloomer(null);
     setMintState('idle');
   };

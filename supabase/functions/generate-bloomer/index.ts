@@ -19,16 +19,121 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Generate a unique magical creature based on the source image
-    const prompt = `Create a hyper-detailed kawaii magical creature portrait in anime art style. 
-The creature should be a whimsical fantasy being - could be a dragon, fairy, elf, unicorn, fox spirit, or magical forest creature.
-Style: Adorable big sparkly eyes, ornate magical accessories, glowing gems, intricate wing patterns if applicable, fluffy fur or scales with iridescent sheen.
-Background: Enchanted mystical setting with floating sparkles, magical auroras, or enchanted forest elements.
-Color palette: Rich jewel tones with magical glow effects - purples, pinks, golds, teals.
-The creature should look friendly and magical, like a collectible NFT character.
-Ultra high resolution, highly detailed, professional digital art quality.`;
+    // Random pose selection - including standing poses
+    const poses = [
+      "standing upright on two legs like a magical humanoid character",
+      "standing proudly with arms crossed",
+      "standing with one hand raised casting a spell",
+      "standing elegantly with flowing robes or wings spread",
+      "sitting gracefully on a magical throne",
+      "floating in mid-air with magical aura",
+      "dancing on tiptoes with graceful movement",
+      "standing heroically with a magical staff or wand",
+      "walking gracefully with flowing magical trails",
+      "striking a cute pose with peace sign"
+    ];
+    const randomPose = poses[Math.floor(Math.random() * poses.length)];
 
-    console.log("Generating Bloomer with Lovable AI...");
+    // Random creature types
+    const creatures = [
+      "mystical fox spirit (kitsune)",
+      "elegant fairy with butterfly wings", 
+      "adorable baby dragon",
+      "magical unicorn creature",
+      "enchanted elf with pointed ears",
+      "whimsical forest spirit",
+      "celestial angel being",
+      "magical cat with powers",
+      "phoenix-like bird creature",
+      "mystical deer spirit"
+    ];
+    const randomCreature = creatures[Math.floor(Math.random() * creatures.length)];
+
+    // Build the message content with image analysis
+    let messageContent: any[];
+    
+    if (sourceImage && !sourceImage.includes('dicebear')) {
+      // Use the source image to analyze and extract traits
+      console.log("Using source image for trait extraction:", sourceImage.substring(0, 100));
+      
+      messageContent = [
+        {
+          type: "text",
+          text: `Analyze this profile picture and create a unique magical creature inspired by it.
+
+CRITICAL - Extract these traits from the image:
+- Dominant colors (use these for the creature's color palette)
+- Any patterns or textures
+- The mood/vibe (energetic, calm, mysterious, playful)
+- Any accessories, hats, or distinctive features
+
+Now create a hyper-detailed kawaii ${randomCreature} portrait in anime art style.
+
+POSE: The creature must be ${randomPose} - NOT on all fours, NOT crouching. This is important!
+
+Style requirements:
+- Adorable big sparkly anime eyes
+- The creature's COLOR PALETTE must match the dominant colors from the analyzed image
+- Ornate magical accessories inspired by any accessories in the image
+- Glowing gems and magical effects
+- Intricate wing/pattern details if applicable
+- Fluffy fur, scales, or magical elements with iridescent sheen
+- Christmas/winter themed accessories (Santa hat, holly, snowflakes) as a festive touch
+
+Background: Enchanted mystical setting with floating sparkles, magical auroras, snow-covered enchanted forest, or northern lights.
+
+The creature should look friendly, magical, and collectible - like a premium NFT character.
+Ultra high resolution, highly detailed, professional digital art quality.`
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: sourceImage
+          }
+        }
+      ];
+    } else {
+      // Fallback to random generation without image reference
+      console.log("No valid source image, using random generation");
+      
+      const colorPalettes = [
+        "royal purples and golds",
+        "ocean blues and teals",
+        "sunset oranges and pinks", 
+        "forest greens and emeralds",
+        "crimson reds and golds",
+        "icy blues and silvers",
+        "pastel rainbow colors",
+        "midnight blues and stars"
+      ];
+      const randomColors = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
+
+      messageContent = [
+        {
+          type: "text",
+          text: `Create a hyper-detailed kawaii ${randomCreature} portrait in anime art style.
+
+POSE: The creature must be ${randomPose} - NOT on all fours, NOT crouching. This is important!
+
+Style requirements:
+- Adorable big sparkly anime eyes
+- Color palette: ${randomColors}
+- Ornate magical accessories
+- Glowing gems and magical effects
+- Intricate wing/pattern details if applicable
+- Fluffy fur, scales, or magical elements with iridescent sheen
+- Christmas/winter themed accessories (Santa hat, holly, snowflakes) as a festive touch
+
+Background: Enchanted mystical setting with floating sparkles, magical auroras, snow-covered enchanted forest, or northern lights.
+
+The creature should look friendly, magical, and collectible - like a premium NFT character.
+Ultra high resolution, highly detailed, professional digital art quality.`
+        }
+      ];
+    }
+
+    console.log("Generating Bloomer with pose:", randomPose);
+    console.log("Creature type:", randomCreature);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -41,7 +146,7 @@ Ultra high resolution, highly detailed, professional digital art quality.`;
         messages: [
           {
             role: "user",
-            content: prompt
+            content: messageContent
           }
         ],
         modalities: ["image", "text"]
@@ -96,6 +201,31 @@ Ultra high resolution, highly detailed, professional digital art quality.`;
       .getPublicUrl(fileName);
 
     console.log("Bloomer uploaded:", publicUrl.publicUrl);
+
+    // Save to pending_bloomers table for persistence before mint
+    if (userAddress) {
+      // Delete any previous pending bloomer for this user
+      await supabase
+        .from("minted_bloomers")
+        .delete()
+        .eq("user_address", userAddress.toLowerCase())
+        .is("tx_hash", null);
+      
+      // Insert the new pending bloomer (tx_hash is null = not minted yet)
+      const { error: insertError } = await supabase
+        .from("minted_bloomers")
+        .insert({
+          user_address: userAddress.toLowerCase(),
+          image_url: publicUrl.publicUrl,
+          tx_hash: null  // null means pending, not minted
+        });
+      
+      if (insertError) {
+        console.error("Failed to save pending bloomer:", insertError);
+      } else {
+        console.log("Saved pending bloomer for user:", userAddress);
+      }
+    }
 
     return new Response(
       JSON.stringify({ imageUrl: publicUrl.publicUrl }),
