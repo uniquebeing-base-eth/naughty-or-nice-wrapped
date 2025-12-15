@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Lock, Upload, ExternalLink, Share2, Loader2 } from 'lucide-react';
+import sdk from '@farcaster/miniapp-sdk';
 
 interface BloomersMintProps {
   userPfp?: string;
@@ -57,8 +58,26 @@ const BloomersMint = ({ userPfp }: BloomersMintProps) => {
     }
   };
 
-  const handleShare = () => {
-    // Share to Farcaster
+  const handleShare = async () => {
+    const shareText = `✨ My Bloomer just bloomed into existence! ✨
+
+Fresh off the blockchain from naughty-or-nice-wrapped by @uniquebeing404
+
+Your turn to bloom 🌸👇`;
+
+    try {
+      if (sdk?.actions?.composeCast) {
+        await sdk.actions.composeCast({
+          text: shareText,
+          embeds: [
+            generatedBloomer || displayImage,
+            'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'
+          ]
+        });
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
   };
 
   const mintingEnabled = false; // Toggle when ready to go live
