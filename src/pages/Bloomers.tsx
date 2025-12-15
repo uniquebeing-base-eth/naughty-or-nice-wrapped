@@ -95,7 +95,7 @@ const Bloomers = () => {
         const sdk = (await import('@farcaster/miniapp-sdk')).default;
         if (sdk?.wallet?.ethProvider) {
           const accounts = await sdk.wallet.ethProvider.request({ 
-            method: 'eth_accounts' 
+            method: 'eth_requestAccounts' 
           }) as string[];
           
           if (accounts?.[0]) {
