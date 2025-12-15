@@ -68,20 +68,25 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
               img.src = pendingBloomer.image_url;
             }
             
-            // Get mint price for user
-            const priceResult = await sdk.wallet.ethProvider.request({
-              method: 'eth_call',
-              params: [{
-                to: BLOOMERS_NFT_ADDRESS,
-                data: `0xa945bf80${addr.slice(2).padStart(64, '0')}`
-              }, 'latest']
-            }) as string;
-            
-            if (priceResult && priceResult !== '0x') {
-              const priceInWei = BigInt(priceResult);
-              const priceInEth = formatEther(priceInWei);
-              setMintPrice(priceInEth);
-              setHasDiscount(priceInWei === parseEther('0.0002'));
+            // Get mint price for user - wrap in try-catch as some providers don't support eth_call
+            try {
+              const priceResult = await sdk.wallet.ethProvider.request({
+                method: 'eth_call',
+                params: [{
+                  to: BLOOMERS_NFT_ADDRESS,
+                  data: `0xa945bf80${addr.slice(2).padStart(64, '0')}`
+                }, 'latest']
+              }) as string;
+              
+              if (priceResult && priceResult !== '0x') {
+                const priceInWei = BigInt(priceResult);
+                const priceInEth = formatEther(priceInWei);
+                setMintPrice(priceInEth);
+                setHasDiscount(priceInWei === parseEther('0.0002'));
+              }
+            } catch (priceError) {
+              console.log('Could not fetch mint price (provider may not support eth_call), using default:', priceError);
+              // Use default price - discount check will happen during mint
             }
           }
         }
@@ -221,15 +226,20 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       console.log('[Mint] Contract address:', BLOOMERS_NFT_ADDRESS);
 
       // Get current totalMinted from contract BEFORE minting to know the tokenId
-      const totalMintedData = await provider.request({
-        method: 'eth_call',
-        params: [{
-          to: BLOOMERS_NFT_ADDRESS,
-          data: '0xa2309ff8' // totalMinted() function selector
-        }, 'latest']
-      }) as string;
-      const nextTokenId = parseInt(totalMintedData, 16);
-      console.log('[Mint] Next token ID will be:', nextTokenId);
+      let nextTokenId = Date.now(); // Fallback to timestamp-based ID if eth_call not supported
+      try {
+        const totalMintedData = await provider.request({
+          method: 'eth_call',
+          params: [{
+            to: BLOOMERS_NFT_ADDRESS,
+            data: '0xa2309ff8' // totalMinted() function selector
+          }, 'latest']
+        }) as string;
+        nextTokenId = parseInt(totalMintedData, 16);
+        console.log('[Mint] Next token ID will be:', nextTokenId);
+      } catch (callError) {
+        console.log('[Mint] Could not get totalMinted via eth_call, using fallback:', callError);
+      }
 
       // Build transaction
       const txParams = {
