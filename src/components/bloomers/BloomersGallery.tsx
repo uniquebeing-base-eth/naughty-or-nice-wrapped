@@ -1,3 +1,7 @@
+import { Share2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import sdk from '@farcaster/miniapp-sdk';
+
 interface BloomersGalleryProps {
   mintedBloomers: string[];
 }
@@ -12,6 +16,22 @@ const EXAMPLE_BLOOMERS = [
 
 const BloomersGallery = ({ mintedBloomers }: BloomersGalleryProps) => {
   const hasBloomers = mintedBloomers.length > 0;
+
+  const handleShare = async (imageUrl: string, index: number) => {
+    const shareText = `✨ Check out my Bloomer #${index + 1}! ✨\n\nFrom my naughty-or-nice-wrapped collection by @uniquebeing404\n\nMint yours 🌸👇`;
+    
+    try {
+      await sdk.actions.composeCast({
+        text: shareText,
+        embeds: [
+          imageUrl,
+          'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'
+        ]
+      });
+    } catch (err) {
+      console.error('Share failed:', err);
+    }
+  };
 
   return (
     <section className="py-16 px-6">
@@ -69,15 +89,26 @@ const BloomersGallery = ({ mintedBloomers }: BloomersGalleryProps) => {
             {mintedBloomers.map((bloomer, idx) => (
               <div 
                 key={idx}
-                className="aspect-square rounded-2xl bg-gradient-to-br from-christmas-gold/30 to-amber-600/30 p-0.5 hover:scale-105 transition-transform duration-300 cursor-pointer shadow-lg hover:shadow-christmas-gold/20"
+                className="relative group"
               >
-                <div className="w-full h-full rounded-2xl bg-black/40 backdrop-blur-sm flex items-center justify-center">
-                  <img 
-                    src={bloomer} 
-                    alt={`Bloomer #${idx + 1}`}
-                    className="w-full h-full object-cover rounded-2xl"
-                  />
+                <div className="aspect-square rounded-2xl bg-gradient-to-br from-christmas-gold/30 to-amber-600/30 p-0.5 hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-christmas-gold/20">
+                  <div className="w-full h-full rounded-2xl bg-black/40 backdrop-blur-sm flex items-center justify-center overflow-hidden">
+                    <img 
+                      src={bloomer} 
+                      alt={`Bloomer #${idx + 1}`}
+                      className="w-full h-full object-cover rounded-2xl"
+                    />
+                  </div>
                 </div>
+                
+                {/* Share button overlay */}
+                <Button
+                  size="sm"
+                  onClick={() => handleShare(bloomer, idx)}
+                  className="absolute bottom-2 right-2 bg-christmas-gold/90 hover:bg-christmas-gold text-black rounded-full p-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
               </div>
             ))}
           </div>
