@@ -28,3 +28,6 @@ verify_jwt = false
 
 [functions.sign-verdict-claim]
 verify_jwt = false
+
+[functions.generate-bloomer]
+verify_jwt = false
