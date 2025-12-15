@@ -245,17 +245,17 @@ const WrappedApp = () => {
         try {
           const result = await sdk.actions.composeCast({ 
             text: shareText, 
-            embeds: [imageUrl, 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'] 
+            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
           });
           console.log('composeCast result:', result);
           toast({ title: "🎄 Shared!", description: "Your verdict has been posted" });
         } catch (castError) {
           console.error('composeCast error:', castError);
-          await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped`);
+          await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
           toast({ title: "🎄 Copied!", description: "Paste to share" });
         }
       } else {
-        await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped`);
+        await navigator.clipboard.writeText(`${shareText}\n\nMy Wrapped: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
         toast({ title: "🎄 Copied!", description: "Paste to share" });
       }
     } catch (err) {
@@ -312,17 +312,17 @@ const WrappedApp = () => {
         try {
           const result = await sdk.actions.composeCast({ 
             text: shareText, 
-            embeds: [imageUrl, 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'] 
+            embeds: [imageUrl, 'https://naughty-or-nice-wrapped.vercel.app'] 
           });
           console.log('composeCast result:', result);
           toast({ title: "✨ Shared!", description: "Your energy has been posted" });
         } catch (castError) {
           console.error('composeCast error:', castError);
-          await navigator.clipboard.writeText(`${shareText}\n\nMy Energy: ${imageUrl}\n\nGet yours: https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped`);
+          await navigator.clipboard.writeText(`${shareText}\n\nMy Energy: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
           toast({ title: "✨ Copied!", description: "Paste to share" });
         }
       } else {
-        await navigator.clipboard.writeText(`${shareText}\n\nMy Energy: ${imageUrl}\n\nGet yours: https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped`);
+        await navigator.clipboard.writeText(`${shareText}\n\nMy Energy: ${imageUrl}\n\nGet yours: https://naughty-or-nice-wrapped.vercel.app`);
         toast({ title: "✨ Copied!", description: "Paste to share" });
       }
     } catch (err) {

@@ -25,7 +25,7 @@ const BloomersGallery = ({ mintedBloomers }: BloomersGalleryProps) => {
         text: shareText,
         embeds: [
           imageUrl,
-          'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'
+          'https://naughty-or-nice-wrapped.vercel.app/bloomers'
         ]
       });
     } catch (err) {

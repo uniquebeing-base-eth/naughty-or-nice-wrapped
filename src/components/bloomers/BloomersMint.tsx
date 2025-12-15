@@ -381,7 +381,7 @@ Your turn to bloom 🌸👇`;
           text: shareText,
           embeds: [
             generatedBloomer || displayImage,
-            'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'
+            'https://naughty-or-nice-wrapped.vercel.app/bloomers'
           ]
         });
       }
