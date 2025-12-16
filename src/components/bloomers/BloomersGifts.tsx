@@ -64,10 +64,21 @@ const BloomersGifts = () => {
   const [showSharePopup, setShowSharePopup] = useState<GiftPartner | null>(null);
   const [visitedGifts, setVisitedGifts] = useState<Record<string, boolean>>({});
 
-  const handleVisitPartner = (gift: GiftPartner) => {
-    // Mark as visited and open the link
+  const handleVisitPartner = async (gift: GiftPartner) => {
+    // Mark as visited
     setVisitedGifts(prev => ({ ...prev, [gift.id]: true }));
-    window.open(gift.link, '_blank');
+    
+    // Open the mini app directly within Farcaster
+    if (isInMiniApp && sdk?.actions?.openUrl) {
+      try {
+        await sdk.actions.openUrl(gift.link);
+      } catch (err) {
+        console.log('openUrl error:', err);
+        window.open(gift.link, '_blank');
+      }
+    } else {
+      window.open(gift.link, '_blank');
+    }
   };
 
   const handleClaimGift = async (gift: GiftPartner) => {
