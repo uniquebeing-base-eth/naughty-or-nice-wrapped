@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Gift, Share2, ExternalLink, X, Loader2, CheckCircle } from 'lucide-react';
 import { sdk } from '@farcaster/miniapp-sdk';
@@ -62,7 +62,25 @@ const BloomersGifts = () => {
   const [claimedGifts, setClaimedGifts] = useState<Record<string, boolean>>({});
   const [claimingGift, setClaimingGift] = useState<string | null>(null);
   const [showSharePopup, setShowSharePopup] = useState<GiftPartner | null>(null);
-  const [visitedGifts, setVisitedGifts] = useState<Record<string, boolean>>({});
+  
+  // Persist visited state in localStorage so it survives navigation to partner apps
+  const [visitedGifts, setVisitedGifts] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem('bloomers_visited_gifts');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Save visited state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('bloomers_visited_gifts', JSON.stringify(visitedGifts));
+    } catch (err) {
+      console.log('Failed to save visited state:', err);
+    }
+  }, [visitedGifts]);
 
   const handleVisitPartner = async (gift: GiftPartner) => {
     // Mark as visited
