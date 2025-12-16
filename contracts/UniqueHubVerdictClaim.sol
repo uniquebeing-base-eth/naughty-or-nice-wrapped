@@ -17,7 +17,7 @@ contract UniqueHubVerdictClaim is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     // UNIQ Token contract
-    IERC20 public rewardToken;
+    IERC20 public immutable rewardToken;
     
     // Amount of UNIQ tokens to claim per day (300,000 UNIQ with 18 decimals)
     uint256 public rewardAmount;
@@ -43,6 +43,7 @@ contract UniqueHubVerdictClaim is Ownable, ReentrancyGuard, Pausable {
         address signerAddress
     ) Ownable(msg.sender) {
         require(tokenAddress != address(0), "Invalid token address");
+        require(tokensPerClaim > 0, "Reward must be > 0");
         require(signerAddress != address(0), "Invalid signer address");
         
         rewardToken = IERC20(tokenAddress);
