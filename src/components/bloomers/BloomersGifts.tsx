@@ -7,33 +7,60 @@ import { useToast } from '@/hooks/use-toast';
 import { encodeFunctionData } from 'viem';
 import { supabase } from '@/integrations/supabase/client';
 import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
-import { BLOOMERS_VERDICT_ADDRESS, BLOOMERS_VERDICT_ABI } from '@/config/wagmi';
+import uniquehubIcon from '@/assets/partners/uniquehub-icon.png';
+import { BLOOMERS_VERDICT_ADDRESS, UNIQUEHUB_VERDICT_ADDRESS, BLOOMERS_VERDICT_ABI } from '@/config/wagmi';
 
 const BASE_CHAIN_ID = '0x2105';
 
-const TODAY_GIFT = {
-  id: 1,
-  partner: {
+interface GiftPartner {
+  id: string;
+  name: string;
+  icon: string;
+  link: string;
+  description: string;
+  santaMessage: string;
+  reward: string;
+  contractAddress: `0x${string}`;
+  tokenSymbol: string;
+  enabled: boolean;
+}
+
+const GIFTS: GiftPartner[] = [
+  {
+    id: 'enb',
     name: 'ENB Blast',
     icon: enbBlastIcon,
     link: 'https://farcaster.xyz/miniapps/0z7FDSc-9NU_/enb-blast',
     description: 'Drag your avatar and collect ENBs',
+    santaMessage: "Ho ho ho! The ENB elves have been blasting joy across the blockchain! Drag, collect, and spread the holiday cheer! 🎄✨",
+    reward: '1,000 ENB Tokens',
+    contractAddress: BLOOMERS_VERDICT_ADDRESS,
+    tokenSymbol: 'ENB',
+    enabled: true,
   },
-  santaMessage: "Ho ho ho! The ENB elves have been blasting joy across the blockchain! Drag, collect, and spread the holiday cheer! 🎄✨",
-  reward: '1,000 ENB Tokens',
-  claimed: false,
-};
+  {
+    id: 'uniquehub',
+    name: 'UniqueHub',
+    icon: uniquehubIcon,
+    link: 'https://farcaster.xyz/miniapps/N6rQ-KuRRFCE/uniquehub',
+    description: 'Your unique hub for everything onchain',
+    santaMessage: "Ho ho ho! The UniqueHub spirits are spreading uniqueness across the realm! Every soul deserves to shine uniquely! 🌟✨",
+    reward: '300,000 UNIQ Tokens',
+    contractAddress: UNIQUEHUB_VERDICT_ADDRESS,
+    tokenSymbol: 'UNIQ',
+    enabled: false, // Will enable after deployment
+  },
+];
 
 const BloomersGifts = () => {
   const { isInMiniApp, user } = useFarcaster();
   const { toast } = useToast();
   
-  const [gift, setGift] = useState(TODAY_GIFT);
-  const [hasShared, setHasShared] = useState(false);
-  const [showSharePopup, setShowSharePopup] = useState(false);
-  const [isClaiming, setIsClaiming] = useState(false);
+  const [claimedGifts, setClaimedGifts] = useState<Record<string, boolean>>({});
+  const [claimingGift, setClaimingGift] = useState<string | null>(null);
+  const [showSharePopup, setShowSharePopup] = useState<GiftPartner | null>(null);
 
-  const handleClaimGift = async () => {
+  const handleClaimGift = async (gift: GiftPartner) => {
     if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
       toast({
         title: "Farcaster Required",
@@ -52,7 +79,7 @@ const BloomersGifts = () => {
       return;
     }
 
-    setIsClaiming(true);
+    setClaimingGift(gift.id);
 
     try {
       const provider = sdk.wallet.ethProvider;
@@ -77,7 +104,7 @@ const BloomersGifts = () => {
       }
 
       const userAddress = accounts[0];
-      console.log('Requesting signature for:', userAddress, 'FID:', user.fid);
+      console.log('Requesting signature for:', userAddress, 'FID:', user.fid, 'Gift:', gift.id);
 
       // Get signature from backend (verifies user has verdict)
       const { data: signData, error: signError } = await supabase.functions.invoke('sign-verdict-claim', {
@@ -89,7 +116,7 @@ const BloomersGifts = () => {
         throw new Error(signData?.error || 'Failed to verify eligibility');
       }
 
-      console.log('Got signature, sending claim tx...');
+      console.log('Got signature, sending claim tx to:', gift.contractAddress);
 
       // Encode the claimReward(signature) call
       const data = encodeFunctionData({
@@ -103,7 +130,7 @@ const BloomersGifts = () => {
         method: 'eth_sendTransaction',
         params: [{
           from: userAddress,
-          to: BLOOMERS_VERDICT_ADDRESS,
+          to: gift.contractAddress,
           data: data,
           value: '0x0',
         }],
@@ -111,10 +138,10 @@ const BloomersGifts = () => {
 
       console.log('Claim tx:', txHash);
 
-      setGift(prev => ({ ...prev, claimed: true }));
-      setShowSharePopup(true);
+      setClaimedGifts(prev => ({ ...prev, [gift.id]: true }));
+      setShowSharePopup(gift);
       toast({
-        title: "🎁 1,000 ENB Tokens Claimed!",
+        title: `🎁 ${gift.reward} Claimed!`,
         description: "Santa smiles 🌸 Bloomers grow brighter when joy is shared",
       });
     } catch (error: any) {
@@ -148,24 +175,23 @@ const BloomersGifts = () => {
         });
       }
     } finally {
-      setIsClaiming(false);
+      setClaimingGift(null);
     }
   };
 
-  const handleShare = async () => {
-    const shareText = `🎅 Ho ho ho! Spread love to stay in Santa's good books! 💝\n\n🎁 Just claimed my daily gift of $ENB from ENB Blast!\n\n🌸 Every gift helps my Bloomer bloom brighter 🌌\n\nnaughty-or-nice-wrapped by @uniquebeing404`;
+  const handleShare = async (gift: GiftPartner) => {
+    const shareText = `🎅 Ho ho ho! Spread love to stay in Santa's good books! 💝\n\n🎁 Just claimed my daily gift of $${gift.tokenSymbol} from ${gift.name}!\n\n🌸 Every gift helps my Bloomer bloom brighter 🌌\n\nnaughty-or-nice-wrapped by @uniquebeing404`;
     
     if (isInMiniApp && sdk?.actions?.composeCast) {
       try {
         await sdk.actions.composeCast({
           text: shareText,
           embeds: [
-            'https://farcaster.xyz/miniapps/0z7FDSc-9NU_/enb-blast',
+            gift.link,
             'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'
           ],
         });
-        setHasShared(true);
-        setShowSharePopup(false);
+        setShowSharePopup(null);
         toast({ title: "✨ Shared!", description: "Your Bloomer thanks you" });
       } catch (err) {
         console.error('Share error:', err);
@@ -178,10 +204,6 @@ const BloomersGifts = () => {
     }
   };
 
-  const handleClosePopup = () => {
-    setShowSharePopup(false);
-  };
-
   const daysUntilChristmas = Math.max(0, Math.ceil((new Date('2025-12-25').getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
   return (
@@ -191,7 +213,7 @@ const BloomersGifts = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="christmas-card max-w-sm w-full p-6 border-2 border-christmas-gold/40 relative animate-in zoom-in-95 duration-300">
             <button 
-              onClick={handleClosePopup}
+              onClick={() => setShowSharePopup(null)}
               className="absolute top-3 right-3 text-christmas-snow/50 hover:text-christmas-snow transition-colors"
             >
               <X className="w-5 h-5" />
@@ -209,24 +231,24 @@ const BloomersGifts = () => {
             
             <div className="flex items-center gap-3 bg-muted/30 rounded-xl p-3 mb-6">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-md flex-shrink-0">
-                <img src={gift.partner.icon} alt={gift.partner.name} className="w-full h-full object-cover" />
+                <img src={showSharePopup.icon} alt={showSharePopup.name} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-christmas-gold font-semibold text-sm">{gift.partner.name}</p>
-                <p className="text-christmas-snow/50 text-xs truncate">{gift.partner.description}</p>
+                <p className="text-christmas-gold font-semibold text-sm">{showSharePopup.name}</p>
+                <p className="text-christmas-snow/50 text-xs truncate">{showSharePopup.description}</p>
               </div>
             </div>
             
             <div className="space-y-3">
               <Button 
-                onClick={handleShare}
+                onClick={() => handleShare(showSharePopup)}
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold py-5 rounded-xl"
               >
                 <Share2 className="w-5 h-5 mr-2" />
                 Share on Farcaster
               </Button>
               <button 
-                onClick={handleClosePopup}
+                onClick={() => setShowSharePopup(null)}
                 className="w-full text-christmas-snow/40 text-xs hover:text-christmas-snow/60 transition-colors py-2"
               >
                 Maybe later
@@ -238,123 +260,152 @@ const BloomersGifts = () => {
 
       <section className="py-16 px-6">
         <div className="max-w-md mx-auto">
-        {/* Title */}
-        <div className="text-center mb-8">
-          <h2 className="font-display text-3xl font-bold text-christmas-snow mb-2">
-            Santa's <span className="text-christmas-gold">Garden Gifts</span>
-          </h2>
-          <p className="text-christmas-snow/60 text-sm">
-            Every day until Christmas, Santa leaves a gift for the Bloomers
-          </p>
-          {daysUntilChristmas > 0 && (
-            <p className="text-christmas-gold/80 text-xs mt-2">
-              {daysUntilChristmas} days until Christmas! 🎄
+          {/* Title */}
+          <div className="text-center mb-8">
+            <h2 className="font-display text-3xl font-bold text-christmas-snow mb-2">
+              Santa's <span className="text-christmas-gold">Garden Gifts</span>
+            </h2>
+            <p className="text-christmas-snow/60 text-sm">
+              Every day until Christmas, Santa leaves a gift for the Bloomers
             </p>
-          )}
-        </div>
-
-        {/* Gift Card */}
-        <div className={`christmas-card p-6 border-2 transition-all duration-500 ${
-          gift.claimed 
-            ? 'border-christmas-green/40 shadow-lg shadow-christmas-green/20' 
-            : 'border-christmas-gold/30 animate-pulse-glow'
-        }`}>
-          {/* Gift indicator */}
-          <div className="flex items-center justify-end mb-4">
-            <Gift className={`w-6 h-6 ${gift.claimed ? 'text-christmas-green' : 'text-christmas-gold animate-bounce'}`} />
-          </div>
-
-          {/* Partner info */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-lg">
-              <img src={gift.partner.icon} alt={gift.partner.name} className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <p className="font-display text-lg text-christmas-gold font-semibold">{gift.partner.name}</p>
-              <p className="text-christmas-snow/60 text-xs">{gift.partner.description}</p>
-              <a 
-                href={gift.partner.link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-christmas-snow/50 text-xs flex items-center gap-1 hover:text-christmas-gold transition-colors mt-1"
-              >
-                Play Now <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-
-          {/* Santa's message */}
-          <div className="bg-muted/30 rounded-xl p-4 mb-4">
-            <p className="text-christmas-snow/80 text-sm italic">
-              "{gift.santaMessage}"
-            </p>
-            <p className="text-christmas-snow/50 text-xs mt-2 text-right">— Santa 🎅</p>
-          </div>
-
-          {/* Actions */}
-          {!gift.claimed ? (
-            <Button 
-              onClick={handleClaimGift}
-              disabled={isClaiming}
-              className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-black font-bold py-6 rounded-xl disabled:opacity-70"
-            >
-              {isClaiming ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Claiming...
-                </>
-              ) : (
-                <>
-                  <Gift className="w-5 h-5 mr-2" />
-                  Claim {gift.reward}
-                </>
-              )}
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              {/* Claimed message */}
-              <div className="text-center py-2 bg-christmas-green/10 rounded-xl border border-christmas-green/30">
-                <p className="text-christmas-green font-semibold">✓ Gift Claimed!</p>
-              </div>
-
-              {/* Sponsor thank you */}
-              <div className="text-center py-3 bg-muted/20 rounded-xl">
-                <p className="text-christmas-snow/70 text-sm mb-2">
-                  🎁 Thank you to our sponsor!
-                </p>
-                <a 
-                  href={gift.partner.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-christmas-gold hover:text-christmas-gold/80 font-semibold text-sm transition-colors"
-                >
-                  <img src={gift.partner.icon} alt={gift.partner.name} className="w-5 h-5 rounded-full" />
-                  Visit {gift.partner.name}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-
-              {/* Share button - always visible */}
-              <Button 
-                onClick={handleShare}
-                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold py-4 rounded-xl"
-              >
-                <Share2 className="w-5 h-5 mr-2" />
-                Share on Farcaster
-              </Button>
-              <p className="text-center text-christmas-snow/40 text-xs">
-                Santa is watching kindly… Bloomers remember generosity 🎅✨
+            {daysUntilChristmas > 0 && (
+              <p className="text-christmas-gold/80 text-xs mt-2">
+                {daysUntilChristmas} days until Christmas! 🎄
               </p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Connection hint */}
-        <p className="text-center text-christmas-snow/40 text-xs mt-6">
-          Each gift claimed helps your Bloomer bloom brighter ✨
-        </p>
-      </div>
-    </section>
+          {/* Gift Cards */}
+          <div className="space-y-6">
+            {GIFTS.map((gift) => {
+              const isClaimed = claimedGifts[gift.id];
+              const isClaiming = claimingGift === gift.id;
+
+              return (
+                <div 
+                  key={gift.id}
+                  className={`christmas-card p-6 border-2 transition-all duration-500 ${
+                    isClaimed 
+                      ? 'border-christmas-green/40 shadow-lg shadow-christmas-green/20' 
+                      : gift.enabled 
+                        ? 'border-christmas-gold/30 animate-pulse-glow'
+                        : 'border-christmas-snow/20 opacity-70'
+                  }`}
+                >
+                  {/* Gift indicator */}
+                  <div className="flex items-center justify-between mb-4">
+                    {!gift.enabled && (
+                      <span className="text-xs bg-christmas-snow/10 text-christmas-snow/60 px-2 py-1 rounded-full">
+                        Coming Soon
+                      </span>
+                    )}
+                    <div className="ml-auto">
+                      <Gift className={`w-6 h-6 ${
+                        isClaimed 
+                          ? 'text-christmas-green' 
+                          : gift.enabled 
+                            ? 'text-christmas-gold animate-bounce' 
+                            : 'text-christmas-snow/40'
+                      }`} />
+                    </div>
+                  </div>
+
+                  {/* Partner info */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-lg">
+                      <img src={gift.icon} alt={gift.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <p className="font-display text-lg text-christmas-gold font-semibold">{gift.name}</p>
+                      <p className="text-christmas-snow/60 text-xs">{gift.description}</p>
+                      <a 
+                        href={gift.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-christmas-snow/50 text-xs flex items-center gap-1 hover:text-christmas-gold transition-colors mt-1"
+                      >
+                        Visit <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Santa's message */}
+                  <div className="bg-muted/30 rounded-xl p-4 mb-4">
+                    <p className="text-christmas-snow/80 text-sm italic">
+                      "{gift.santaMessage}"
+                    </p>
+                    <p className="text-christmas-snow/50 text-xs mt-2 text-right">— Santa 🎅</p>
+                  </div>
+
+                  {/* Actions */}
+                  {!isClaimed ? (
+                    <Button 
+                      onClick={() => handleClaimGift(gift)}
+                      disabled={isClaiming || !gift.enabled}
+                      className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-black font-bold py-6 rounded-xl disabled:opacity-70"
+                    >
+                      {isClaiming ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Claiming...
+                        </>
+                      ) : !gift.enabled ? (
+                        <>
+                          <Gift className="w-5 h-5 mr-2" />
+                          Coming Soon
+                        </>
+                      ) : (
+                        <>
+                          <Gift className="w-5 h-5 mr-2" />
+                          Claim {gift.reward}
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Claimed message */}
+                      <div className="text-center py-2 bg-christmas-green/10 rounded-xl border border-christmas-green/30">
+                        <p className="text-christmas-green font-semibold">✓ Gift Claimed!</p>
+                      </div>
+
+                      {/* Sponsor thank you */}
+                      <div className="text-center py-3 bg-muted/20 rounded-xl">
+                        <p className="text-christmas-snow/70 text-sm mb-2">
+                          🎁 Thank you to our sponsor!
+                        </p>
+                        <a 
+                          href={gift.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-christmas-gold hover:text-christmas-gold/80 font-semibold text-sm transition-colors"
+                        >
+                          <img src={gift.icon} alt={gift.name} className="w-5 h-5 rounded-full" />
+                          Visit {gift.name}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+
+                      {/* Share button - always visible */}
+                      <Button 
+                        onClick={() => handleShare(gift)}
+                        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold py-4 rounded-xl"
+                      >
+                        <Share2 className="w-5 h-5 mr-2" />
+                        Share on Farcaster
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Connection hint */}
+          <p className="text-center text-christmas-snow/40 text-xs mt-6">
+            Each gift claimed helps your Bloomer bloom brighter ✨
+          </p>
+        </div>
+      </section>
     </>
   );
 };

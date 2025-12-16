@@ -1,8 +1,11 @@
 import { createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 
-// BloomersVerdictClaim contract on Base
+// BloomersVerdictClaim contract on Base (ENB)
 export const BLOOMERS_VERDICT_ADDRESS = '0xf2BD230858D30e5858937a27A0C2FB8309E47997' as const;
+
+// UniqueHubVerdictClaim contract on Base (UNIQ) - to be deployed
+export const UNIQUEHUB_VERDICT_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
 
 // BloomersNFT contract on Base
 export const BLOOMERS_NFT_ADDRESS = '0x31031d10988169e6cac45F47469BA87d8B394E1e' as const;
