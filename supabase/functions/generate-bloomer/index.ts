@@ -19,24 +19,17 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Random pose selection - including standing poses
-    const poses = [
-      "standing upright on two legs like a magical humanoid character",
-      "standing proudly with arms crossed",
-      "standing with one hand raised casting a spell",
-      "standing elegantly with flowing robes or wings spread",
-      "sitting gracefully on a magical throne",
-      "floating in mid-air with magical aura",
-      "dancing on tiptoes with graceful movement",
-      "standing heroically with a magical staff or wand",
-      "walking gracefully with flowing magical trails",
-      "striking a cute pose with peace sign"
+    // Plain background colors for NFT style
+    const backgrounds = [
+      "plain solid black background",
+      "plain solid navy blue background",
+      "plain solid soft pink background",
+      "plain solid emerald green background"
     ];
-    const randomPose = poses[Math.floor(Math.random() * poses.length)];
+    const randomBackground = backgrounds[Math.floor(Math.random() * backgrounds.length)];
 
-    // ALL Bloomers are cute kawaii fox/cat-like magical creatures with wings
-    // Only the accessories, colors, and magical elements vary based on user's profile
-    const creature = "adorable kawaii fox-cat spirit creature with fluffy fur, big sparkly anime eyes, small cute wings, and magical jewelry";
+    // ALL Bloomers are cute kawaii fox-cat spirit creatures - CONSISTENT design
+    const creatureDescription = `adorable kawaii fox-cat spirit creature standing upright on two legs facing forward, with fluffy fur, large sparkly anime eyes, small cute fairy wings on back, wearing ornate magical jewelry (necklaces, earrings, crown/tiara, bracelets), magical gems embedded in accessories`;
 
     // Build the message content with image analysis
     let messageContent: any[];
@@ -48,31 +41,26 @@ serve(async (req) => {
       messageContent = [
         {
           type: "text",
-          text: `Analyze this profile picture and create a unique magical creature inspired by it.
+          text: `Analyze this profile picture and extract the dominant colors and mood.
 
-CRITICAL - Extract these traits from the image:
-- Dominant colors (use these for the creature's color palette)
-- Any patterns or textures
-- The mood/vibe (energetic, calm, mysterious, playful)
-- Any accessories, hats, or distinctive features
+Create a ${creatureDescription}.
 
-Now create a hyper-detailed ${creature} portrait in anime art style.
+CRITICAL REQUIREMENTS:
+1. POSE: Standing upright on two legs, facing forward toward the viewer (like a character portrait)
+2. CREATURE: Must be a cute fox-cat hybrid with small fairy wings - NOT an owl, horse, or any other animal
+3. BACKGROUND: ${randomBackground} - completely plain, no scenery, no effects, just solid color
+4. COLORS: Use the dominant colors from the analyzed image for the creature's fur, accessories, and magical glow effects
 
-POSE: The creature must be ${randomPose} - NOT on all fours, NOT crouching. This is important!
+Style:
+- Big sparkly anime eyes with cute expression
+- Fluffy fur with the color palette from the image
+- Ornate magical jewelry (crown/tiara, necklace, earrings, arm bands)
+- Glowing magical gems in accessories
+- Small cute fairy wings on the back
+- Soft magical glow around the character
 
-Style requirements:
-- Adorable big sparkly anime eyes
-- The creature's COLOR PALETTE must match the dominant colors from the analyzed image
-- Ornate magical accessories inspired by any accessories in the image
-- Glowing gems and magical effects
-- Intricate wing/pattern details if applicable
-- Fluffy fur, scales, or magical elements with iridescent sheen
-- Christmas/winter themed accessories (Santa hat, holly, snowflakes) as a festive touch
-
-Background: Enchanted mystical setting with floating sparkles, magical auroras, snow-covered enchanted forest, or northern lights.
-
-The creature should look friendly, magical, and collectible - like a premium NFT character.
-Ultra high resolution, highly detailed, professional digital art quality.`
+This is for an NFT collection - the creature should be centered, professional quality, highly detailed anime art style.
+Ultra high resolution digital art.`
         },
         {
           type: "image_url",
@@ -93,36 +81,37 @@ Ultra high resolution, highly detailed, professional digital art quality.`
         "crimson reds and golds",
         "icy blues and silvers",
         "pastel rainbow colors",
-        "midnight blues and stars"
+        "midnight blues with silver stars"
       ];
       const randomColors = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
 
       messageContent = [
         {
           type: "text",
-          text: `Create a hyper-detailed ${creature} portrait in anime art style.
+          text: `Create a ${creatureDescription}.
 
-POSE: The creature must be ${randomPose} - NOT on all fours, NOT crouching. This is important!
+CRITICAL REQUIREMENTS:
+1. POSE: Standing upright on two legs, facing forward toward the viewer (like a character portrait)
+2. CREATURE: Must be a cute fox-cat hybrid with small fairy wings - NOT an owl, horse, or any other animal
+3. BACKGROUND: ${randomBackground} - completely plain, no scenery, no effects, just solid color
+4. COLORS: ${randomColors} for fur and accessories
 
-Style requirements:
-- Adorable big sparkly anime eyes
-- Color palette: ${randomColors}
-- Ornate magical accessories
-- Glowing gems and magical effects
-- Intricate wing/pattern details if applicable
-- Fluffy fur, scales, or magical elements with iridescent sheen
-- Christmas/winter themed accessories (Santa hat, holly, snowflakes) as a festive touch
+Style:
+- Big sparkly anime eyes with cute expression
+- Fluffy fur in ${randomColors}
+- Ornate magical jewelry (crown/tiara, necklace, earrings, arm bands)
+- Glowing magical gems in accessories
+- Small cute fairy wings on the back
+- Soft magical glow around the character
 
-Background: Enchanted mystical setting with floating sparkles, magical auroras, snow-covered enchanted forest, or northern lights.
-
-The creature should look friendly, magical, and collectible - like a premium NFT character.
-Ultra high resolution, highly detailed, professional digital art quality.`
+This is for an NFT collection - the creature should be centered, professional quality, highly detailed anime art style.
+Ultra high resolution digital art.`
         }
       ];
     }
 
-    console.log("Generating Bloomer with pose:", randomPose);
-    console.log("Creature type:", creature);
+    console.log("Generating Bloomer with background:", randomBackground);
+    console.log("Creature type: fox-cat spirit with wings");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
