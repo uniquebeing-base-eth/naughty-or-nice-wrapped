@@ -164,6 +164,9 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
     }
 
     console.log('[Mint] Starting mint process...');
+    console.log('[Mint] SDK available:', !!sdk);
+    console.log('[Mint] SDK wallet:', !!sdk?.wallet);
+    console.log('[Mint] ethProvider:', !!sdk?.wallet?.ethProvider);
 
     if (!sdk?.wallet?.ethProvider) {
       console.error('[Mint] No ethProvider available');
@@ -183,6 +186,8 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
         method: 'eth_requestAccounts' 
       }) as string[];
       
+      console.log('[Mint] Accounts received:', accounts);
+      
       if (!accounts?.[0]) {
         throw new Error('No wallet connected');
       }
@@ -197,8 +202,11 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: '0x2105' }]
         });
+        console.log('[Mint] Network switch successful');
       } catch (switchError: any) {
+        console.log('[Mint] Network switch error:', switchError);
         if (switchError.code === 4902) {
+          console.log('[Mint] Adding Base network...');
           await provider.request({
             method: 'wallet_addEthereumChain',
             params: [{
@@ -212,79 +220,20 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
         }
       }
 
-      // Step 1: Upload metadata FIRST (before minting)
-      // Use a unique ID based on user address and timestamp
-      const uniqueId = `${userAddr.toLowerCase()}-${Date.now()}`;
-      console.log('[Mint] Uploading metadata with ID:', uniqueId);
-      
-      const metadata = {
-        name: `Bloomer`,
-        description: "A magical Bloomer creature from Naughty or Nice Wrapped. Each Bloomer is uniquely generated based on its owner's profile, making it a one-of-a-kind digital companion.",
-        image: generatedBloomer,
-        external_url: "https://naughty-or-nice-wrapped.vercel.app/bloomers",
-        attributes: [
-          { trait_type: "Collection", value: "Naughty or Nice Wrapped" },
-          { trait_type: "Season", value: "Christmas 2024" },
-          { trait_type: "Minted By", value: userAddr }
-        ]
-      };
-      
-      const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('bloomers-metadata')
-        .upload(`${uniqueId}.json`, metadataBlob, {
-          contentType: 'application/json',
-          upsert: true
-        });
-      
-      if (uploadError) {
-        console.error('[Mint] Failed to upload metadata:', uploadError);
-        throw new Error('Failed to upload metadata');
-      }
-      
-      // Get the public URL for the metadata
-      const metadataUrl = `https://sbhcnilxueqchughpeui.supabase.co/storage/v1/object/public/bloomers-metadata/${uniqueId}.json`;
-      console.log('[Mint] Metadata URL:', metadataUrl);
-
-      // Step 2: Mint with the metadata URI
+      // Use the mint price we already determined
       const mintPriceWei = parseEther(mintPrice);
       console.log('[Mint] Mint price in Wei:', mintPriceWei.toString());
       console.log('[Mint] Contract address:', BLOOMERS_NFT_ADDRESS);
-
-      // Encode mint(string metadataURI) function call
-      // Function selector: first 4 bytes of keccak256("mint(string)")
-      const functionSelector = 'd85d3d27'; // keccak256("mint(string)").slice(0,8)
-      
-      // ABI encode the string parameter
-      // String encoding: offset (32 bytes) + length (32 bytes) + data (padded to 32 bytes)
-      const encoder = new TextEncoder();
-      const metadataBytes = encoder.encode(metadataUrl);
-      const stringLength = metadataBytes.length;
-      
-      // Offset to string data (always 0x20 = 32 for single string param)
-      const offset = '0000000000000000000000000000000000000000000000000000000000000020';
-      // String length
-      const lengthHex = stringLength.toString(16).padStart(64, '0');
-      // String data padded to 32 byte boundary
-      let stringHex = '';
-      for (let i = 0; i < metadataBytes.length; i++) {
-        stringHex += metadataBytes[i].toString(16).padStart(2, '0');
-      }
-      // Pad to multiple of 64 characters (32 bytes)
-      while (stringHex.length % 64 !== 0) {
-        stringHex += '00';
-      }
-      
-      const callData = '0x' + functionSelector + offset + lengthHex + stringHex;
-      console.log('[Mint] Call data length:', callData.length);
 
       // Build transaction
       const txParams = {
         from: userAddr,
         to: BLOOMERS_NFT_ADDRESS,
         value: `0x${mintPriceWei.toString(16)}`,
-        data: callData
+        data: '0x1249c58b' // mint() function selector
       };
+      
+      console.log('[Mint] Transaction params:', JSON.stringify(txParams, null, 2));
 
       // Send mint transaction
       console.log('[Mint] Sending transaction...');
@@ -296,44 +245,130 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       console.log('[Mint] Transaction hash:', hash);
       setTxHash(hash);
 
-      // Save to database
-      try {
-        // Update existing pending bloomer or insert new one
-        const { data: existingPending } = await supabase
-          .from('minted_bloomers')
-          .select('id')
-          .eq('user_address', userAddr.toLowerCase())
-          .eq('image_url', generatedBloomer)
-          .is('tx_hash', null)
-          .single();
-
-        if (existingPending) {
-          await supabase
+      // Update the pending bloomer with the tx_hash, or insert if no pending
+      if (generatedBloomer) {
+        try {
+          // First, try to find and update any pending bloomer for this user with this image
+          const { data: existingPending } = await supabase
             .from('minted_bloomers')
-            .update({ tx_hash: hash })
-            .eq('id', existingPending.id);
-          console.log('[Mint] Updated pending bloomer with tx_hash');
-        } else {
-          await supabase.from('minted_bloomers').insert({
-            user_address: userAddr.toLowerCase(),
-            image_url: generatedBloomer,
-            tx_hash: hash
-          });
-          console.log('[Mint] Saved new bloomer to database');
+            .select('id')
+            .eq('user_address', userAddr.toLowerCase())
+            .eq('image_url', generatedBloomer)
+            .is('tx_hash', null)
+            .single();
+
+          if (existingPending) {
+            // Update existing pending bloomer
+            const { error: updateError } = await supabase
+              .from('minted_bloomers')
+              .update({ tx_hash: hash })
+              .eq('id', existingPending.id);
+            
+            if (updateError) {
+              console.error('[Mint] Failed to update pending bloomer:', updateError);
+            } else {
+              console.log('[Mint] Updated pending bloomer with tx_hash');
+            }
+          } else {
+            // Insert new minted bloomer
+            const { error: insertError } = await supabase.from('minted_bloomers').insert({
+              user_address: userAddr.toLowerCase(),
+              image_url: generatedBloomer,
+              tx_hash: hash
+            });
+            
+            if (insertError) {
+              console.error('[Mint] Failed to insert bloomer:', insertError);
+            } else {
+              console.log('[Mint] Saved new bloomer to database');
+            }
+          }
+          
+          // Get tokenId from transaction receipt logs (Transfer event)
+          // Poll for receipt since tx might not be mined yet
+          let tokenId: number | null = null;
+          try {
+            let receipt = null;
+            let attempts = 0;
+            const maxAttempts = 30; // Wait up to ~30 seconds
+            
+            while (!receipt && attempts < maxAttempts) {
+              await new Promise(r => setTimeout(r, 1000));
+              receipt = await provider.request({
+                method: 'eth_getTransactionReceipt',
+                params: [hash]
+              }) as any;
+              attempts++;
+              console.log(`[Mint] Waiting for receipt... attempt ${attempts}`);
+            }
+            
+            if (receipt?.logs) {
+              // Transfer event topic: keccak256("Transfer(address,address,uint256)")
+              const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+              const transferLog = receipt.logs.find((log: any) => 
+                log.topics?.[0]?.toLowerCase() === transferTopic.toLowerCase()
+              );
+              
+              if (transferLog?.topics?.[3]) {
+                tokenId = parseInt(transferLog.topics[3], 16);
+                console.log('[Mint] Got tokenId from Transfer event:', tokenId);
+              }
+            }
+          } catch (receiptErr) {
+            console.log('[Mint] Could not get receipt for tokenId:', receiptErr);
+          }
+          
+          // Upload metadata if we got tokenId
+          if (tokenId !== null) {
+            console.log('[Mint] Uploading metadata for tokenId:', tokenId);
+            
+            const metadata = {
+              name: `Bloomer #${tokenId}`,
+              description: "A magical Bloomer creature from Naughty or Nice Wrapped. Each Bloomer is uniquely generated based on its owner's profile, making it a one-of-a-kind digital companion.",
+              image: generatedBloomer,
+              external_url: "https://naughty-or-nice-wrapped.vercel.app/bloomers",
+              attributes: [
+                { trait_type: "Collection", value: "Naughty or Nice Wrapped" },
+                { trait_type: "Season", value: "Christmas 2024" },
+                { trait_type: "Minted By", value: userAddr }
+              ]
+            };
+            
+            const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+            const { error: uploadError } = await supabase.storage
+              .from('bloomers-metadata')
+              .upload(`${tokenId}.json`, metadataBlob, {
+                contentType: 'application/json',
+                upsert: true
+              });
+            
+            if (uploadError) {
+              console.error('[Mint] Failed to upload metadata:', uploadError);
+            } else {
+              console.log(`[Mint] Uploaded metadata for token ${tokenId}`);
+            }
+          } else {
+            console.log('[Mint] Could not determine tokenId, skipping metadata upload');
+          }
+          
+          // Notify parent to refresh gallery
+          onMinted?.(generatedBloomer);
+          setPendingBloomerId(null);
+          // Reset custom image back to PFP after minting
+          setCustomImage(null);
+        } catch (saveErr) {
+          console.error('[Mint] Failed to save bloomer:', saveErr);
         }
-        
-        // Notify parent to refresh gallery
-        onMinted?.(generatedBloomer);
-        setPendingBloomerId(null);
-        setCustomImage(null);
-      } catch (saveErr) {
-        console.error('[Mint] Failed to save bloomer:', saveErr);
       }
 
       setMintState('minted');
     } catch (err: any) {
       console.error('[Mint] Error:', err);
+      console.error('[Mint] Error message:', err?.message);
+      console.error('[Mint] Error code:', err?.code);
+      console.error('[Mint] Error data:', err?.data);
       
+      // More specific error messages
       let errorMessage = 'Mint failed. Please try again.';
       if (err?.message?.includes('rejected') || err?.code === 4001) {
         errorMessage = 'Transaction was rejected.';
