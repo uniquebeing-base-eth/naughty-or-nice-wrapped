@@ -4,8 +4,8 @@ import { base } from 'wagmi/chains';
 // BloomersVerdictClaim contract on Base
 export const BLOOMERS_VERDICT_ADDRESS = '0xf2BD230858D30e5858937a27A0C2FB8309E47997' as const;
 
-// BloomersNFT contract on Base
-export const BLOOMERS_NFT_ADDRESS = '0x31031d10988169e6cac45F47469BA87d8B394E1e' as const;
+// BloomersNFTV2 contract on Base (ERC721URIStorage - tokenURI passed at mint)
+export const BLOOMERS_NFT_ADDRESS = '0x283ED2B1F90Ac24Eca5075802bCaD27A33f865DB' as const;
 
 // ABI for BloomersVerdictClaim
 export const BLOOMERS_VERDICT_ABI = [
@@ -46,20 +46,13 @@ export const BLOOMERS_VERDICT_ABI = [
   },
 ] as const;
 
-// ABI for BloomersNFT
+// ABI for BloomersNFTV2 (ERC721URIStorage)
 export const BLOOMERS_NFT_ABI = [
   {
     name: 'mint',
     type: 'function',
     stateMutability: 'payable',
-    inputs: [],
-    outputs: [],
-  },
-  {
-    name: 'batchMint',
-    type: 'function',
-    stateMutability: 'payable',
-    inputs: [{ name: 'count', type: 'uint256' }],
+    inputs: [{ name: 'metadataURI', type: 'string' }],
     outputs: [],
   },
   {
