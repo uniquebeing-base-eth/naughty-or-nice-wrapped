@@ -34,20 +34,9 @@ serve(async (req) => {
     ];
     const randomPose = poses[Math.floor(Math.random() * poses.length)];
 
-    // Random creature types
-    const creatures = [
-      "mystical fox spirit (kitsune)",
-      "elegant fairy with butterfly wings", 
-      "adorable baby dragon",
-      "magical unicorn creature",
-      "enchanted elf with pointed ears",
-      "whimsical forest spirit",
-      "celestial angel being",
-      "magical cat with powers",
-      "phoenix-like bird creature",
-      "mystical deer spirit"
-    ];
-    const randomCreature = creatures[Math.floor(Math.random() * creatures.length)];
+    // ALL Bloomers are cute kawaii fox/cat-like magical creatures with wings
+    // Only the accessories, colors, and magical elements vary based on user's profile
+    const creature = "adorable kawaii fox-cat spirit creature with fluffy fur, big sparkly anime eyes, small cute wings, and magical jewelry";
 
     // Build the message content with image analysis
     let messageContent: any[];
@@ -67,7 +56,7 @@ CRITICAL - Extract these traits from the image:
 - The mood/vibe (energetic, calm, mysterious, playful)
 - Any accessories, hats, or distinctive features
 
-Now create a hyper-detailed kawaii ${randomCreature} portrait in anime art style.
+Now create a hyper-detailed ${creature} portrait in anime art style.
 
 POSE: The creature must be ${randomPose} - NOT on all fours, NOT crouching. This is important!
 
@@ -111,7 +100,7 @@ Ultra high resolution, highly detailed, professional digital art quality.`
       messageContent = [
         {
           type: "text",
-          text: `Create a hyper-detailed kawaii ${randomCreature} portrait in anime art style.
+          text: `Create a hyper-detailed ${creature} portrait in anime art style.
 
 POSE: The creature must be ${randomPose} - NOT on all fours, NOT crouching. This is important!
 
@@ -133,7 +122,7 @@ Ultra high resolution, highly detailed, professional digital art quality.`
     }
 
     console.log("Generating Bloomer with pose:", randomPose);
-    console.log("Creature type:", randomCreature);
+    console.log("Creature type:", creature);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
