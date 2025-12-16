@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Gift, Share2, ExternalLink, X, Loader2 } from 'lucide-react';
+import { Gift, Share2, ExternalLink, X, Loader2, CheckCircle } from 'lucide-react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ interface GiftPartner {
   contractAddress: `0x${string}`;
   tokenSymbol: string;
   enabled: boolean;
+  claimIntervalHours: number; // Claim interval in hours
 }
 
 const GIFTS: GiftPartner[] = [
@@ -37,6 +38,7 @@ const GIFTS: GiftPartner[] = [
     contractAddress: BLOOMERS_VERDICT_ADDRESS,
     tokenSymbol: 'ENB',
     enabled: true,
+    claimIntervalHours: 24, // Daily
   },
   {
     id: 'uniquehub',
@@ -49,6 +51,7 @@ const GIFTS: GiftPartner[] = [
     contractAddress: UNIQUEHUB_VERDICT_ADDRESS,
     tokenSymbol: 'UNIQ',
     enabled: true,
+    claimIntervalHours: 5, // Every 5 hours
   },
 ];
 
@@ -59,8 +62,25 @@ const BloomersGifts = () => {
   const [claimedGifts, setClaimedGifts] = useState<Record<string, boolean>>({});
   const [claimingGift, setClaimingGift] = useState<string | null>(null);
   const [showSharePopup, setShowSharePopup] = useState<GiftPartner | null>(null);
+  const [visitedGifts, setVisitedGifts] = useState<Record<string, boolean>>({});
+
+  const handleVisitPartner = (gift: GiftPartner) => {
+    // Mark as visited and open the link
+    setVisitedGifts(prev => ({ ...prev, [gift.id]: true }));
+    window.open(gift.link, '_blank');
+  };
 
   const handleClaimGift = async (gift: GiftPartner) => {
+    // Check if user visited the partner first
+    if (!visitedGifts[gift.id]) {
+      toast({
+        title: "Visit Required",
+        description: `Please tap 'Visit' to check out ${gift.name} first!`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
       toast({
         title: "Farcaster Required",
@@ -156,9 +176,10 @@ const BloomersGifts = () => {
           variant: "destructive",
         });
       } else if (msg.includes('Already claimed') || msg.includes('already claimed') || msg.includes('execution reverted')) {
+        const intervalText = gift.claimIntervalHours === 24 ? 'tomorrow' : `in ${gift.claimIntervalHours} hours`;
         toast({
-          title: "Already Claimed Today",
-          description: "Come back tomorrow for your next gift!",
+          title: "Already Claimed",
+          description: `Come back ${intervalText} for your next gift!`,
           variant: "destructive",
         });
       } else if (msg.includes('No verdict') || msg.includes('eligibility')) {
@@ -280,6 +301,7 @@ const BloomersGifts = () => {
             {GIFTS.map((gift) => {
               const isClaimed = claimedGifts[gift.id];
               const isClaiming = claimingGift === gift.id;
+              const isVisited = visitedGifts[gift.id];
 
               return (
                 <div 
@@ -299,6 +321,11 @@ const BloomersGifts = () => {
                         Coming Soon
                       </span>
                     )}
+                    {gift.claimIntervalHours !== 24 && gift.enabled && (
+                      <span className="text-xs bg-christmas-gold/20 text-christmas-gold px-2 py-1 rounded-full">
+                        Every {gift.claimIntervalHours}h
+                      </span>
+                    )}
                     <div className="ml-auto">
                       <Gift className={`w-6 h-6 ${
                         isClaimed 
@@ -315,17 +342,28 @@ const BloomersGifts = () => {
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-lg">
                       <img src={gift.icon} alt={gift.name} className="w-full h-full object-cover" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-display text-lg text-christmas-gold font-semibold">{gift.name}</p>
                       <p className="text-christmas-snow/60 text-xs">{gift.description}</p>
-                      <a 
-                        href={gift.link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-christmas-snow/50 text-xs flex items-center gap-1 hover:text-christmas-gold transition-colors mt-1"
+                      <button 
+                        onClick={() => handleVisitPartner(gift)}
+                        className={`text-xs flex items-center gap-1 mt-1 transition-colors ${
+                          isVisited 
+                            ? 'text-christmas-green' 
+                            : 'text-christmas-snow/50 hover:text-christmas-gold'
+                        }`}
                       >
-                        Visit <ExternalLink className="w-3 h-3" />
-                      </a>
+                        {isVisited ? (
+                          <>
+                            <CheckCircle className="w-3 h-3" />
+                            Visited
+                          </>
+                        ) : (
+                          <>
+                            Visit <ExternalLink className="w-3 h-3" />
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
 
@@ -337,12 +375,23 @@ const BloomersGifts = () => {
                     <p className="text-christmas-snow/50 text-xs mt-2 text-right">— Santa 🎅</p>
                   </div>
 
+                  {/* Visit requirement hint */}
+                  {!isVisited && gift.enabled && !isClaimed && (
+                    <p className="text-christmas-gold/80 text-xs text-center mb-3 animate-pulse">
+                      👆 Tap 'Visit' above to unlock claim
+                    </p>
+                  )}
+
                   {/* Actions */}
                   {!isClaimed ? (
                     <Button 
                       onClick={() => handleClaimGift(gift)}
-                      disabled={isClaiming || !gift.enabled}
-                      className="w-full bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-black font-bold py-6 rounded-xl disabled:opacity-70"
+                      disabled={isClaiming || !gift.enabled || !isVisited}
+                      className={`w-full font-bold py-6 rounded-xl disabled:opacity-70 ${
+                        isVisited && gift.enabled
+                          ? 'bg-gradient-to-r from-christmas-gold to-amber-600 hover:from-christmas-gold/90 hover:to-amber-600/90 text-black'
+                          : 'bg-christmas-snow/20 text-christmas-snow/50'
+                      }`}
                     >
                       {isClaiming ? (
                         <>
@@ -353,6 +402,11 @@ const BloomersGifts = () => {
                         <>
                           <Gift className="w-5 h-5 mr-2" />
                           Coming Soon
+                        </>
+                      ) : !isVisited ? (
+                        <>
+                          <Gift className="w-5 h-5 mr-2" />
+                          Visit to Unlock
                         </>
                       ) : (
                         <>
@@ -366,6 +420,9 @@ const BloomersGifts = () => {
                       {/* Claimed message */}
                       <div className="text-center py-2 bg-christmas-green/10 rounded-xl border border-christmas-green/30">
                         <p className="text-christmas-green font-semibold">✓ Gift Claimed!</p>
+                        <p className="text-christmas-snow/50 text-xs mt-1">
+                          Next claim in {gift.claimIntervalHours === 24 ? '~24 hours' : `~${gift.claimIntervalHours} hours`}
+                        </p>
                       </div>
 
                       {/* Sponsor thank you */}
