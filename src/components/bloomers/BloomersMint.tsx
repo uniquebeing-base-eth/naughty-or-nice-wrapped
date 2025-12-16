@@ -225,22 +225,6 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       console.log('[Mint] Mint price in Wei:', mintPriceWei.toString());
       console.log('[Mint] Contract address:', BLOOMERS_NFT_ADDRESS);
 
-      // Get current totalMinted from contract BEFORE minting to know the tokenId
-      let nextTokenId = Date.now(); // Fallback to timestamp-based ID if eth_call not supported
-      try {
-        const totalMintedData = await provider.request({
-          method: 'eth_call',
-          params: [{
-            to: BLOOMERS_NFT_ADDRESS,
-            data: '0xa2309ff8' // totalMinted() function selector
-          }, 'latest']
-        }) as string;
-        nextTokenId = parseInt(totalMintedData, 16);
-        console.log('[Mint] Next token ID will be:', nextTokenId);
-      } catch (callError) {
-        console.log('[Mint] Could not get totalMinted via eth_call, using fallback:', callError);
-      }
-
       // Build transaction
       const txParams = {
         from: userAddr,
@@ -300,34 +284,61 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
             }
           }
           
-          // Use the nextTokenId we got from the contract before minting
-          const tokenId = nextTokenId;
-          console.log('[Mint] Uploading metadata for tokenId:', tokenId);
+          // Get tokenId from transaction receipt logs (Transfer event)
+          let tokenId: number | null = null;
+          try {
+            const receipt = await provider.request({
+              method: 'eth_getTransactionReceipt',
+              params: [hash]
+            }) as any;
+            
+            if (receipt?.logs) {
+              // Transfer event topic: keccak256("Transfer(address,address,uint256)")
+              const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+              const transferLog = receipt.logs.find((log: any) => 
+                log.topics?.[0]?.toLowerCase() === transferTopic.toLowerCase()
+              );
+              
+              if (transferLog?.topics?.[3]) {
+                tokenId = parseInt(transferLog.topics[3], 16);
+                console.log('[Mint] Got tokenId from Transfer event:', tokenId);
+              }
+            }
+          } catch (receiptErr) {
+            console.log('[Mint] Could not get receipt for tokenId:', receiptErr);
+          }
           
-          const metadata = {
-            name: `Bloomer #${tokenId}`,
-            description: "A magical Bloomer creature from Naughty or Nice Wrapped. Each Bloomer is uniquely generated based on its owner's profile, making it a one-of-a-kind digital companion.",
-            image: generatedBloomer,
-            external_url: "https://naughty-or-nice-wrapped.vercel.app/bloomers",
-            attributes: [
-              { trait_type: "Collection", value: "Naughty or Nice Wrapped" },
-              { trait_type: "Season", value: "Christmas 2024" },
-              { trait_type: "Minted By", value: userAddr }
-            ]
-          };
-          
-          const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
-          const { error: uploadError } = await supabase.storage
-            .from('bloomers-metadata')
-            .upload(`${tokenId}.json`, metadataBlob, {
-              contentType: 'application/json',
-              upsert: true
-            });
-          
-          if (uploadError) {
-            console.error('[Mint] Failed to upload metadata:', uploadError);
+          // Upload metadata if we got tokenId
+          if (tokenId !== null) {
+            console.log('[Mint] Uploading metadata for tokenId:', tokenId);
+            
+            const metadata = {
+              name: `Bloomer #${tokenId}`,
+              description: "A magical Bloomer creature from Naughty or Nice Wrapped. Each Bloomer is uniquely generated based on its owner's profile, making it a one-of-a-kind digital companion.",
+              image: generatedBloomer,
+              external_url: "https://naughty-or-nice-wrapped.vercel.app/bloomers",
+              attributes: [
+                { trait_type: "Collection", value: "Naughty or Nice Wrapped" },
+                { trait_type: "Season", value: "Christmas 2024" },
+                { trait_type: "Minted By", value: userAddr }
+              ]
+            };
+            
+            const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+            const { error: uploadError } = await supabase.storage
+              .from('bloomers-metadata')
+              .upload(`${tokenId}.json`, metadataBlob, {
+                contentType: 'application/json',
+                upsert: true
+              });
+            
+            if (uploadError) {
+              console.error('[Mint] Failed to upload metadata:', uploadError);
+            } else {
+              console.log(`[Mint] Uploaded metadata for token ${tokenId}`);
+            }
           } else {
-            console.log(`[Mint] Uploaded metadata for token ${tokenId}`);
+            console.log('[Mint] Could not determine tokenId, skipping metadata upload');
           }
           
           // Notify parent to refresh gallery
