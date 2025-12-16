@@ -285,12 +285,22 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
           }
           
           // Get tokenId from transaction receipt logs (Transfer event)
+          // Poll for receipt since tx might not be mined yet
           let tokenId: number | null = null;
           try {
-            const receipt = await provider.request({
-              method: 'eth_getTransactionReceipt',
-              params: [hash]
-            }) as any;
+            let receipt = null;
+            let attempts = 0;
+            const maxAttempts = 30; // Wait up to ~30 seconds
+            
+            while (!receipt && attempts < maxAttempts) {
+              await new Promise(r => setTimeout(r, 1000));
+              receipt = await provider.request({
+                method: 'eth_getTransactionReceipt',
+                params: [hash]
+              }) as any;
+              attempts++;
+              console.log(`[Mint] Waiting for receipt... attempt ${attempts}`);
+            }
             
             if (receipt?.logs) {
               // Transfer event topic: keccak256("Transfer(address,address,uint256)")
