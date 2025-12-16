@@ -42,13 +42,13 @@ const GIFTS: GiftPartner[] = [
     id: 'uniquehub',
     name: 'UniqueHub',
     icon: uniquehubIcon,
-    link: 'https://farcaster.xyz/miniapps/N6rQ-KuRRFCE/uniquehub',
+    link: 'https://farcaster.xyz/miniapps/lQoakVUKSjUV/uniquehub',
     description: 'Your unique hub for everything onchain',
     santaMessage: "Ho ho ho! The UniqueHub spirits are spreading uniqueness across the realm! Every soul deserves to shine uniquely! 🌟✨",
     reward: '300,000 UNIQ Tokens',
     contractAddress: UNIQUEHUB_VERDICT_ADDRESS,
     tokenSymbol: 'UNIQ',
-    enabled: false, // Will enable after deployment
+    enabled: true,
   },
 ];
 
