@@ -44,7 +44,7 @@ const GIFTS: GiftPartner[] = [
     id: 'uniquehub',
     name: 'UniqueHub',
     icon: uniquehubIcon,
-    link: 'https://farcaster.xyz/miniapps/lQoakVUKSjUV/uniquehub',
+    link: 'https://uniqueehub.vercel.app',
     description: 'Your unique hub for everything onchain',
     santaMessage: "Ho ho ho! The UniqueHub spirits are spreading uniqueness across the realm! Every soul deserves to shine uniquely! 🌟✨",
     reward: '300,000 UNIQ Tokens',
