@@ -6,9 +6,8 @@ import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useToast } from '@/hooks/use-toast';
 import { encodeFunctionData } from 'viem';
 import { supabase } from '@/integrations/supabase/client';
-import enbBlastIcon from '@/assets/partners/enb-blast-icon.png';
 import uniquehubIcon from '@/assets/partners/uniquehub-icon.png';
-import { BLOOMERS_VERDICT_ADDRESS, UNIQUEHUB_VERDICT_ADDRESS, BLOOMERS_VERDICT_ABI } from '@/config/wagmi';
+import { UNIQUEHUB_VERDICT_ADDRESS, BLOOMERS_VERDICT_ABI } from '@/config/wagmi';
 
 const BASE_CHAIN_ID = '0x2105';
 
@@ -27,19 +26,6 @@ interface GiftPartner {
 }
 
 const GIFTS: GiftPartner[] = [
-  {
-    id: 'enb',
-    name: 'ENB Blast',
-    icon: enbBlastIcon,
-    link: 'https://farcaster.xyz/miniapps/0z7FDSc-9NU_/enb-blast',
-    description: 'Drag your avatar and collect ENBs',
-    santaMessage: "Ho ho ho! The ENB elves have been blasting joy across the blockchain! Drag, collect, and spread the holiday cheer! 🎄✨",
-    reward: '1,000 ENB Tokens',
-    contractAddress: BLOOMERS_VERDICT_ADDRESS,
-    tokenSymbol: 'ENB',
-    enabled: true,
-    claimIntervalHours: 24, // Daily
-  },
   {
     id: 'uniquehub',
     name: 'UniqueHub',
