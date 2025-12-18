@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
+import BloomersLeaderboard from './BloomersLeaderboard';
 
 // Import Bloomer images
 import bloomerCelestialFox from '@/assets/bloomers/bloomer-celestial-fox.png';
@@ -130,16 +131,20 @@ const BloomersHero = () => {
         </div>
       </div>
 
-      {/* Mint now button */}
-      <Button 
-        onClick={() => {
-          document.getElementById('mint-section')?.scrollIntoView({ behavior: 'smooth' });
-        }}
-        className="bg-gradient-to-r from-christmas-gold to-amber-600 text-white px-8 py-6 rounded-full font-bold text-lg border border-christmas-gold/50 hover:scale-105 transition-transform"
-      >
-        <Sparkles className="w-5 h-5 mr-2" />
-        Mint Now
-      </Button>
+      {/* Action Buttons */}
+      <div className="flex items-center gap-3">
+        <Button 
+          onClick={() => {
+            document.getElementById('mint-section')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="bg-gradient-to-r from-christmas-gold to-amber-600 text-white px-8 py-6 rounded-full font-bold text-lg border border-christmas-gold/50 hover:scale-105 transition-transform"
+        >
+          <Sparkles className="w-5 h-5 mr-2" />
+          Mint Now
+        </Button>
+        
+        <BloomersLeaderboard />
+      </div>
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
