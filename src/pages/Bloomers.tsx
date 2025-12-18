@@ -168,6 +168,7 @@ const Bloomers = () => {
         {/* Mint Section */}
         <BloomersMint 
           userPfp={user?.pfpUrl} 
+          userFid={user?.fid}
           onMinted={(imageUrl) => setMintedBloomers(prev => [imageUrl, ...prev])}
         />
 
