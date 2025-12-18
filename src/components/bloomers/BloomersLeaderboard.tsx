@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Trophy, Coins, Sparkles, ExternalLink } from 'lucide-react';
+import { Trophy, Coins, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LeaderboardEntry {
   user_address: string;
+  fid: number | null;
   bloomer_count: number;
   bloom_points: number;
   tokens: number;
@@ -24,49 +25,65 @@ const BloomersLeaderboard = () => {
   const fetchLeaderboard = async () => {
     setIsLoading(true);
     try {
-      // Get all minted bloomers grouped by user
+      // Get all minted bloomers with fid
       const { data, error } = await supabase
         .from('minted_bloomers')
-        .select('user_address')
+        .select('user_address, fid')
         .not('tx_hash', 'is', null);
 
       if (error) throw error;
 
-      // Count bloomers per user
-      const userCounts: Record<string, number> = {};
+      // Count bloomers per user and track their fid
+      const userCounts: Record<string, { count: number; fid: number | null }> = {};
       data?.forEach(item => {
         const addr = item.user_address.toLowerCase();
-        userCounts[addr] = (userCounts[addr] || 0) + 1;
+        if (!userCounts[addr]) {
+          userCounts[addr] = { count: 0, fid: item.fid };
+        }
+        userCounts[addr].count += 1;
+        // Keep the fid if we have one
+        if (item.fid) userCounts[addr].fid = item.fid;
       });
+
+      // Get unique fids to fetch user data
+      const fids = Object.values(userCounts)
+        .map(u => u.fid)
+        .filter((fid): fid is number => fid !== null);
+
+      // Fetch user data from wrapped_stats
+      let userDataMap: Record<number, { username: string; pfpUrl: string }> = {};
+      if (fids.length > 0) {
+        const { data: userData } = await supabase
+          .from('wrapped_stats')
+          .select('fid, user_data')
+          .in('fid', fids);
+
+        userData?.forEach((item: any) => {
+          if (item.fid && item.user_data) {
+            userDataMap[item.fid] = {
+              username: item.user_data.username || item.user_data.displayName,
+              pfpUrl: item.user_data.pfpUrl,
+            };
+          }
+        });
+      }
 
       // Convert to leaderboard entries and sort by count
       const entries: LeaderboardEntry[] = Object.entries(userCounts)
-        .map(([address, count]) => ({
-          user_address: address,
-          bloomer_count: count,
-          bloom_points: count * POINTS_PER_BLOOMER,
-          tokens: count * POINTS_PER_BLOOMER * TOKENS_MULTIPLIER,
-        }))
+        .map(([address, data]) => {
+          const userData = data.fid ? userDataMap[data.fid] : undefined;
+          return {
+            user_address: address,
+            fid: data.fid,
+            bloomer_count: data.count,
+            bloom_points: data.count * POINTS_PER_BLOOMER,
+            tokens: data.count * POINTS_PER_BLOOMER * TOKENS_MULTIPLIER,
+            username: userData?.username,
+            pfp_url: userData?.pfpUrl,
+          };
+        })
         .sort((a, b) => b.bloomer_count - a.bloomer_count)
         .slice(0, 50); // Top 50
-
-      // Try to fetch user data from wrapped_stats
-      const addresses = entries.map(e => e.user_address);
-      const { data: userData } = await supabase
-        .from('wrapped_stats')
-        .select('user_data');
-
-      // Create a map of usernames/pfps if available
-      const userMap: Record<string, { pfp?: string; username?: string }> = {};
-      userData?.forEach((item: any) => {
-        if (item.user_data?.username) {
-          // Store by username for now
-          userMap[item.user_data.username.toLowerCase()] = {
-            pfp: item.user_data.pfpUrl,
-            username: item.user_data.username,
-          };
-        }
-      });
 
       setLeaderboard(entries);
     } catch (err) {
@@ -86,11 +103,19 @@ const BloomersLeaderboard = () => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const getRankEmoji = (rank: number) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
-    return `#${rank}`;
+  const getRankDisplay = (rank: number) => {
+    if (rank === 1) return { emoji: '🥇', highlight: true };
+    if (rank === 2) return { emoji: '🥈', highlight: true };
+    if (rank === 3) return { emoji: '🥉', highlight: true };
+    return { emoji: `#${rank}`, highlight: false };
+  };
+
+  const handleUserClick = (entry: LeaderboardEntry) => {
+    if (entry.username) {
+      window.open(`https://warpcast.com/${entry.username}`, '_blank');
+    } else {
+      window.open(`https://basescan.org/address/${entry.user_address}`, '_blank');
+    }
   };
 
   return (
@@ -114,101 +139,111 @@ const BloomersLeaderboard = () => {
               <Trophy className="w-6 h-6" />
               Bloom Leaderboard
             </span>
+            <p className="text-christmas-snow/50 text-sm font-normal mt-1">
+              Top Bloomer collectors
+            </p>
           </SheetTitle>
         </SheetHeader>
 
         {/* Token Info Banner */}
-        <div className="christmas-card p-4 mb-6 border border-purple-500/30 bg-purple-900/20">
+        <div className="christmas-card p-4 mb-5 border border-christmas-gold/30 bg-gradient-to-r from-purple-900/40 to-pink-900/40">
           <div className="flex items-start gap-3">
-            <Coins className="w-6 h-6 text-christmas-gold flex-shrink-0 mt-0.5" />
+            <div className="w-10 h-10 rounded-full bg-christmas-gold/20 flex items-center justify-center flex-shrink-0">
+              <Coins className="w-5 h-5 text-christmas-gold" />
+            </div>
             <div>
-              <p className="text-christmas-snow font-semibold text-sm">$BLOOM Token Airdrop</p>
-              <p className="text-christmas-snow/60 text-xs mt-1">
-                Token launching soon! Your tokens will be claimable when the token goes live. 
-                Keep minting to increase your allocation! 🚀
+              <p className="text-christmas-gold font-bold text-sm">$BLOOM Token Airdrop 🎁</p>
+              <p className="text-christmas-snow/70 text-xs mt-1 leading-relaxed">
+                Token launching soon! Mint more Bloomers to increase your allocation. 
+                Claim your tokens when we go live!
               </p>
             </div>
           </div>
         </div>
 
-        {/* Stats Legend */}
-        <div className="grid grid-cols-4 gap-2 mb-4 px-2 text-center">
-          <div className="text-christmas-snow/50 text-xs font-medium">Rank</div>
-          <div className="text-christmas-snow/50 text-xs font-medium">Bloomers</div>
-          <div className="text-christmas-snow/50 text-xs font-medium">Points</div>
-          <div className="text-christmas-snow/50 text-xs font-medium">$BLOOM</div>
-        </div>
-
         {/* Leaderboard List */}
-        <div className="overflow-y-auto max-h-[calc(85vh-280px)] space-y-2 pr-1">
+        <div className="overflow-y-auto max-h-[calc(85vh-260px)] space-y-2 pr-1">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Sparkles className="w-8 h-8 text-christmas-gold animate-pulse" />
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Sparkles className="w-10 h-10 text-christmas-gold animate-pulse" />
+              <p className="text-christmas-snow/60 text-sm">Loading rankings...</p>
             </div>
           ) : leaderboard.length === 0 ? (
             <div className="text-center py-12">
+              <div className="text-4xl mb-3">🌸</div>
               <p className="text-christmas-snow/60">No minters yet. Be the first!</p>
             </div>
           ) : (
-            leaderboard.map((entry, index) => (
-              <div 
-                key={entry.user_address}
-                className={`christmas-card p-3 border ${
-                  index < 3 
-                    ? 'border-christmas-gold/40 bg-christmas-gold/5' 
-                    : 'border-christmas-gold/10'
-                }`}
-              >
-                <div className="grid grid-cols-4 gap-2 items-center">
-                  {/* Rank & User */}
-                  <div className="flex items-center gap-2">
-                    <span className={`text-lg ${index < 3 ? 'text-2xl' : 'text-christmas-snow/60 text-sm'}`}>
-                      {getRankEmoji(index + 1)}
-                    </span>
-                    <a 
-                      href={`https://basescan.org/address/${entry.user_address}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 hover:text-christmas-gold transition-colors"
-                    >
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs">
-                        🌸
+            leaderboard.map((entry, index) => {
+              const rank = getRankDisplay(index + 1);
+              return (
+                <div 
+                  key={entry.user_address}
+                  className={`christmas-card p-3 border transition-all hover:scale-[1.01] cursor-pointer ${
+                    rank.highlight 
+                      ? 'border-christmas-gold/50 bg-gradient-to-r from-christmas-gold/10 to-transparent' 
+                      : 'border-christmas-gold/15 hover:border-christmas-gold/30'
+                  }`}
+                  onClick={() => handleUserClick(entry)}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Rank */}
+                    <div className={`w-8 text-center flex-shrink-0 ${rank.highlight ? 'text-xl' : 'text-christmas-snow/50 text-sm font-medium'}`}>
+                      {rank.emoji}
+                    </div>
+
+                    {/* User Info */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {/* Profile Picture */}
+                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-2 border-christmas-gold/30">
+                        {entry.pfp_url ? (
+                          <img 
+                            src={entry.pfp_url} 
+                            alt={entry.username || 'User'} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <span className="text-sm">🌸</span>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-christmas-snow/80 text-xs truncate max-w-[60px]">
-                        {formatAddress(entry.user_address)}
-                      </span>
-                    </a>
-                  </div>
 
-                  {/* Bloomers Count */}
-                  <div className="text-center">
-                    <span className="text-christmas-snow font-bold">{entry.bloomer_count}</span>
-                  </div>
+                      {/* Username/Address */}
+                      <div className="min-w-0 flex-1">
+                        <p className={`font-semibold truncate ${entry.username ? 'text-christmas-snow' : 'text-christmas-snow/70'}`}>
+                          {entry.username ? `@${entry.username}` : formatAddress(entry.user_address)}
+                        </p>
+                        <p className="text-christmas-snow/40 text-xs">
+                          {entry.bloomer_count} Bloomer{entry.bloomer_count !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
 
-                  {/* Bloom Points */}
-                  <div className="text-center">
-                    <span className="text-purple-400 font-semibold text-sm">
-                      {entry.bloom_points.toLocaleString()}
-                    </span>
-                  </div>
-
-                  {/* Token Allocation */}
-                  <div className="text-center">
-                    <span className="text-christmas-gold font-bold text-sm">
-                      {entry.tokens.toLocaleString()}
-                    </span>
+                    {/* Stats */}
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="text-center">
+                        <p className="text-purple-400 font-bold text-sm">{entry.bloom_points.toLocaleString()}</p>
+                        <p className="text-christmas-snow/30 text-[10px]">Points</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-christmas-gold font-bold">{entry.tokens.toLocaleString()}</p>
+                        <p className="text-christmas-snow/30 text-[10px]">$BLOOM</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
         {/* Bottom Info */}
-        <div className="absolute bottom-6 left-0 right-0 px-6">
-          <div className="text-center text-christmas-snow/40 text-xs space-y-1">
-            <p>1 Bloomer = {POINTS_PER_BLOOMER} Bloom Points</p>
-            <p>1 Bloom Point = {TOKENS_MULTIPLIER} $BLOOM Tokens</p>
+        <div className="absolute bottom-4 left-0 right-0 px-6">
+          <div className="text-center space-y-0.5">
+            <p className="text-christmas-snow/30 text-xs">
+              🌸 1 Bloomer = {POINTS_PER_BLOOMER} Points • 1 Point = {TOKENS_MULTIPLIER} $BLOOM
+            </p>
           </div>
         </div>
       </SheetContent>

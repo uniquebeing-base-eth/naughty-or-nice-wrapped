@@ -17,6 +17,7 @@ export type Database = {
       minted_bloomers: {
         Row: {
           created_at: string
+          fid: number | null
           id: string
           image_url: string
           tx_hash: string | null
@@ -24,6 +25,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          fid?: number | null
           id?: string
           image_url: string
           tx_hash?: string | null
@@ -31,6 +33,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          fid?: number | null
           id?: string
           image_url?: string
           tx_hash?: string | null

@@ -8,12 +8,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface BloomersMintProps {
   userPfp?: string;
+  userFid?: number;
   onMinted?: (imageUrl: string) => void;
 }
 
 type MintState = 'idle' | 'generating' | 'preview' | 'paying' | 'minted';
 
-const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
+const BloomersMint = ({ userPfp, userFid, onMinted }: BloomersMintProps) => {
   const [mintState, setMintState] = useState<MintState>('idle');
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [generatedBloomer, setGeneratedBloomer] = useState<string | null>(null);
@@ -126,7 +127,8 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
       const { data, error } = await supabase.functions.invoke('generate-bloomer', {
         body: { 
           sourceImage: displayImage,
-          userAddress: userAddress
+          userAddress: userAddress,
+          userFid: userFid
         }
       });
 
@@ -261,7 +263,7 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
             // Update existing pending bloomer
             const { error: updateError } = await supabase
               .from('minted_bloomers')
-              .update({ tx_hash: hash })
+              .update({ tx_hash: hash, fid: userFid })
               .eq('id', existingPending.id);
             
             if (updateError) {
@@ -274,7 +276,8 @@ const BloomersMint = ({ userPfp, onMinted }: BloomersMintProps) => {
             const { error: insertError } = await supabase.from('minted_bloomers').insert({
               user_address: userAddr.toLowerCase(),
               image_url: generatedBloomer,
-              tx_hash: hash
+              tx_hash: hash,
+              fid: userFid
             });
             
             if (insertError) {

@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sourceImage, userAddress } = await req.json();
+    const { sourceImage, userAddress, userFid } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -195,7 +195,8 @@ Ultra high resolution digital art.`
         .insert({
           user_address: userAddress.toLowerCase(),
           image_url: publicUrl.publicUrl,
-          tx_hash: null  // null means pending, not minted
+          tx_hash: null,  // null means pending, not minted
+          fid: userFid || null
         });
       
       if (insertError) {
