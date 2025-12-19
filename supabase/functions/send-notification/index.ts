@@ -6,13 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Encouraging messages for mint notifications
+// Encouraging messages for mint notifications (must be under 128 chars total)
 const encouragingMessages = [
-  "✨ Another soul has bloomed! @{username} just minted their Bloomer. Your turn to bloom! 🌸",
-  "🎉 @{username} joined the Bloomer family! Don't miss out on creating your unique companion! 🦋",
-  "🌟 Fresh bloom alert! @{username} minted a magical Bloomer. Will you be next? ✨",
-  "💫 @{username} just brought a new Bloomer to life! Spread the magic - mint yours! 🌺",
-  "🎊 Congrats @{username} on your new Bloomer! The garden grows! Who's blooming next? 🌸"
+  "✨ @{username} just minted their Bloomer! Your turn to bloom! 🌸",
+  "🎉 @{username} joined the Bloomer family! Mint yours now! 🦋",
+  "🌟 @{username} minted a magical Bloomer. Will you be next? ✨",
+  "💫 @{username} brought a Bloomer to life! Mint yours! 🌺",
+  "🎊 Congrats @{username} on your Bloomer! Who's next? 🌸"
 ];
 
 serve(async (req) => {
