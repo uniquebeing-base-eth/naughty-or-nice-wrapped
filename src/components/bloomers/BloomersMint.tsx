@@ -9,12 +9,13 @@ import { supabase } from '@/integrations/supabase/client';
 interface BloomersMintProps {
   userPfp?: string;
   userFid?: number;
+  username?: string;
   onMinted?: (imageUrl: string) => void;
 }
 
 type MintState = 'idle' | 'generating' | 'preview' | 'paying' | 'minted';
 
-const BloomersMint = ({ userPfp, userFid, onMinted }: BloomersMintProps) => {
+const BloomersMint = ({ userPfp, userFid, username, onMinted }: BloomersMintProps) => {
   const [mintState, setMintState] = useState<MintState>('idle');
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [generatedBloomer, setGeneratedBloomer] = useState<string | null>(null);
@@ -352,6 +353,22 @@ const BloomersMint = ({ userPfp, userFid, onMinted }: BloomersMintProps) => {
             }
           } else {
             console.log('[Mint] Could not determine tokenId, skipping metadata upload');
+          }
+          
+          // Send notification to all users about the new mint
+          try {
+            console.log('[Mint] Sending mint notification for username:', username);
+            await supabase.functions.invoke('send-notification', {
+              body: {
+                notification_type: 'bloomer_minted',
+                username: username || `fid:${userFid}`,
+                target_url: 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'
+              }
+            });
+            console.log('[Mint] Notification sent successfully');
+          } catch (notifyErr) {
+            console.error('[Mint] Failed to send notification:', notifyErr);
+            // Don't block minting if notification fails
           }
           
           // Notify parent to refresh gallery
