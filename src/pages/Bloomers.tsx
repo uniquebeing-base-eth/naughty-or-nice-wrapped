@@ -169,6 +169,7 @@ const Bloomers = () => {
         <BloomersMint 
           userPfp={user?.pfpUrl} 
           userFid={user?.fid}
+          username={user?.username}
           onMinted={(imageUrl) => setMintedBloomers(prev => [imageUrl, ...prev])}
         />
 

@@ -1,13 +1,19 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// NOTE: This function should be called with a secret key for security
-// But we're allowing public access for now to send the notification
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Encouraging messages for mint notifications
+const encouragingMessages = [
+  "✨ Another soul has bloomed! @{username} just minted their Bloomer. Your turn to bloom! 🌸",
+  "🎉 @{username} joined the Bloomer family! Don't miss out on creating your unique companion! 🦋",
+  "🌟 Fresh bloom alert! @{username} minted a magical Bloomer. Will you be next? ✨",
+  "💫 @{username} just brought a new Bloomer to life! Spread the magic - mint yours! 🌺",
+  "🎊 Congrats @{username} on your new Bloomer! The garden grows! Who's blooming next? 🌸"
+];
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -22,14 +28,28 @@ serve(async (req) => {
       throw new Error('NEYNAR_API_KEY not configured');
     }
 
-    const { title, body, target_url, target_fids } = await req.json();
+    const { title, body, target_url, target_fids, notification_type, username } = await req.json();
 
-    // Default notification content
-    const notificationTitle = title || "🎄 Oopsie! Share Feature Fixed!";
-    const notificationBody = body || "We fixed the share image feature! Come back and share your Naughty or Nice verdict with your friends! 🎅✨";
-    const notificationUrl = target_url || "https://naughty-or-nice-wrapped.vercel.app";
+    let notificationTitle: string;
+    let notificationBody: string;
+
+    // Handle different notification types
+    if (notification_type === 'bloomer_minted' && username) {
+      // Pick a random encouraging message
+      const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
+      notificationTitle = "🌸 New Bloomer Alert!";
+      notificationBody = randomMessage.replace('{username}', username);
+    } else {
+      // Default notification content
+      notificationTitle = title || "🎄 Naughty or Nice Update!";
+      notificationBody = body || "Something magical is happening! Come check it out! 🎅✨";
+    }
+
+    const notificationUrl = target_url || "https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped";
 
     console.log('Sending notification to users...');
+    console.log('Type:', notification_type || 'custom');
+    console.log('Username:', username || 'N/A');
     console.log('Title:', notificationTitle);
     console.log('Body:', notificationBody);
     console.log('Target FIDs:', target_fids || 'all opted-in users');
