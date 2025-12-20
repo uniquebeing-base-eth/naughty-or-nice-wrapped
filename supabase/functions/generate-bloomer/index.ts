@@ -6,91 +6,50 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Pre-existing templates organized by color trait (black background versions)
-// Priority: fairy templates first (new high-quality ones), then others
+// Pre-existing templates organized by color trait - ONLY templates that exist in public/bloomers
 const TEMPLATE_MAP: { [key: string]: string[] } = {
   blue: [
-    "blue-fox-black-bg.png",
-    "blue-fox-navy-bg.png",
-    "blue-fox-blue-bg.png",
-    "blue-bunny-navy-bg.png",
-    "blue-dragon-blue-bg.png"
+    "bloomer-celestial-fox.png",
+    "bloomer-dragon-blue.png", 
+    "bloomer-frost-guardian.png"
   ],
   pink: [
     "pink-fairy-black-bg.png",
-    "pink-fox-black-bg.png",
-    "pink-cat-black-bg.png",
-    "pink-fox-magenta-bg.png",
-    "pink-fox-pink-bg.png",
-    "pink-bunny-magenta-bg.png",
-    "pink-unicorn-pink-bg.png"
+    "bloomer-fairy-pink.png",
+    "bloomer-blossom-fairy.png"
   ],
   gold: [
     "gold-fairy-black-bg.png",
-    "gold-cat-black-bg.png",
-    "gold-fox-black-bg.png",
-    "gold-kitsune-black-bg.png",
-    "gold-fox-amber-bg.png",
-    "gold-fox-gold-bg.png",
-    "gold-lion-amber-bg.png",
-    "gold-phoenix-gold-bg.png"
+    "bloomer-fox-golden.png",
+    "bloomer-golden-spirit.png",
+    "bloomer-mystic-kitsune.png"
   ],
   white: [
-    "white-fox-black-bg.png",
-    "white-bunny-black-bg.png",
-    "white-fox-cream-bg.png",
-    "white-fox-gray-bg.png",
-    "white-owl-gray-bg.png"
+    "bloomer-fox-white.png",
+    "bloomer-owl-ice.png"
   ],
   ice: [
-    "ice-fox-black-bg.png",
     "ice-fairy-black-bg.png",
-    "ice-fox-cyan-bg.png",
-    "ice-fox-lightblue-bg.png",
-    "ice-penguin-teal-bg.png",
-    "ice-wolf-cyan-bg.png"
+    "bloomer-frost-guardian.png",
+    "bloomer-owl-ice.png"
   ],
   purple: [
-    "purple-fairy-black-bg.png",
-    "purple-fox-black-bg.png",
-    "purple-cat-black-bg.png",
-    "purple-fox-purple-bg.png",
-    "purple-fox-violet-bg.png",
-    "purple-dragon-magenta-bg.png",
-    "purple-owl-purple-bg.png"
+    "purple-fairy-black-bg.png"
   ],
   green: [
-    "green-fairy-black-bg.png",
-    "green-cat-black-bg.png",
-    "green-fox-black-bg.png",
-    "green-fox-green-bg.png",
-    "green-fox-lime-bg.png",
-    "green-dragon-green-bg.png",
-    "green-frog-lime-bg.png"
+    "green-fairy-black-bg.png"
   ],
   orange: [
-    "orange-fox-black-bg.png",
-    "orange-fox-orange-bg.png",
-    "orange-fox-rust-bg.png",
-    "orange-panda-rust-bg.png",
-    "orange-tiger-orange-bg.png"
+    "bloomer-fox-golden.png"
   ],
   red: [
-    "red-fairy-black-bg.png",
-    "red-cat-black-bg.png",
-    "red-fox-black-bg.png",
-    "red-phoenix-black-bg.png",
-    "red-fox-red-bg.png",
-    "red-fox-maroon-bg.png",
-    "red-dragon-red-bg.png"
+    "red-fairy-black-bg.png"
   ],
   default: [
-    "default-fox-black-bg.png",
-    "default-cat-black-bg.png",
-    "default-fox-navy-bg.png",
-    "default-fox-purple-bg.png",
-    "default-owl-navy-bg.png",
-    "default-unicorn-purple-bg.png"
+    "bloomer-celestial-fox.png",
+    "bloomer-fairy-pink.png",
+    "bloomer-fox-golden.png",
+    "bloomer-fox-white.png"
   ]
 };
 
@@ -258,26 +217,60 @@ serve(async (req) => {
     const templateFileName = pickTemplate(colorTrait, userAddress || '');
     console.log(`Selected template: ${templateFileName}`);
     
-    // Build the public URL for the template from the app's public folder
-    // Templates are served from the deployed app's public/bloomers folder
-    const templateUrl = `https://naughty-or-nice-wrapped.lovable.app/bloomers/${templateFileName}`;
-    console.log(`Template URL: ${templateUrl}`);
+    // First try to check if template exists in storage bucket "assets"
+    const { data: storageData } = supabase.storage
+      .from("assets")
+      .getPublicUrl(`bloomers/${templateFileName}`);
     
-    // Fetch the template image
-    let imageBytes: Uint8Array;
-    try {
-      const templateResponse = await fetch(templateUrl);
-      if (!templateResponse.ok) {
-        throw new Error(`Failed to fetch template: ${templateResponse.status}`);
+    // Try multiple sources for the template
+    const templateUrls = [
+      storageData.publicUrl,
+      `${supabaseUrl}/storage/v1/object/public/assets/bloomers/${templateFileName}`,
+      `https://naughty-or-nice-wrapped.lovable.app/bloomers/${templateFileName}`
+    ];
+    
+    let imageBytes: Uint8Array | null = null;
+    let successUrl = '';
+    
+    for (const templateUrl of templateUrls) {
+      console.log(`Trying template URL: ${templateUrl}`);
+      try {
+        const templateResponse = await fetch(templateUrl);
+        if (templateResponse.ok) {
+          const buffer = await templateResponse.arrayBuffer();
+          imageBytes = new Uint8Array(buffer);
+          successUrl = templateUrl;
+          console.log(`Successfully fetched template from: ${templateUrl}, size: ${imageBytes.length} bytes`);
+          break;
+        }
+      } catch (e) {
+        console.log(`Failed to fetch from ${templateUrl}`);
       }
-      const buffer = await templateResponse.arrayBuffer();
-      imageBytes = new Uint8Array(buffer);
-      console.log(`Fetched template image, size: ${imageBytes.length} bytes`);
-    } catch (fetchError) {
-      console.error("Error fetching template:", fetchError);
+    }
+    
+    // If all URLs failed, use a fallback - pick from a simple reliable template
+    if (!imageBytes) {
+      console.log("All template URLs failed, using fallback strategy");
+      
+      // Try bloomer-celestial-fox as ultimate fallback
+      const fallbackUrl = `https://naughty-or-nice-wrapped.lovable.app/bloomers/bloomer-celestial-fox.png`;
+      try {
+        const fallbackResponse = await fetch(fallbackUrl);
+        if (fallbackResponse.ok) {
+          const buffer = await fallbackResponse.arrayBuffer();
+          imageBytes = new Uint8Array(buffer);
+          successUrl = fallbackUrl;
+          console.log(`Used fallback template: ${fallbackUrl}`);
+        }
+      } catch (e) {
+        console.error("Fallback also failed:", e);
+      }
+    }
+    
+    if (!imageBytes) {
       return new Response(
         JSON.stringify({ 
-          error: "Failed to load Bloomer template. Please try again.",
+          error: "Failed to load Bloomer template. Please try again later.",
           colorTrait
         }),
         { 
