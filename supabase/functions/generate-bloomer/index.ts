@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 // Pre-existing templates organized by color trait (black background versions)
+// Priority: fairy templates first (new high-quality ones), then others
 const TEMPLATE_MAP: { [key: string]: string[] } = {
   blue: [
     "blue-fox-black-bg.png",
@@ -16,6 +17,7 @@ const TEMPLATE_MAP: { [key: string]: string[] } = {
     "blue-dragon-blue-bg.png"
   ],
   pink: [
+    "pink-fairy-black-bg.png",
     "pink-fox-black-bg.png",
     "pink-cat-black-bg.png",
     "pink-fox-magenta-bg.png",
@@ -24,6 +26,8 @@ const TEMPLATE_MAP: { [key: string]: string[] } = {
     "pink-unicorn-pink-bg.png"
   ],
   gold: [
+    "gold-fairy-black-bg.png",
+    "gold-cat-black-bg.png",
     "gold-fox-black-bg.png",
     "gold-kitsune-black-bg.png",
     "gold-fox-amber-bg.png",
@@ -47,6 +51,7 @@ const TEMPLATE_MAP: { [key: string]: string[] } = {
     "ice-wolf-cyan-bg.png"
   ],
   purple: [
+    "purple-fairy-black-bg.png",
     "purple-fox-black-bg.png",
     "purple-cat-black-bg.png",
     "purple-fox-purple-bg.png",
@@ -55,6 +60,8 @@ const TEMPLATE_MAP: { [key: string]: string[] } = {
     "purple-owl-purple-bg.png"
   ],
   green: [
+    "green-fairy-black-bg.png",
+    "green-cat-black-bg.png",
     "green-fox-black-bg.png",
     "green-fox-green-bg.png",
     "green-fox-lime-bg.png",
@@ -69,6 +76,8 @@ const TEMPLATE_MAP: { [key: string]: string[] } = {
     "orange-tiger-orange-bg.png"
   ],
   red: [
+    "red-fairy-black-bg.png",
+    "red-cat-black-bg.png",
     "red-fox-black-bg.png",
     "red-phoenix-black-bg.png",
     "red-fox-red-bg.png",
