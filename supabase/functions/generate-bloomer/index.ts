@@ -6,25 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Pre-made Bloomer templates - same kawaii fox character with different color trait markings, all with SOLID BLACK background
-const BLOOMER_TEMPLATES: { [key: string]: string[] } = {
-  blue: ["blue-fox-black-bg.png"],
-  pink: ["pink-fox-black-bg.png"],
-  gold: ["gold-fox-black-bg.png"],
-  white: ["white-fox-black-bg.png"],
-  ice: ["ice-fox-black-bg.png"],
-  purple: ["purple-fox-black-bg.png"],
-  green: ["green-fox-black-bg.png"],
-  orange: ["orange-fox-black-bg.png"],
-  red: ["red-fox-black-bg.png"],
-  default: ["default-fox-black-bg.png"]
+// Color trait descriptions for AI generation
+const COLOR_TRAIT_PROMPTS: { [key: string]: string } = {
+  blue: "pastel blue and light blue colored fur with blue markings and stripes",
+  pink: "pastel pink and rose colored fur with pink markings and stripes", 
+  gold: "golden orange and amber colored fur with yellow-gold markings and stripes",
+  white: "pure white and cream colored fur with subtle white markings",
+  ice: "icy cyan and light blue colored fur with frost-like ice blue markings",
+  purple: "lavender purple and violet colored fur with purple markings and stripes",
+  green: "lime green and mint colored fur with green markings and stripes",
+  orange: "bright orange and tangerine colored fur with orange markings and stripes",
+  red: "crimson red and coral colored fur with red markings and stripes",
+  default: "soft gray and silver colored fur with subtle gray markings"
 };
-
-// Function to get random template from a color trait
-function getRandomTemplate(colorTrait: string): string {
-  const templates = BLOOMER_TEMPLATES[colorTrait] || BLOOMER_TEMPLATES.default;
-  return templates[Math.floor(Math.random() * templates.length)];
-}
 
 // Color trait to hex mapping for detection
 const COLOR_MAPPINGS: { [key: string]: string[] } = {
@@ -52,7 +46,7 @@ function colorDistance(hex1: string, r2: number, g2: number, b2: number): number
 function detectColorTrait(profileColors: { r: number, g: number, b: number }[]): string {
   if (!profileColors || profileColors.length === 0) {
     // Return random trait if no colors detected
-    const traits = Object.keys(BLOOMER_TEMPLATES).filter(t => t !== 'default');
+    const traits = Object.keys(COLOR_TRAIT_PROMPTS).filter(t => t !== 'default');
     return traits[Math.floor(Math.random() * traits.length)];
   }
 
@@ -128,10 +122,8 @@ async function getProfileColors(fid: number): Promise<{ r: number, g: number, b:
     const imageBytes = new Uint8Array(imageBuffer);
     
     // Simple color extraction from image bytes (sample pixels)
-    // This is a simplified approach - we'll sample some pixels from the image data
     const colors: { r: number, g: number, b: number }[] = [];
     
-    // For PNG/JPEG, we'll do basic sampling
     // Sample every Nth byte assuming RGB format
     const sampleRate = Math.max(1, Math.floor(imageBytes.length / 1000));
     
@@ -155,6 +147,75 @@ async function getProfileColors(fid: number): Promise<{ r: number, g: number, b:
   }
 }
 
+// Generate Bloomer image using Lovable AI
+async function generateBloomerWithAI(colorTrait: string): Promise<Uint8Array | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.error("LOVABLE_API_KEY not configured");
+    return null;
+  }
+
+  const colorDescription = COLOR_TRAIT_PROMPTS[colorTrait] || COLOR_TRAIT_PROMPTS.default;
+  
+  // Create a unique prompt for this Bloomer
+  const prompt = `Create a cute kawaii chibi fox character with small angel wings. The fox has ${colorDescription}. The character should have big sparkly anime eyes with star reflections, fluffy tail, and a sweet happy expression with rosy cheeks. The character is centered in the image, sitting pose. IMPORTANT: The background must be a completely SOLID PURE BLACK color (#000000), no patterns, no gradients, no textures - just flat black. Digital art style, high quality, crisp lines.`;
+
+  console.log("Generating Bloomer with AI, color trait:", colorTrait);
+  console.log("Prompt:", prompt);
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        modalities: ["image", "text"]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI generation error:", response.status, errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log("AI response received");
+    
+    // Extract the base64 image from the response
+    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    if (!imageData) {
+      console.error("No image in AI response");
+      return null;
+    }
+
+    // Convert base64 to Uint8Array
+    // Remove the data:image/png;base64, prefix if present
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    console.log("Successfully generated Bloomer image, size:", bytes.length);
+    return bytes;
+  } catch (error) {
+    console.error("Error generating Bloomer with AI:", error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -170,92 +231,26 @@ serve(async (req) => {
     // Get profile colors from Neynar if we have a fid
     let colorTrait = "default";
     if (userFid) {
+      console.log("Fetching profile colors for fid:", userFid);
       const profileColors = await getProfileColors(userFid);
       colorTrait = detectColorTrait(profileColors);
     } else {
       // Random trait if no fid
-      const traits = Object.keys(BLOOMER_TEMPLATES).filter(t => t !== 'default');
+      const traits = Object.keys(COLOR_TRAIT_PROMPTS).filter(t => t !== 'default');
       colorTrait = traits[Math.floor(Math.random() * traits.length)];
     }
     
     console.log(`Selected color trait: ${colorTrait} for user ${userAddress}`);
     
-    // Get a random template filename for this trait
-    const templateFileName = getRandomTemplate(colorTrait);
-    console.log(`Selected template: ${templateFileName}`);
+    // Generate unique Bloomer using AI
+    console.log("Starting AI generation...");
+    const imageBytes = await generateBloomerWithAI(colorTrait);
     
-    // Always try to fetch fresh template from the app first
-    // Templates are stored in public/bloomers/ folder
-    const sources = [
-      // Use the current preview/production app URL
-      `https://sbhcnilxueqchughpeui.supabase.co/storage/v1/object/public/bloomers/templates/${templateFileName}`,
-    ];
-    
-    let templateBytes: Uint8Array = new Uint8Array();
-    let fetched = false;
-    
-    // First check if template exists in storage
-    const { data: existingFiles } = await supabase.storage
-      .from("bloomers")
-      .list("templates");
-    
-    const templateExists = existingFiles?.some(f => f.name === templateFileName);
-    
-    if (templateExists) {
-      // Download from storage
-      console.log("Using existing template from storage:", templateFileName);
-      const { data: templateData, error: downloadError } = await supabase.storage
-        .from("bloomers")
-        .download(`templates/${templateFileName}`);
-      
-      if (!downloadError && templateData) {
-        templateBytes = new Uint8Array(await templateData.arrayBuffer());
-        fetched = true;
-      }
-    }
-    
-    if (!fetched) {
-      // Templates not in storage - fetch from the deployed app
-      const appUrls = [
-        // Get from the deployed preview
-        `https://sbhcnilxueqchughpeui.lovable.app/bloomers/${templateFileName}`,
-        // Fallback to direct preview
-        `https://id-preview--f2e7c21e-29f6-4b6c-8b04-b3f98f1de7a7.lovable.app/bloomers/${templateFileName}`,
-      ];
-      
-      for (const sourceUrl of appUrls) {
-        console.log("Trying to fetch template from:", sourceUrl);
-        try {
-          const response = await fetch(sourceUrl, { 
-            headers: { 'Accept': 'image/png,image/*' }
-          });
-          if (response.ok) {
-            const contentType = response.headers.get('content-type') || '';
-            if (contentType.includes('image')) {
-              templateBytes = new Uint8Array(await response.arrayBuffer());
-              fetched = true;
-              
-              // Cache to storage for future use
-              await supabase.storage
-                .from("bloomers")
-                .upload(`templates/${templateFileName}`, templateBytes, {
-                  contentType: "image/png",
-                  upsert: true
-                });
-              console.log("Cached template to storage:", templateFileName);
-              break;
-            }
-          }
-        } catch (e) {
-          console.log("Source failed:", sourceUrl, e);
-        }
-      }
-    }
-    
-    if (!fetched) {
+    if (!imageBytes) {
+      console.error("Failed to generate Bloomer with AI");
       return new Response(
         JSON.stringify({ 
-          error: "Bloomer templates not available yet. Please try again in a few minutes.",
+          error: "Failed to generate Bloomer. Please try again.",
           colorTrait
         }),
         { 
@@ -264,22 +259,19 @@ serve(async (req) => {
         }
       );
     }
-
-    // templateBytes already populated above
     
     // Upload with unique filename for this user
     const fileName = `bloomer_${userAddress || 'anon'}_${Date.now()}.png`;
     
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("bloomers")
-      .upload(fileName, templateBytes, {
+      .upload(fileName, imageBytes, {
         contentType: "image/png",
         upsert: false
       });
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      // Return an error if upload fails
       return new Response(
         JSON.stringify({ error: "Failed to upload bloomer image", colorTrait }),
         { 
