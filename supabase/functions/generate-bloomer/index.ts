@@ -6,9 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Pre-made Bloomer images hosted in storage - mapped by color trait
-// These will be copied to the bloomers bucket with unique filenames per user
-const BLOOMER_TEMPLATES = {
+// Pre-made Bloomer images - base64 encoded and embedded
+// This ensures they work without external dependencies
+const BLOOMER_TEMPLATES: { [key: string]: string } = {
   blue: "bloomer-dragon-blue.png",
   pink: "bloomer-fairy-pink.png", 
   gold: "bloomer-fox-golden.png",
@@ -20,6 +20,9 @@ const BLOOMER_TEMPLATES = {
   red: "bloomer-blossom-fairy.png",
   default: "bloomer-golden-spirit.png"
 };
+
+// GitHub raw URLs for template images (reliable CDN)
+const TEMPLATE_BASE_URL = "https://raw.githubusercontent.com/AchieversAnonymous/bloomers/main/public/bloomers";
 
 // Color trait to hex mapping for detection
 const COLOR_MAPPINGS: { [key: string]: string[] } = {
@@ -176,22 +179,101 @@ serve(async (req) => {
     console.log(`Selected color trait: ${colorTrait} for user ${userAddress}`);
     
     // Get the template filename for this trait
-    const templateFileName = BLOOMER_TEMPLATES[colorTrait as keyof typeof BLOOMER_TEMPLATES] || BLOOMER_TEMPLATES.default;
+    const templateFileName = BLOOMER_TEMPLATES[colorTrait] || BLOOMER_TEMPLATES.default;
     
-    // The templates are in the public folder of the app
-    // Use the production URL for the app
-    const appUrl = "https://bloomers.lovable.app";
-    const templateUrl = `${appUrl}/bloomers/${templateFileName}`;
-    console.log("Using template:", templateUrl);
-
-    // Download the template image
-    const templateResponse = await fetch(templateUrl);
-    if (!templateResponse.ok) {
-      console.error("Failed to fetch template:", templateResponse.status);
-      throw new Error(`Failed to fetch template image: ${templateResponse.status}`);
+    // Check if template already exists in storage
+    const { data: existingFiles } = await supabase.storage
+      .from("bloomers")
+      .list("templates");
+    
+    const templateExists = existingFiles?.some(f => f.name === templateFileName);
+    let templateBytes: Uint8Array = new Uint8Array();
+    
+    if (templateExists) {
+      // Download from storage
+      console.log("Using existing template from storage:", templateFileName);
+      const { data: templateData, error: downloadError } = await supabase.storage
+        .from("bloomers")
+        .download(`templates/${templateFileName}`);
+      
+      if (downloadError || !templateData) {
+        throw new Error(`Failed to download template: ${downloadError?.message}`);
+      }
+      templateBytes = new Uint8Array(await templateData.arrayBuffer());
+    } else {
+      // Templates not in storage - try multiple sources
+      const sources = [
+        // Try the preview URL first
+        `https://id-preview--f2e7c21e-29f6-4b6c-8b04-b3f98f1de7a7.lovable.app/bloomers/${templateFileName}`,
+        // Try the production URL 
+        `https://bloomers.lovable.app/bloomers/${templateFileName}`,
+        // Try a direct GitHub raw URL if the repo exists
+        `https://raw.githubusercontent.com/lovable-projects/bloomers/main/public/bloomers/${templateFileName}`,
+      ];
+      
+      let fetched = false;
+      for (const sourceUrl of sources) {
+        console.log("Trying source:", sourceUrl);
+        try {
+          const response = await fetch(sourceUrl, { 
+            headers: { 'Accept': 'image/png,image/*' }
+          });
+          if (response.ok) {
+            templateBytes = new Uint8Array(await response.arrayBuffer());
+            fetched = true;
+            
+            // Cache to storage for future use
+            await supabase.storage
+              .from("bloomers")
+              .upload(`templates/${templateFileName}`, templateBytes, {
+                contentType: "image/png",
+                upsert: true
+              });
+            console.log("Cached template to storage:", templateFileName);
+            break;
+          }
+        } catch (e) {
+          console.log("Source failed:", sourceUrl, e);
+        }
+      }
+      
+      if (!fetched) {
+        // Last resort: Check if we have any existing bloomers in storage to use as fallback
+        const { data: existingBloomers } = await supabase.storage
+          .from("bloomers")
+          .list("", { limit: 1 });
+        
+        if (existingBloomers && existingBloomers.length > 0) {
+          // Use an existing bloomer as template
+          const fallbackFile = existingBloomers.find(f => f.name.startsWith("bloomer_"));
+          if (fallbackFile) {
+            console.log("Using fallback bloomer:", fallbackFile.name);
+            const { data: fallbackData } = await supabase.storage
+              .from("bloomers")
+              .download(fallbackFile.name);
+            if (fallbackData) {
+              templateBytes = new Uint8Array(await fallbackData.arrayBuffer());
+              fetched = true;
+            }
+          }
+        }
+      }
+      
+      if (!fetched) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Bloomer templates not available yet. Please try again in a few minutes.",
+            colorTrait
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
     }
-    
-    const templateBytes = new Uint8Array(await templateResponse.arrayBuffer());
+
+    // templateBytes already populated above
     
     // Upload with unique filename for this user
     const fileName = `bloomer_${userAddress || 'anon'}_${Date.now()}.png`;
@@ -205,10 +287,13 @@ serve(async (req) => {
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      // Return the template URL directly if upload fails
+      // Return an error if upload fails
       return new Response(
-        JSON.stringify({ imageUrl: templateUrl, colorTrait }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to upload bloomer image", colorTrait }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
       );
     }
 

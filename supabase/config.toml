@@ -37,3 +37,12 @@ verify_jwt = false
 
 [functions.backfill-bloomer-metadata]
 verify_jwt = false
+
+[functions.seed-bloomer-templates]
+verify_jwt = false
+
+[functions.fetch-users-by-address]
+verify_jwt = false
+
+[functions.save-energy-result]
+verify_jwt = false
