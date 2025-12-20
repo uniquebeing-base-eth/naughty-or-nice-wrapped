@@ -15,7 +15,7 @@ interface LeaderboardEntry {
 }
 
 const POINTS_PER_BLOOMER = 300;
-const TOKENS_MULTIPLIER = 50;
+const TOKENS_MULTIPLIER = 100;
 
 const BloomersLeaderboard = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -25,7 +25,7 @@ const BloomersLeaderboard = () => {
   const fetchLeaderboard = async () => {
     setIsLoading(true);
     try {
-      // Get all minted bloomers with fid
+      // Get all minted bloomers
       const { data, error } = await supabase
         .from('minted_bloomers')
         .select('user_address, fid')
@@ -45,36 +45,33 @@ const BloomersLeaderboard = () => {
         if (item.fid) userCounts[addr].fid = item.fid;
       });
 
-      // Get unique fids to fetch user data
-      const fids = Object.values(userCounts)
-        .map(u => u.fid)
-        .filter((fid): fid is number => fid !== null);
+      // Get all unique addresses
+      const addresses = Object.keys(userCounts);
 
-      // Fetch user data from wrapped_stats
-      let userDataMap: Record<number, { username: string; pfpUrl: string }> = {};
-      if (fids.length > 0) {
-        const { data: userData } = await supabase
-          .from('wrapped_stats')
-          .select('fid, user_data')
-          .in('fid', fids);
+      // Fetch user data from Neynar via edge function
+      let userDataMap: Record<string, { username: string; pfpUrl: string; fid: number }> = {};
+      
+      if (addresses.length > 0) {
+        try {
+          const { data: neynarData, error: neynarError } = await supabase.functions.invoke('fetch-users-by-address', {
+            body: { addresses }
+          });
 
-        userData?.forEach((item: any) => {
-          if (item.fid && item.user_data) {
-            userDataMap[item.fid] = {
-              username: item.user_data.username || item.user_data.displayName,
-              pfpUrl: item.user_data.pfpUrl,
-            };
+          if (!neynarError && neynarData?.users) {
+            userDataMap = neynarData.users;
           }
-        });
+        } catch (err) {
+          console.error('Failed to fetch user data from Neynar:', err);
+        }
       }
 
       // Convert to leaderboard entries and sort by count
       const entries: LeaderboardEntry[] = Object.entries(userCounts)
         .map(([address, data]) => {
-          const userData = data.fid ? userDataMap[data.fid] : undefined;
+          const userData = userDataMap[address.toLowerCase()];
           return {
             user_address: address,
-            fid: data.fid,
+            fid: userData?.fid || data.fid,
             bloomer_count: data.count,
             bloom_points: data.count * POINTS_PER_BLOOMER,
             tokens: data.count * POINTS_PER_BLOOMER * TOKENS_MULTIPLIER,
@@ -94,18 +91,10 @@ const BloomersLeaderboard = () => {
   };
 
   useEffect(() => {
-    // Fetch on open and set up auto-refresh every 30 seconds
     if (isOpen) {
       fetchLeaderboard();
-      const interval = setInterval(fetchLeaderboard, 30000);
-      return () => clearInterval(interval);
     }
   }, [isOpen]);
-
-  // Also refresh when component mounts to ensure fresh data
-  useEffect(() => {
-    fetchLeaderboard();
-  }, []);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
