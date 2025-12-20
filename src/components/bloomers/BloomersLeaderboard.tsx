@@ -15,7 +15,7 @@ interface LeaderboardEntry {
 }
 
 const POINTS_PER_BLOOMER = 300;
-const TOKENS_MULTIPLIER = 10;
+const TOKENS_MULTIPLIER = 50;
 
 const BloomersLeaderboard = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -94,10 +94,18 @@ const BloomersLeaderboard = () => {
   };
 
   useEffect(() => {
+    // Fetch on open and set up auto-refresh every 30 seconds
     if (isOpen) {
       fetchLeaderboard();
+      const interval = setInterval(fetchLeaderboard, 30000);
+      return () => clearInterval(interval);
     }
   }, [isOpen]);
+
+  // Also refresh when component mounts to ensure fresh data
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
