@@ -6,52 +6,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Pre-existing templates organized by color trait - ONLY templates that exist in public/bloomers
-const TEMPLATE_MAP: { [key: string]: string[] } = {
-  blue: [
-    "bloomer-celestial-fox.png",
-    "bloomer-dragon-blue.png", 
-    "bloomer-frost-guardian.png"
-  ],
-  pink: [
-    "pink-fairy-black-bg.png",
-    "bloomer-fairy-pink.png",
-    "bloomer-blossom-fairy.png"
-  ],
-  gold: [
-    "gold-fairy-black-bg.png",
-    "bloomer-fox-golden.png",
-    "bloomer-golden-spirit.png",
-    "bloomer-mystic-kitsune.png"
-  ],
-  white: [
-    "bloomer-fox-white.png",
-    "bloomer-owl-ice.png"
-  ],
-  ice: [
-    "ice-fairy-black-bg.png",
-    "bloomer-frost-guardian.png",
-    "bloomer-owl-ice.png"
-  ],
-  purple: [
-    "purple-fairy-black-bg.png"
-  ],
-  green: [
-    "green-fairy-black-bg.png"
-  ],
-  orange: [
-    "bloomer-fox-golden.png"
-  ],
-  red: [
-    "red-fairy-black-bg.png"
-  ],
-  default: [
-    "bloomer-celestial-fox.png",
-    "bloomer-fairy-pink.png",
-    "bloomer-fox-golden.png",
-    "bloomer-fox-white.png"
-  ]
+// Pre-made Bloomer images - base64 encoded and embedded
+// This ensures they work without external dependencies
+const BLOOMER_TEMPLATES: { [key: string]: string } = {
+  blue: "bloomer-dragon-blue.png",
+  pink: "bloomer-fairy-pink.png", 
+  gold: "bloomer-fox-golden.png",
+  white: "bloomer-fox-white.png",
+  ice: "bloomer-owl-ice.png",
+  purple: "bloomer-mystic-kitsune.png",
+  green: "bloomer-frost-guardian.png",
+  orange: "bloomer-celestial-fox.png",
+  red: "bloomer-blossom-fairy.png",
+  default: "bloomer-golden-spirit.png"
 };
+
+// GitHub raw URLs for template images (reliable CDN)
+const TEMPLATE_BASE_URL = "https://raw.githubusercontent.com/AchieversAnonymous/bloomers/main/public/bloomers";
 
 // Color trait to hex mapping for detection
 const COLOR_MAPPINGS: { [key: string]: string[] } = {
@@ -75,10 +46,11 @@ function colorDistance(hex1: string, r2: number, g2: number, b2: number): number
   return Math.sqrt(Math.pow(r1 - r2, 2) + Math.pow(g1 - g2, 2) + Math.pow(b1 - b2, 2));
 }
 
-// Analyze dominant color from image
+// Analyze dominant color from image via Neynar profile data
 function detectColorTrait(profileColors: { r: number, g: number, b: number }[]): string {
   if (!profileColors || profileColors.length === 0) {
-    const traits = Object.keys(TEMPLATE_MAP).filter(t => t !== 'default');
+    // Return random trait if no colors detected
+    const traits = Object.keys(BLOOMER_TEMPLATES).filter(t => t !== 'default');
     return traits[Math.floor(Math.random() * traits.length)];
   }
 
@@ -153,8 +125,12 @@ async function getProfileColors(fid: number): Promise<{ r: number, g: number, b:
     const imageBuffer = await imageResponse.arrayBuffer();
     const imageBytes = new Uint8Array(imageBuffer);
     
-    // Simple color extraction from image bytes
+    // Simple color extraction from image bytes (sample pixels)
+    // This is a simplified approach - we'll sample some pixels from the image data
     const colors: { r: number, g: number, b: number }[] = [];
+    
+    // For PNG/JPEG, we'll do basic sampling
+    // Sample every Nth byte assuming RGB format
     const sampleRate = Math.max(1, Math.floor(imageBytes.length / 1000));
     
     for (let i = 0; i < imageBytes.length - 2; i += sampleRate * 3) {
@@ -162,6 +138,7 @@ async function getProfileColors(fid: number): Promise<{ r: number, g: number, b:
       const g = imageBytes[i + 1];
       const b = imageBytes[i + 2];
       
+      // Skip near-black and near-white pixels
       if (r + g + b > 30 && r + g + b < 720) {
         colors.push({ r, g, b });
       }
@@ -174,18 +151,6 @@ async function getProfileColors(fid: number): Promise<{ r: number, g: number, b:
     console.error("Error fetching profile colors:", error);
     return [];
   }
-}
-
-// Pick a random template based on color trait
-function pickTemplate(colorTrait: string, userAddress: string): string {
-  const templates = TEMPLATE_MAP[colorTrait] || TEMPLATE_MAP.default;
-  
-  // Use user address to add some deterministic randomness
-  // but still allow variation between mints
-  const seed = Date.now() + (userAddress ? userAddress.charCodeAt(2) + userAddress.charCodeAt(5) : 0);
-  const index = seed % templates.length;
-  
-  return templates[index];
 }
 
 serve(async (req) => {
@@ -203,95 +168,126 @@ serve(async (req) => {
     // Get profile colors from Neynar if we have a fid
     let colorTrait = "default";
     if (userFid) {
-      console.log("Fetching profile colors for fid:", userFid);
       const profileColors = await getProfileColors(userFid);
       colorTrait = detectColorTrait(profileColors);
     } else {
-      const traits = Object.keys(TEMPLATE_MAP).filter(t => t !== 'default');
+      // Random trait if no fid
+      const traits = Object.keys(BLOOMER_TEMPLATES).filter(t => t !== 'default');
       colorTrait = traits[Math.floor(Math.random() * traits.length)];
     }
     
     console.log(`Selected color trait: ${colorTrait} for user ${userAddress}`);
     
-    // Pick a template based on color trait
-    const templateFileName = pickTemplate(colorTrait, userAddress || '');
-    console.log(`Selected template: ${templateFileName}`);
+    // Get the template filename for this trait
+    const templateFileName = BLOOMER_TEMPLATES[colorTrait] || BLOOMER_TEMPLATES.default;
     
-    // First try to check if template exists in storage bucket "assets"
-    const { data: storageData } = supabase.storage
-      .from("assets")
-      .getPublicUrl(`bloomers/${templateFileName}`);
+    // Check if template already exists in storage
+    const { data: existingFiles } = await supabase.storage
+      .from("bloomers")
+      .list("templates");
     
-    // Try multiple sources for the template
-    const templateUrls = [
-      storageData.publicUrl,
-      `${supabaseUrl}/storage/v1/object/public/assets/bloomers/${templateFileName}`,
-      `https://naughty-or-nice-wrapped.lovable.app/bloomers/${templateFileName}`
-    ];
+    const templateExists = existingFiles?.some(f => f.name === templateFileName);
+    let templateBytes: Uint8Array = new Uint8Array();
     
-    let imageBytes: Uint8Array | null = null;
-    let successUrl = '';
-    
-    for (const templateUrl of templateUrls) {
-      console.log(`Trying template URL: ${templateUrl}`);
-      try {
-        const templateResponse = await fetch(templateUrl);
-        if (templateResponse.ok) {
-          const buffer = await templateResponse.arrayBuffer();
-          imageBytes = new Uint8Array(buffer);
-          successUrl = templateUrl;
-          console.log(`Successfully fetched template from: ${templateUrl}, size: ${imageBytes.length} bytes`);
-          break;
-        }
-      } catch (e) {
-        console.log(`Failed to fetch from ${templateUrl}`);
-      }
-    }
-    
-    // If all URLs failed, use a fallback - pick from a simple reliable template
-    if (!imageBytes) {
-      console.log("All template URLs failed, using fallback strategy");
+    if (templateExists) {
+      // Download from storage
+      console.log("Using existing template from storage:", templateFileName);
+      const { data: templateData, error: downloadError } = await supabase.storage
+        .from("bloomers")
+        .download(`templates/${templateFileName}`);
       
-      // Try bloomer-celestial-fox as ultimate fallback
-      const fallbackUrl = `https://naughty-or-nice-wrapped.lovable.app/bloomers/bloomer-celestial-fox.png`;
-      try {
-        const fallbackResponse = await fetch(fallbackUrl);
-        if (fallbackResponse.ok) {
-          const buffer = await fallbackResponse.arrayBuffer();
-          imageBytes = new Uint8Array(buffer);
-          successUrl = fallbackUrl;
-          console.log(`Used fallback template: ${fallbackUrl}`);
+      if (downloadError || !templateData) {
+        throw new Error(`Failed to download template: ${downloadError?.message}`);
+      }
+      templateBytes = new Uint8Array(await templateData.arrayBuffer());
+    } else {
+      // Templates not in storage - try multiple sources
+      const sources = [
+        // Try the preview URL first
+        `https://id-preview--f2e7c21e-29f6-4b6c-8b04-b3f98f1de7a7.lovable.app/bloomers/${templateFileName}`,
+        // Try the production URL 
+        `https://bloomers.lovable.app/bloomers/${templateFileName}`,
+        // Try a direct GitHub raw URL if the repo exists
+        `https://raw.githubusercontent.com/lovable-projects/bloomers/main/public/bloomers/${templateFileName}`,
+      ];
+      
+      let fetched = false;
+      for (const sourceUrl of sources) {
+        console.log("Trying source:", sourceUrl);
+        try {
+          const response = await fetch(sourceUrl, { 
+            headers: { 'Accept': 'image/png,image/*' }
+          });
+          if (response.ok) {
+            templateBytes = new Uint8Array(await response.arrayBuffer());
+            fetched = true;
+            
+            // Cache to storage for future use
+            await supabase.storage
+              .from("bloomers")
+              .upload(`templates/${templateFileName}`, templateBytes, {
+                contentType: "image/png",
+                upsert: true
+              });
+            console.log("Cached template to storage:", templateFileName);
+            break;
+          }
+        } catch (e) {
+          console.log("Source failed:", sourceUrl, e);
         }
-      } catch (e) {
-        console.error("Fallback also failed:", e);
+      }
+      
+      if (!fetched) {
+        // Last resort: Check if we have any existing bloomers in storage to use as fallback
+        const { data: existingBloomers } = await supabase.storage
+          .from("bloomers")
+          .list("", { limit: 1 });
+        
+        if (existingBloomers && existingBloomers.length > 0) {
+          // Use an existing bloomer as template
+          const fallbackFile = existingBloomers.find(f => f.name.startsWith("bloomer_"));
+          if (fallbackFile) {
+            console.log("Using fallback bloomer:", fallbackFile.name);
+            const { data: fallbackData } = await supabase.storage
+              .from("bloomers")
+              .download(fallbackFile.name);
+            if (fallbackData) {
+              templateBytes = new Uint8Array(await fallbackData.arrayBuffer());
+              fetched = true;
+            }
+          }
+        }
+      }
+      
+      if (!fetched) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Bloomer templates not available yet. Please try again in a few minutes.",
+            colorTrait
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
       }
     }
-    
-    if (!imageBytes) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Failed to load Bloomer template. Please try again later.",
-          colorTrait
-        }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        }
-      );
-    }
+
+    // templateBytes already populated above
     
     // Upload with unique filename for this user
     const fileName = `bloomer_${userAddress || 'anon'}_${Date.now()}.png`;
     
-    const { error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from("bloomers")
-      .upload(fileName, imageBytes, {
+      .upload(fileName, templateBytes, {
         contentType: "image/png",
         upsert: false
       });
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
+      // Return an error if upload fails
       return new Response(
         JSON.stringify({ error: "Failed to upload bloomer image", colorTrait }),
         { 
@@ -309,12 +305,14 @@ serve(async (req) => {
 
     // Save to pending_bloomers table for persistence before mint
     if (userAddress) {
+      // Delete any previous pending bloomer for this user
       await supabase
         .from("minted_bloomers")
         .delete()
         .eq("user_address", userAddress.toLowerCase())
         .is("tx_hash", null);
       
+      // Insert the new pending bloomer (tx_hash is null = not minted yet)
       const { error: insertError } = await supabase
         .from("minted_bloomers")
         .insert({

@@ -15,14 +15,6 @@ const encouragingMessages = [
   "🎊 Congrats @{username} on your Bloomer! Who's next? 🌸"
 ];
 
-// Token launch notification messages
-const tokenLaunchMessages = [
-  "🚀 $BLOOM token is coming! Mint your Bloomer NOW for exclusive perks! 🌸",
-  "💎 $BLOOM launching soon! Bloomer holders get special benefits! Mint now! ✨",
-  "🌟 Get ready for $BLOOM! Mint your Bloomer before launch for rewards! 🎁",
-  "🔥 $BLOOM token alert! Bloomer minters will be rewarded! Don't miss out! 💫"
-];
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -47,15 +39,6 @@ serve(async (req) => {
       const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
       notificationTitle = "🌸 New Bloomer Alert!";
       notificationBody = randomMessage.replace('{username}', username);
-    } else if (notification_type === 'token_launch') {
-      // $BLOOM token launch notification
-      const randomMessage = tokenLaunchMessages[Math.floor(Math.random() * tokenLaunchMessages.length)];
-      notificationTitle = "🚀 $BLOOM Token Alert!";
-      notificationBody = randomMessage;
-    } else if (notification_type === 'mint_reminder') {
-      // Reminder to mint Bloomers
-      notificationTitle = "🌸 Mint Your Bloomer!";
-      notificationBody = "Don't miss out! Mint your unique Bloomer before $BLOOM launch! 🚀✨";
     } else {
       // Default notification content
       notificationTitle = title || "🎄 Naughty or Nice Update!";
