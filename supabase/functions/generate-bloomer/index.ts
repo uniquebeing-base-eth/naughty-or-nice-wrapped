@@ -6,57 +6,57 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Pre-made Bloomer templates with solid backgrounds - multiple options per color trait
+// Pre-made Bloomer templates - same kawaii fox character with different color trait markings and solid backgrounds
 const BLOOMER_TEMPLATES: { [key: string]: string[] } = {
   blue: [
     "blue-fox-black-bg.png",
-    "blue-dragon-blue-bg.png", 
-    "blue-bunny-navy-bg.png"
+    "blue-fox-blue-bg.png", 
+    "blue-fox-navy-bg.png"
   ],
   pink: [
-    "pink-cat-black-bg.png",
-    "pink-unicorn-pink-bg.png",
-    "pink-bunny-magenta-bg.png"
+    "pink-fox-black-bg.png",
+    "pink-fox-pink-bg.png",
+    "pink-fox-magenta-bg.png"
   ],
   gold: [
-    "gold-kitsune-black-bg.png",
-    "gold-phoenix-gold-bg.png",
-    "gold-lion-amber-bg.png"
+    "gold-fox-black-bg.png",
+    "gold-fox-gold-bg.png",
+    "gold-fox-amber-bg.png"
   ],
   white: [
     "white-fox-black-bg.png",
-    "white-owl-gray-bg.png",
-    "white-bunny-black-bg.png"
+    "white-fox-gray-bg.png",
+    "white-fox-cream-bg.png"
   ],
   ice: [
-    "ice-fairy-black-bg.png",
-    "ice-wolf-cyan-bg.png",
-    "ice-penguin-teal-bg.png"
+    "ice-fox-black-bg.png",
+    "ice-fox-cyan-bg.png",
+    "ice-fox-lightblue-bg.png"
   ],
   purple: [
-    "purple-cat-black-bg.png",
-    "purple-owl-purple-bg.png",
-    "purple-dragon-magenta-bg.png"
+    "purple-fox-black-bg.png",
+    "purple-fox-purple-bg.png",
+    "purple-fox-violet-bg.png"
   ],
   green: [
     "green-fox-black-bg.png",
-    "green-dragon-green-bg.png",
-    "green-frog-lime-bg.png"
+    "green-fox-green-bg.png",
+    "green-fox-lime-bg.png"
   ],
   orange: [
     "orange-fox-black-bg.png",
-    "orange-tiger-orange-bg.png",
-    "orange-panda-rust-bg.png"
+    "orange-fox-orange-bg.png",
+    "orange-fox-rust-bg.png"
   ],
   red: [
-    "red-phoenix-black-bg.png",
-    "red-dragon-red-bg.png",
+    "red-fox-black-bg.png",
+    "red-fox-red-bg.png",
     "red-fox-maroon-bg.png"
   ],
   default: [
-    "default-cat-black-bg.png",
-    "default-unicorn-purple-bg.png",
-    "default-owl-navy-bg.png"
+    "default-fox-black-bg.png",
+    "default-fox-purple-bg.png",
+    "default-fox-navy-bg.png"
   ]
 };
 
