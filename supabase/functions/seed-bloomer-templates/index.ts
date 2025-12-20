@@ -6,8 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// All template filenames
+// All template filenames (original + new spirit variants)
 const TEMPLATE_FILES = [
+  // Original templates
   "bloomer-dragon-blue.png",
   "bloomer-fairy-pink.png",
   "bloomer-fox-golden.png",
@@ -17,7 +18,13 @@ const TEMPLATE_FILES = [
   "bloomer-frost-guardian.png",
   "bloomer-celestial-fox.png",
   "bloomer-blossom-fairy.png",
-  "bloomer-golden-spirit.png"
+  "bloomer-golden-spirit.png",
+  // New spirit variants (primary templates)
+  "bloomer-purple-spirit.png",
+  "bloomer-pink-spirit.png",
+  "bloomer-green-spirit.png",
+  "bloomer-red-spirit.png",
+  "bloomer-gold-spirit.png"
 ];
 
 serve(async (req) => {
