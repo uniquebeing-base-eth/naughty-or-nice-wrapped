@@ -6,58 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Pre-made Bloomer templates - same kawaii fox character with different color trait markings and solid backgrounds
+// Pre-made Bloomer templates - same kawaii fox character with different color trait markings, all with SOLID BLACK background
 const BLOOMER_TEMPLATES: { [key: string]: string[] } = {
-  blue: [
-    "blue-fox-black-bg.png",
-    "blue-fox-blue-bg.png", 
-    "blue-fox-navy-bg.png"
-  ],
-  pink: [
-    "pink-fox-black-bg.png",
-    "pink-fox-pink-bg.png",
-    "pink-fox-magenta-bg.png"
-  ],
-  gold: [
-    "gold-fox-black-bg.png",
-    "gold-fox-gold-bg.png",
-    "gold-fox-amber-bg.png"
-  ],
-  white: [
-    "white-fox-black-bg.png",
-    "white-fox-gray-bg.png",
-    "white-fox-cream-bg.png"
-  ],
-  ice: [
-    "ice-fox-black-bg.png",
-    "ice-fox-cyan-bg.png",
-    "ice-fox-lightblue-bg.png"
-  ],
-  purple: [
-    "purple-fox-black-bg.png",
-    "purple-fox-purple-bg.png",
-    "purple-fox-violet-bg.png"
-  ],
-  green: [
-    "green-fox-black-bg.png",
-    "green-fox-green-bg.png",
-    "green-fox-lime-bg.png"
-  ],
-  orange: [
-    "orange-fox-black-bg.png",
-    "orange-fox-orange-bg.png",
-    "orange-fox-rust-bg.png"
-  ],
-  red: [
-    "red-fox-black-bg.png",
-    "red-fox-red-bg.png",
-    "red-fox-maroon-bg.png"
-  ],
-  default: [
-    "default-fox-black-bg.png",
-    "default-fox-purple-bg.png",
-    "default-fox-navy-bg.png"
-  ]
+  blue: ["blue-fox-black-bg.png"],
+  pink: ["pink-fox-black-bg.png"],
+  gold: ["gold-fox-black-bg.png"],
+  white: ["white-fox-black-bg.png"],
+  ice: ["ice-fox-black-bg.png"],
+  purple: ["purple-fox-black-bg.png"],
+  green: ["green-fox-black-bg.png"],
+  orange: ["orange-fox-black-bg.png"],
+  red: ["red-fox-black-bg.png"],
+  default: ["default-fox-black-bg.png"]
 };
 
 // Function to get random template from a color trait
@@ -224,13 +184,22 @@ serve(async (req) => {
     const templateFileName = getRandomTemplate(colorTrait);
     console.log(`Selected template: ${templateFileName}`);
     
-    // Check if template already exists in storage
+    // Always try to fetch fresh template from the app first
+    // Templates are stored in public/bloomers/ folder
+    const sources = [
+      // Use the current preview/production app URL
+      `https://sbhcnilxueqchughpeui.supabase.co/storage/v1/object/public/bloomers/templates/${templateFileName}`,
+    ];
+    
+    let templateBytes: Uint8Array = new Uint8Array();
+    let fetched = false;
+    
+    // First check if template exists in storage
     const { data: existingFiles } = await supabase.storage
       .from("bloomers")
       .list("templates");
     
     const templateExists = existingFiles?.some(f => f.name === templateFileName);
-    let templateBytes: Uint8Array = new Uint8Array();
     
     if (templateExists) {
       // Download from storage
@@ -239,81 +208,61 @@ serve(async (req) => {
         .from("bloomers")
         .download(`templates/${templateFileName}`);
       
-      if (downloadError || !templateData) {
-        throw new Error(`Failed to download template: ${downloadError?.message}`);
+      if (!downloadError && templateData) {
+        templateBytes = new Uint8Array(await templateData.arrayBuffer());
+        fetched = true;
       }
-      templateBytes = new Uint8Array(await templateData.arrayBuffer());
-    } else {
-      // Templates not in storage - try multiple sources
-      const sources = [
-        // Try the preview URL first
+    }
+    
+    if (!fetched) {
+      // Templates not in storage - fetch from the deployed app
+      const appUrls = [
+        // Get from the deployed preview
+        `https://sbhcnilxueqchughpeui.lovable.app/bloomers/${templateFileName}`,
+        // Fallback to direct preview
         `https://id-preview--f2e7c21e-29f6-4b6c-8b04-b3f98f1de7a7.lovable.app/bloomers/${templateFileName}`,
-        // Try the production URL 
-        `https://bloomers.lovable.app/bloomers/${templateFileName}`,
-        // Try a direct GitHub raw URL if the repo exists
-        `https://raw.githubusercontent.com/lovable-projects/bloomers/main/public/bloomers/${templateFileName}`,
       ];
       
-      let fetched = false;
-      for (const sourceUrl of sources) {
-        console.log("Trying source:", sourceUrl);
+      for (const sourceUrl of appUrls) {
+        console.log("Trying to fetch template from:", sourceUrl);
         try {
           const response = await fetch(sourceUrl, { 
             headers: { 'Accept': 'image/png,image/*' }
           });
           if (response.ok) {
-            templateBytes = new Uint8Array(await response.arrayBuffer());
-            fetched = true;
-            
-            // Cache to storage for future use
-            await supabase.storage
-              .from("bloomers")
-              .upload(`templates/${templateFileName}`, templateBytes, {
-                contentType: "image/png",
-                upsert: true
-              });
-            console.log("Cached template to storage:", templateFileName);
-            break;
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('image')) {
+              templateBytes = new Uint8Array(await response.arrayBuffer());
+              fetched = true;
+              
+              // Cache to storage for future use
+              await supabase.storage
+                .from("bloomers")
+                .upload(`templates/${templateFileName}`, templateBytes, {
+                  contentType: "image/png",
+                  upsert: true
+                });
+              console.log("Cached template to storage:", templateFileName);
+              break;
+            }
           }
         } catch (e) {
           console.log("Source failed:", sourceUrl, e);
         }
       }
-      
-      if (!fetched) {
-        // Last resort: Check if we have any existing bloomers in storage to use as fallback
-        const { data: existingBloomers } = await supabase.storage
-          .from("bloomers")
-          .list("", { limit: 1 });
-        
-        if (existingBloomers && existingBloomers.length > 0) {
-          // Use an existing bloomer as template
-          const fallbackFile = existingBloomers.find(f => f.name.startsWith("bloomer_"));
-          if (fallbackFile) {
-            console.log("Using fallback bloomer:", fallbackFile.name);
-            const { data: fallbackData } = await supabase.storage
-              .from("bloomers")
-              .download(fallbackFile.name);
-            if (fallbackData) {
-              templateBytes = new Uint8Array(await fallbackData.arrayBuffer());
-              fetched = true;
-            }
-          }
+    }
+    
+    if (!fetched) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Bloomer templates not available yet. Please try again in a few minutes.",
+          colorTrait
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
         }
-      }
-      
-      if (!fetched) {
-        return new Response(
-          JSON.stringify({ 
-            error: "Bloomer templates not available yet. Please try again in a few minutes.",
-            colorTrait
-          }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          }
-        );
-      }
+      );
     }
 
     // templateBytes already populated above
