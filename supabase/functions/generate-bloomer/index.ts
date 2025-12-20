@@ -6,23 +6,65 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Pre-made Bloomer images - base64 encoded and embedded
-// This ensures they work without external dependencies
-const BLOOMER_TEMPLATES: { [key: string]: string } = {
-  blue: "bloomer-dragon-blue.png",
-  pink: "bloomer-fairy-pink.png", 
-  gold: "bloomer-fox-golden.png",
-  white: "bloomer-fox-white.png",
-  ice: "bloomer-owl-ice.png",
-  purple: "bloomer-mystic-kitsune.png",
-  green: "bloomer-frost-guardian.png",
-  orange: "bloomer-celestial-fox.png",
-  red: "bloomer-blossom-fairy.png",
-  default: "bloomer-golden-spirit.png"
+// Pre-made Bloomer templates with solid backgrounds - multiple options per color trait
+const BLOOMER_TEMPLATES: { [key: string]: string[] } = {
+  blue: [
+    "blue-fox-black-bg.png",
+    "blue-dragon-blue-bg.png", 
+    "blue-bunny-navy-bg.png"
+  ],
+  pink: [
+    "pink-cat-black-bg.png",
+    "pink-unicorn-pink-bg.png",
+    "pink-bunny-magenta-bg.png"
+  ],
+  gold: [
+    "gold-kitsune-black-bg.png",
+    "gold-phoenix-gold-bg.png",
+    "gold-lion-amber-bg.png"
+  ],
+  white: [
+    "white-fox-black-bg.png",
+    "white-owl-gray-bg.png",
+    "white-bunny-black-bg.png"
+  ],
+  ice: [
+    "ice-fairy-black-bg.png",
+    "ice-wolf-cyan-bg.png",
+    "ice-penguin-teal-bg.png"
+  ],
+  purple: [
+    "purple-cat-black-bg.png",
+    "purple-owl-purple-bg.png",
+    "purple-dragon-magenta-bg.png"
+  ],
+  green: [
+    "green-fox-black-bg.png",
+    "green-dragon-green-bg.png",
+    "green-frog-lime-bg.png"
+  ],
+  orange: [
+    "orange-fox-black-bg.png",
+    "orange-tiger-orange-bg.png",
+    "orange-panda-rust-bg.png"
+  ],
+  red: [
+    "red-phoenix-black-bg.png",
+    "red-dragon-red-bg.png",
+    "red-fox-maroon-bg.png"
+  ],
+  default: [
+    "default-cat-black-bg.png",
+    "default-unicorn-purple-bg.png",
+    "default-owl-navy-bg.png"
+  ]
 };
 
-// GitHub raw URLs for template images (reliable CDN)
-const TEMPLATE_BASE_URL = "https://raw.githubusercontent.com/AchieversAnonymous/bloomers/main/public/bloomers";
+// Function to get random template from a color trait
+function getRandomTemplate(colorTrait: string): string {
+  const templates = BLOOMER_TEMPLATES[colorTrait] || BLOOMER_TEMPLATES.default;
+  return templates[Math.floor(Math.random() * templates.length)];
+}
 
 // Color trait to hex mapping for detection
 const COLOR_MAPPINGS: { [key: string]: string[] } = {
@@ -178,8 +220,9 @@ serve(async (req) => {
     
     console.log(`Selected color trait: ${colorTrait} for user ${userAddress}`);
     
-    // Get the template filename for this trait
-    const templateFileName = BLOOMER_TEMPLATES[colorTrait] || BLOOMER_TEMPLATES.default;
+    // Get a random template filename for this trait
+    const templateFileName = getRandomTemplate(colorTrait);
+    console.log(`Selected template: ${templateFileName}`);
     
     // Check if template already exists in storage
     const { data: existingFiles } = await supabase.storage
