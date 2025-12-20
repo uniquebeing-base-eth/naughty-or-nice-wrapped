@@ -15,7 +15,7 @@ interface LeaderboardEntry {
 }
 
 const POINTS_PER_BLOOMER = 300;
-const TOKENS_MULTIPLIER = 100;
+const TOKENS_MULTIPLIER = 1000;
 
 const BloomersLeaderboard = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
