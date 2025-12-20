@@ -6,18 +6,83 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Color trait descriptions for AI generation
-const COLOR_TRAIT_PROMPTS: { [key: string]: string } = {
-  blue: "pastel blue and light blue colored fur with blue markings and stripes",
-  pink: "pastel pink and rose colored fur with pink markings and stripes", 
-  gold: "golden orange and amber colored fur with yellow-gold markings and stripes",
-  white: "pure white and cream colored fur with subtle white markings",
-  ice: "icy cyan and light blue colored fur with frost-like ice blue markings",
-  purple: "lavender purple and violet colored fur with purple markings and stripes",
-  green: "lime green and mint colored fur with green markings and stripes",
-  orange: "bright orange and tangerine colored fur with orange markings and stripes",
-  red: "crimson red and coral colored fur with red markings and stripes",
-  default: "soft gray and silver colored fur with subtle gray markings"
+// Pre-existing templates organized by color trait (black background versions)
+const TEMPLATE_MAP: { [key: string]: string[] } = {
+  blue: [
+    "blue-fox-black-bg.png",
+    "blue-fox-navy-bg.png",
+    "blue-fox-blue-bg.png",
+    "blue-bunny-navy-bg.png",
+    "blue-dragon-blue-bg.png"
+  ],
+  pink: [
+    "pink-fox-black-bg.png",
+    "pink-cat-black-bg.png",
+    "pink-fox-magenta-bg.png",
+    "pink-fox-pink-bg.png",
+    "pink-bunny-magenta-bg.png",
+    "pink-unicorn-pink-bg.png"
+  ],
+  gold: [
+    "gold-fox-black-bg.png",
+    "gold-kitsune-black-bg.png",
+    "gold-fox-amber-bg.png",
+    "gold-fox-gold-bg.png",
+    "gold-lion-amber-bg.png",
+    "gold-phoenix-gold-bg.png"
+  ],
+  white: [
+    "white-fox-black-bg.png",
+    "white-bunny-black-bg.png",
+    "white-fox-cream-bg.png",
+    "white-fox-gray-bg.png",
+    "white-owl-gray-bg.png"
+  ],
+  ice: [
+    "ice-fox-black-bg.png",
+    "ice-fairy-black-bg.png",
+    "ice-fox-cyan-bg.png",
+    "ice-fox-lightblue-bg.png",
+    "ice-penguin-teal-bg.png",
+    "ice-wolf-cyan-bg.png"
+  ],
+  purple: [
+    "purple-fox-black-bg.png",
+    "purple-cat-black-bg.png",
+    "purple-fox-purple-bg.png",
+    "purple-fox-violet-bg.png",
+    "purple-dragon-magenta-bg.png",
+    "purple-owl-purple-bg.png"
+  ],
+  green: [
+    "green-fox-black-bg.png",
+    "green-fox-green-bg.png",
+    "green-fox-lime-bg.png",
+    "green-dragon-green-bg.png",
+    "green-frog-lime-bg.png"
+  ],
+  orange: [
+    "orange-fox-black-bg.png",
+    "orange-fox-orange-bg.png",
+    "orange-fox-rust-bg.png",
+    "orange-panda-rust-bg.png",
+    "orange-tiger-orange-bg.png"
+  ],
+  red: [
+    "red-fox-black-bg.png",
+    "red-phoenix-black-bg.png",
+    "red-fox-red-bg.png",
+    "red-fox-maroon-bg.png",
+    "red-dragon-red-bg.png"
+  ],
+  default: [
+    "default-fox-black-bg.png",
+    "default-cat-black-bg.png",
+    "default-fox-navy-bg.png",
+    "default-fox-purple-bg.png",
+    "default-owl-navy-bg.png",
+    "default-unicorn-purple-bg.png"
+  ]
 };
 
 // Color trait to hex mapping for detection
@@ -42,11 +107,10 @@ function colorDistance(hex1: string, r2: number, g2: number, b2: number): number
   return Math.sqrt(Math.pow(r1 - r2, 2) + Math.pow(g1 - g2, 2) + Math.pow(b1 - b2, 2));
 }
 
-// Analyze dominant color from image via Neynar profile data
+// Analyze dominant color from image
 function detectColorTrait(profileColors: { r: number, g: number, b: number }[]): string {
   if (!profileColors || profileColors.length === 0) {
-    // Return random trait if no colors detected
-    const traits = Object.keys(COLOR_TRAIT_PROMPTS).filter(t => t !== 'default');
+    const traits = Object.keys(TEMPLATE_MAP).filter(t => t !== 'default');
     return traits[Math.floor(Math.random() * traits.length)];
   }
 
@@ -121,10 +185,8 @@ async function getProfileColors(fid: number): Promise<{ r: number, g: number, b:
     const imageBuffer = await imageResponse.arrayBuffer();
     const imageBytes = new Uint8Array(imageBuffer);
     
-    // Simple color extraction from image bytes (sample pixels)
+    // Simple color extraction from image bytes
     const colors: { r: number, g: number, b: number }[] = [];
-    
-    // Sample every Nth byte assuming RGB format
     const sampleRate = Math.max(1, Math.floor(imageBytes.length / 1000));
     
     for (let i = 0; i < imageBytes.length - 2; i += sampleRate * 3) {
@@ -132,7 +194,6 @@ async function getProfileColors(fid: number): Promise<{ r: number, g: number, b:
       const g = imageBytes[i + 1];
       const b = imageBytes[i + 2];
       
-      // Skip near-black and near-white pixels
       if (r + g + b > 30 && r + g + b < 720) {
         colors.push({ r, g, b });
       }
@@ -147,73 +208,16 @@ async function getProfileColors(fid: number): Promise<{ r: number, g: number, b:
   }
 }
 
-// Generate Bloomer image using Lovable AI
-async function generateBloomerWithAI(colorTrait: string): Promise<Uint8Array | null> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) {
-    console.error("LOVABLE_API_KEY not configured");
-    return null;
-  }
-
-  const colorDescription = COLOR_TRAIT_PROMPTS[colorTrait] || COLOR_TRAIT_PROMPTS.default;
+// Pick a random template based on color trait
+function pickTemplate(colorTrait: string, userAddress: string): string {
+  const templates = TEMPLATE_MAP[colorTrait] || TEMPLATE_MAP.default;
   
-  // Create a unique prompt for this Bloomer
-  const prompt = `Create a cute kawaii chibi fox character with small angel wings. The fox has ${colorDescription}. The character should have big sparkly anime eyes with star reflections, fluffy tail, and a sweet happy expression with rosy cheeks. The character is centered in the image, sitting pose. IMPORTANT: The background must be a completely SOLID PURE BLACK color (#000000), no patterns, no gradients, no textures - just flat black. Digital art style, high quality, crisp lines.`;
-
-  console.log("Generating Bloomer with AI, color trait:", colorTrait);
-  console.log("Prompt:", prompt);
-
-  try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        modalities: ["image", "text"]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI generation error:", response.status, errorText);
-      return null;
-    }
-
-    const data = await response.json();
-    console.log("AI response received");
-    
-    // Extract the base64 image from the response
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
-    if (!imageData) {
-      console.error("No image in AI response");
-      return null;
-    }
-
-    // Convert base64 to Uint8Array
-    // Remove the data:image/png;base64, prefix if present
-    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-    const binaryString = atob(base64Data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    
-    console.log("Successfully generated Bloomer image, size:", bytes.length);
-    return bytes;
-  } catch (error) {
-    console.error("Error generating Bloomer with AI:", error);
-    return null;
-  }
+  // Use user address to add some deterministic randomness
+  // but still allow variation between mints
+  const seed = Date.now() + (userAddress ? userAddress.charCodeAt(2) + userAddress.charCodeAt(5) : 0);
+  const index = seed % templates.length;
+  
+  return templates[index];
 }
 
 serve(async (req) => {
@@ -235,22 +239,36 @@ serve(async (req) => {
       const profileColors = await getProfileColors(userFid);
       colorTrait = detectColorTrait(profileColors);
     } else {
-      // Random trait if no fid
-      const traits = Object.keys(COLOR_TRAIT_PROMPTS).filter(t => t !== 'default');
+      const traits = Object.keys(TEMPLATE_MAP).filter(t => t !== 'default');
       colorTrait = traits[Math.floor(Math.random() * traits.length)];
     }
     
     console.log(`Selected color trait: ${colorTrait} for user ${userAddress}`);
     
-    // Generate unique Bloomer using AI
-    console.log("Starting AI generation...");
-    const imageBytes = await generateBloomerWithAI(colorTrait);
+    // Pick a template based on color trait
+    const templateFileName = pickTemplate(colorTrait, userAddress || '');
+    console.log(`Selected template: ${templateFileName}`);
     
-    if (!imageBytes) {
-      console.error("Failed to generate Bloomer with AI");
+    // Build the public URL for the template from the app's public folder
+    // Templates are served from the deployed app's public/bloomers folder
+    const templateUrl = `https://naughty-or-nice-wrapped.lovable.app/bloomers/${templateFileName}`;
+    console.log(`Template URL: ${templateUrl}`);
+    
+    // Fetch the template image
+    let imageBytes: Uint8Array;
+    try {
+      const templateResponse = await fetch(templateUrl);
+      if (!templateResponse.ok) {
+        throw new Error(`Failed to fetch template: ${templateResponse.status}`);
+      }
+      const buffer = await templateResponse.arrayBuffer();
+      imageBytes = new Uint8Array(buffer);
+      console.log(`Fetched template image, size: ${imageBytes.length} bytes`);
+    } catch (fetchError) {
+      console.error("Error fetching template:", fetchError);
       return new Response(
         JSON.stringify({ 
-          error: "Failed to generate Bloomer. Please try again.",
+          error: "Failed to load Bloomer template. Please try again.",
           colorTrait
         }),
         { 
@@ -289,14 +307,12 @@ serve(async (req) => {
 
     // Save to pending_bloomers table for persistence before mint
     if (userAddress) {
-      // Delete any previous pending bloomer for this user
       await supabase
         .from("minted_bloomers")
         .delete()
         .eq("user_address", userAddress.toLowerCase())
         .is("tx_hash", null);
       
-      // Insert the new pending bloomer (tx_hash is null = not minted yet)
       const { error: insertError } = await supabase
         .from("minted_bloomers")
         .insert({
