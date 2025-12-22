@@ -6,51 +6,38 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Pre-made Bloomer images with primary and fallback options
-// Primary templates use the new "spirit" style
-const BLOOMER_TEMPLATES: { [key: string]: { primary: string, fallback: string } } = {
-  blue: { primary: "bloomer-dragon-blue.png", fallback: "bloomer-dragon-blue.png" },
-  pink: { primary: "bloomer-pink-spirit.png", fallback: "bloomer-fairy-pink.png" }, 
-  gold: { primary: "bloomer-gold-spirit.png", fallback: "bloomer-fox-golden.png" },
-  white: { primary: "bloomer-fox-white.png", fallback: "bloomer-fox-white.png" },
-  ice: { primary: "bloomer-owl-ice.png", fallback: "bloomer-owl-ice.png" },
-  purple: { primary: "bloomer-purple-spirit.png", fallback: "bloomer-mystic-kitsune.png" },
-  green: { primary: "bloomer-green-spirit.png", fallback: "bloomer-frost-guardian.png" },
-  orange: { primary: "bloomer-celestial-fox.png", fallback: "bloomer-celestial-fox.png" },
-  red: { primary: "bloomer-red-spirit.png", fallback: "bloomer-blossom-fairy.png" },
-  default: { primary: "bloomer-gold-spirit.png", fallback: "bloomer-golden-spirit.png" }
+// Only using the 5 spirit bloomers - these are the ONLY templates
+const BLOOMER_TEMPLATES: { [key: string]: string } = {
+  purple: "bloomer-purple-spirit.png",
+  pink: "bloomer-pink-spirit.png", 
+  green: "bloomer-green-spirit.png",
+  red: "bloomer-red-spirit.png",
+  gold: "bloomer-gold-spirit.png",
 };
 
-// GitHub raw URLs for template images (reliable CDN)
-const TEMPLATE_BASE_URL = "https://raw.githubusercontent.com/AchieversAnonymous/bloomers/main/public/bloomers";
+// Production URL where bloomers are hosted
+const PRODUCTION_BASE_URL = "https://naughty-or-nice-wrapped.lovable.app/bloomers";
 
-// Color trait to hex mapping for detection
-const COLOR_MAPPINGS: { [key: string]: string[] } = {
-  blue: ["#0000ff", "#0066cc", "#003399", "#6699ff", "#00ccff", "#336699", "#000080", "#4169e1", "#1e90ff", "#00bfff"],
-  pink: ["#ff69b4", "#ff1493", "#ffb6c1", "#ffc0cb", "#db7093", "#ff66b2", "#ff99cc", "#ffccff", "#e91e8c"],
-  gold: ["#ffd700", "#ffcc00", "#daa520", "#b8860b", "#f4a460", "#cd853f", "#d4af37", "#ffdf00"],
-  white: ["#ffffff", "#f5f5f5", "#fafafa", "#f0f0f0", "#e8e8e8", "#dcdcdc", "#d3d3d3"],
-  ice: ["#e0ffff", "#afeeee", "#b0e0e6", "#add8e6", "#87ceeb", "#87cefa", "#00ced1", "#48d1cc"],
-  purple: ["#800080", "#9932cc", "#8b008b", "#9400d3", "#ba55d3", "#da70d6", "#ee82ee", "#8a2be2", "#9370db"],
-  green: ["#008000", "#00ff00", "#32cd32", "#228b22", "#006400", "#90ee90", "#98fb98", "#00fa9a", "#2e8b57"],
-  orange: ["#ffa500", "#ff8c00", "#ff7f50", "#ff6347", "#ff4500", "#e9967a", "#fa8072", "#f08080"],
-  red: ["#ff0000", "#dc143c", "#b22222", "#8b0000", "#cd5c5c", "#ff6b6b", "#e74c3c", "#c0392b", "#a93226"]
+// Color trait RGB definitions for detection
+const COLOR_DEFINITIONS: { [key: string]: { r: number, g: number, b: number } } = {
+  purple: { r: 128, g: 0, b: 128 },
+  pink: { r: 255, g: 105, b: 180 },
+  green: { r: 0, g: 128, b: 0 },
+  red: { r: 255, g: 0, b: 0 },
+  gold: { r: 255, g: 215, b: 0 },
 };
 
 // Simple color distance calculation
-function colorDistance(hex1: string, r2: number, g2: number, b2: number): number {
-  const hex = hex1.replace('#', '');
-  const r1 = parseInt(hex.substring(0, 2), 16);
-  const g1 = parseInt(hex.substring(2, 4), 16);
-  const b1 = parseInt(hex.substring(4, 6), 16);
-  return Math.sqrt(Math.pow(r1 - r2, 2) + Math.pow(g1 - g2, 2) + Math.pow(b1 - b2, 2));
+function colorDistance(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number {
+  return Math.sqrt(Math.pow(r2 - r1, 2) + Math.pow(g2 - g1, 2) + Math.pow(b2 - b1, 2));
 }
 
-// Analyze dominant color from image via Neynar profile data
+// Analyze dominant color and match to closest trait
 function detectColorTrait(profileColors: { r: number, g: number, b: number }[]): string {
+  const traits = Object.keys(BLOOMER_TEMPLATES);
+  
   if (!profileColors || profileColors.length === 0) {
     // Return random trait if no colors detected
-    const traits = Object.keys(BLOOMER_TEMPLATES).filter(t => t !== 'default');
     return traits[Math.floor(Math.random() * traits.length)];
   }
 
@@ -68,17 +55,15 @@ function detectColorTrait(profileColors: { r: number, g: number, b: number }[]):
     }
   }
 
-  // Match to closest color trait
-  let bestTrait = "default";
+  // Match to closest color trait from the 5 spirit bloomers
+  let bestTrait = "gold";
   let bestDistance = Infinity;
 
-  for (const [trait, hexColors] of Object.entries(COLOR_MAPPINGS)) {
-    for (const hex of hexColors) {
-      const distance = colorDistance(hex, dominantColor.r, dominantColor.g, dominantColor.b);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestTrait = trait;
-      }
+  for (const [trait, colorDef] of Object.entries(COLOR_DEFINITIONS)) {
+    const distance = colorDistance(dominantColor.r, dominantColor.g, dominantColor.b, colorDef.r, colorDef.g, colorDef.b);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestTrait = trait;
     }
   }
 
@@ -172,30 +157,42 @@ serve(async (req) => {
       colorTrait = detectColorTrait(profileColors);
     } else {
       // Random trait if no fid
-      const traits = Object.keys(BLOOMER_TEMPLATES).filter(t => t !== 'default');
+      const traits = Object.keys(BLOOMER_TEMPLATES);
       colorTrait = traits[Math.floor(Math.random() * traits.length)];
     }
     
     console.log(`Selected color trait: ${colorTrait} for user ${userAddress}`);
     
-    // Get the template config for this trait (primary + fallback)
-    const templateConfig = BLOOMER_TEMPLATES[colorTrait] || BLOOMER_TEMPLATES.default;
-    const templateFileNames = [templateConfig.primary, templateConfig.fallback];
-    
-    // Check if templates exist in storage
-    const { data: existingFiles } = await supabase.storage
-      .from("bloomers")
-      .list("templates");
+    // Get the template filename for this trait
+    const templateFileName = BLOOMER_TEMPLATES[colorTrait] || BLOOMER_TEMPLATES.gold;
     
     let templateBytes: Uint8Array = new Uint8Array();
     let usedTemplate = "";
     
-    // Try to find template in storage first (primary, then fallback)
-    for (const templateFileName of templateFileNames) {
-      const templateExists = existingFiles?.some(f => f.name === templateFileName);
+    // Try fetching from production URL first
+    console.log(`Fetching template from: ${PRODUCTION_BASE_URL}/${templateFileName}`);
+    try {
+      const response = await fetch(`${PRODUCTION_BASE_URL}/${templateFileName}`, { 
+        headers: { 'Accept': 'image/png,image/*' }
+      });
+      if (response.ok) {
+        templateBytes = new Uint8Array(await response.arrayBuffer());
+        usedTemplate = templateFileName;
+        console.log("Successfully fetched template:", templateFileName);
+      }
+    } catch (e) {
+      console.log("Failed to fetch from production URL:", e);
+    }
+    
+    // Fallback: check storage for cached templates
+    if (templateBytes.length === 0) {
+      const { data: existingFiles } = await supabase.storage
+        .from("bloomers")
+        .list("templates");
       
+      const templateExists = existingFiles?.some(f => f.name === templateFileName);
       if (templateExists) {
-        console.log("Trying existing template from storage:", templateFileName);
+        console.log("Trying cached template from storage:", templateFileName);
         const { data: templateData, error: downloadError } = await supabase.storage
           .from("bloomers")
           .download(`templates/${templateFileName}`);
@@ -204,49 +201,18 @@ serve(async (req) => {
           templateBytes = new Uint8Array(await templateData.arrayBuffer());
           usedTemplate = templateFileName;
           console.log("Using template from storage:", templateFileName);
-          break;
         }
       }
     }
     
-    // If not found in storage, try fetching from URLs
-    if (templateBytes.length === 0) {
-      for (const templateFileName of templateFileNames) {
-        const sources = [
-          `https://id-preview--f2e7c21e-29f6-4b6c-8b04-b3f98f1de7a7.lovable.app/bloomers/${templateFileName}`,
-          `https://bloomers.lovable.app/bloomers/${templateFileName}`,
-          `https://raw.githubusercontent.com/lovable-projects/bloomers/main/public/bloomers/${templateFileName}`,
-        ];
-        
-        let fetched = false;
-        for (const sourceUrl of sources) {
-          console.log("Trying source:", sourceUrl);
-          try {
-            const response = await fetch(sourceUrl, { 
-              headers: { 'Accept': 'image/png,image/*' }
-            });
-            if (response.ok) {
-              templateBytes = new Uint8Array(await response.arrayBuffer());
-              usedTemplate = templateFileName;
-              fetched = true;
-              
-              // Cache to storage for future use
-              await supabase.storage
-                .from("bloomers")
-                .upload(`templates/${templateFileName}`, templateBytes, {
-                  contentType: "image/png",
-                  upsert: true
-                });
-              console.log("Cached template to storage:", templateFileName);
-              break;
-            }
-          } catch (e) {
-            console.log("Source failed:", sourceUrl, e);
-          }
-        }
-        
-        if (fetched) break;
-      }
+    // Cache the template to storage if we fetched it
+    if (templateBytes.length > 0 && usedTemplate === templateFileName) {
+      await supabase.storage
+        .from("bloomers")
+        .upload(`templates/${templateFileName}`, templateBytes, {
+          contentType: "image/png",
+          upsert: true
+        }).catch(() => {}); // Ignore cache errors
     }
     
     // Last resort: use any existing bloomer from storage
