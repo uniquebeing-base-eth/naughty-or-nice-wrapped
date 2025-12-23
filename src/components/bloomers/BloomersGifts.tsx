@@ -30,7 +30,7 @@ const GIFTS: GiftPartner[] = [
     id: 'uniquehub',
     name: 'UniqueHub',
     icon: uniquehubIcon,
-    link: 'https://uniqueehub.vercel.app',
+    link: 'https://uniquehub.xyz',
     description: 'Your unique hub for everything onchain',
     santaMessage: "Ho ho ho! The UniqueHub spirits are spreading uniqueness across the realm! Every soul deserves to shine uniquely! 🌟✨",
     reward: '300,000 UNIQ Tokens',
@@ -49,10 +49,10 @@ const BloomersGifts = () => {
   const [claimingGift, setClaimingGift] = useState<string | null>(null);
   const [showSharePopup, setShowSharePopup] = useState<GiftPartner | null>(null);
   
-  // Persist visited state in localStorage so it survives navigation to partner apps
-  const [visitedGifts, setVisitedGifts] = useState<Record<string, boolean>>(() => {
+  // Persist visited state with timestamp in localStorage - requires daily visit
+  const [visitedGifts, setVisitedGifts] = useState<Record<string, number>>(() => {
     try {
-      const stored = localStorage.getItem('bloomers_visited_gifts');
+      const stored = localStorage.getItem('bloomers_visited_gifts_v2');
       return stored ? JSON.parse(stored) : {};
     } catch {
       return {};
@@ -62,15 +62,24 @@ const BloomersGifts = () => {
   // Save visited state to localStorage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem('bloomers_visited_gifts', JSON.stringify(visitedGifts));
+      localStorage.setItem('bloomers_visited_gifts_v2', JSON.stringify(visitedGifts));
     } catch (err) {
       console.log('Failed to save visited state:', err);
     }
   }, [visitedGifts]);
 
+  // Check if user visited today (within last 24 hours)
+  const hasVisitedToday = (giftId: string): boolean => {
+    const lastVisit = visitedGifts[giftId];
+    if (!lastVisit) return false;
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    return (now - lastVisit) < oneDayMs;
+  };
+
   const handleVisitPartner = async (gift: GiftPartner) => {
-    // Mark as visited
-    setVisitedGifts(prev => ({ ...prev, [gift.id]: true }));
+    // Mark as visited with current timestamp
+    setVisitedGifts(prev => ({ ...prev, [gift.id]: Date.now() }));
     
     // Open the mini app directly within Farcaster
     if (isInMiniApp && sdk?.actions?.openUrl) {
@@ -86,11 +95,11 @@ const BloomersGifts = () => {
   };
 
   const handleClaimGift = async (gift: GiftPartner) => {
-    // Check if user visited the partner first
-    if (!visitedGifts[gift.id]) {
+    // Check if user visited the partner today
+    if (!hasVisitedToday(gift.id)) {
       toast({
-        title: "Visit Required",
-        description: `Please tap 'Visit' to check out ${gift.name} first!`,
+        title: "Daily Visit Required",
+        description: `Please visit ${gift.name} today before claiming!`,
         variant: "destructive",
       });
       return;
@@ -223,8 +232,7 @@ const BloomersGifts = () => {
         await sdk.actions.composeCast({
           text: shareText,
           embeds: [
-            gift.link,
-            'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'
+            'https://uniquehub.xyz'
           ],
         });
         setShowSharePopup(null);
@@ -316,7 +324,7 @@ const BloomersGifts = () => {
             {GIFTS.map((gift) => {
               const isClaimed = claimedGifts[gift.id];
               const isClaiming = claimingGift === gift.id;
-              const isVisited = visitedGifts[gift.id];
+              const isVisited = hasVisitedToday(gift.id);
 
               return (
                 <div 
@@ -393,7 +401,7 @@ const BloomersGifts = () => {
                   {/* Visit requirement hint */}
                   {!isVisited && gift.enabled && !isClaimed && (
                     <p className="text-christmas-gold/80 text-xs text-center mb-3 animate-pulse">
-                      👆 Tap 'Visit' above to unlock claim
+                      👆 Visit {gift.name} daily to unlock claim
                     </p>
                   )}
 
