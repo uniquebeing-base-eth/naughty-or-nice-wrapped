@@ -40,12 +40,12 @@ export const useMonthlyWrappedData = (stats: MonthlyStats, savedJudgment?: Month
     // Slide 1: Total Casts
     slideList.push({
       id: 'total-casts',
-      title: `${stats.month} Casts`,
+      title: 'December Casts',
       value: stats.totalCasts,
       funnyText: randomItem([
-        `You dropped ${stats.totalCasts.toLocaleString()} casts this month.\nThat's not posting.\nThat's a lifestyle.`,
-        `${stats.totalCasts.toLocaleString()} casts in ${stats.month}.\nYou had thoughts.\nYou shared them.\nNo regrets.`,
-        `${stats.totalCasts.toLocaleString()} casts.\nSome hit.\nSome missed.\nAll iconic.`,
+        `You dropped ${stats.totalCasts.toLocaleString()} casts this December.\nSanta saw every one.\nNo regrets. 🎅`,
+        `${stats.totalCasts.toLocaleString()} casts in December.\nYou had thoughts.\nYou shared them.\nThe elves took notes.`,
+        `${stats.totalCasts.toLocaleString()} casts.\nSome hit.\nSome missed.\nAll made Santa's list.`,
       ]),
       emoji: '📢',
       color: 'purple',
@@ -58,13 +58,13 @@ export const useMonthlyWrappedData = (stats: MonthlyStats, savedJudgment?: Month
       value: stats.replies,
       funnyText: stats.replies > 50 
         ? randomItem([
-            `You pulled ${stats.replies.toLocaleString()} replies this month.\nFantastic energy detected.\nYou don't talk at people —\nyou start movements.`,
-            `${stats.replies.toLocaleString()} replies.\nPeople can't stop responding to you.\nMain character behavior confirmed.`,
-            `${stats.replies.toLocaleString()} replies in ${stats.month}.\nYou said things.\nPeople had opinions.\nThe timeline was never the same.`,
+            `You pulled ${stats.replies.toLocaleString()} replies this December.\nFantastic energy detected.\nYou start movements, not arguments. 🎄`,
+            `${stats.replies.toLocaleString()} replies.\nPeople couldn't resist responding.\nMain character December confirmed.`,
+            `${stats.replies.toLocaleString()} replies in December.\nYou said things.\nPeople had opinions.\nChaos ensued.`,
           ])
         : randomItem([
-            `${stats.replies.toLocaleString()} replies.\nQuality over quantity.\nYou made them count.`,
-            `${stats.replies.toLocaleString()} replies this month.\nSilent but powerful.\nThey're listening.`,
+            `${stats.replies.toLocaleString()} replies.\nQuality over quantity.\nSanta respects that.`,
+            `${stats.replies.toLocaleString()} replies this December.\nSilent but powerful.\nThey're listening. 👀`,
           ]),
       emoji: '💬',
       color: 'gold',
@@ -77,13 +77,13 @@ export const useMonthlyWrappedData = (stats: MonthlyStats, savedJudgment?: Month
       value: stats.recastsReceived,
       funnyText: stats.recastsReceived > 50
         ? randomItem([
-            `${stats.recastsReceived.toLocaleString()} recasts.\nYour words didn't just land.\nThey traveled.`,
-            `${stats.recastsReceived.toLocaleString()} recasts.\nPeople wanted to share your energy.\nInfluence unlocked.`,
-            `${stats.recastsReceived.toLocaleString()} recasts.\nYou're not just posting.\nYou're spreading culture.`,
+            `${stats.recastsReceived.toLocaleString()} recasts.\nYour words didn't just land.\nThey traveled like Santa's sleigh. 🛷`,
+            `${stats.recastsReceived.toLocaleString()} recasts.\nPeople wanted to share your energy.\nInfluence: unlocked.`,
+            `${stats.recastsReceived.toLocaleString()} recasts.\nYou're not just posting.\nYou're spreading holiday vibes.`,
           ])
         : randomItem([
-            `${stats.recastsReceived.toLocaleString()} recasts.\nYour vibe is catching on.\nSlow and steady wins.`,
-            `${stats.recastsReceived.toLocaleString()} recasts.\nSeeds planted.\nWaiting for bloom.`,
+            `${stats.recastsReceived.toLocaleString()} recasts.\nYour vibe is catching on.\nSlow and steady wins the sleigh race. 🎿`,
+            `${stats.recastsReceived.toLocaleString()} recasts.\nSeeds planted.\nWaiting for the Christmas bloom. 🌟`,
           ]),
       emoji: '🔄',
       color: 'green',
@@ -96,13 +96,13 @@ export const useMonthlyWrappedData = (stats: MonthlyStats, savedJudgment?: Month
       value: stats.likesReceived,
       funnyText: stats.likesReceived > 100
         ? randomItem([
-            `${stats.likesReceived.toLocaleString()} likes.\nPeople really like your vibe.\nCharm: confirmed.`,
-            `${stats.likesReceived.toLocaleString()} likes in ${stats.month}.\nYou're lowkey famous around here.`,
-            `${stats.likesReceived.toLocaleString()} likes.\nThe timeline smashed that heart button\nfor you. Repeatedly.`,
+            `${stats.likesReceived.toLocaleString()} likes.\nPeople really like your December vibe.\nCharm: confirmed. ✨`,
+            `${stats.likesReceived.toLocaleString()} likes in December.\nYou're basically a holiday legend around here.`,
+            `${stats.likesReceived.toLocaleString()} likes.\nThe timeline smashed that heart button\nfor you. Repeatedly. 💙`,
           ])
         : randomItem([
-            `${stats.likesReceived.toLocaleString()} likes.\nEach one earned.\nNot given.`,
-            `${stats.likesReceived.toLocaleString()} likes.\nYour people found you.\nMore will follow.`,
+            `${stats.likesReceived.toLocaleString()} likes.\nEach one earned.\nNot given.\nSanta approves. 🎅`,
+            `${stats.likesReceived.toLocaleString()} likes.\nYour people found you.\nMore will follow in the new year.`,
           ]),
       emoji: '❤️',
       color: 'red',
@@ -111,23 +111,23 @@ export const useMonthlyWrappedData = (stats: MonthlyStats, savedJudgment?: Month
     // Slide 5: Active Days / Streak
     slideList.push({
       id: 'active-days',
-      title: 'Posting Streak',
+      title: 'December Days',
       value: stats.activeDays,
       funnyText: stats.longestStreak >= 7
         ? randomItem([
-            `You showed up ${stats.activeDays} days this month.\n${stats.longestStreak}-day streak.\nConsistency unlocked.\nVery nice behavior 💙`,
-            `${stats.activeDays} active days.\n${stats.longestStreak} straight.\nThat's not posting.\nThat's commitment.`,
-            `${stats.activeDays} days.\nStreak: ${stats.longestStreak}.\nYou understood the assignment.`,
+            `You showed up ${stats.activeDays} days this December.\n${stats.longestStreak}-day streak.\nConsistency unlocked.\nVery nice behavior 💙`,
+            `${stats.activeDays} active days.\n${stats.longestStreak} straight.\nThat's not posting.\nThat's holiday dedication.`,
+            `${stats.activeDays} days.\nStreak: ${stats.longestStreak}.\nYou understood the December assignment. 🎄`,
           ])
         : stats.hasGapReturn
         ? randomItem([
             `You disappeared for a bit...\nThen came back loud.\nNaughty behavior confirmed 😈`,
-            `${stats.activeDays} active days.\nYou took breaks.\nYou returned stronger.\nRespect.`,
-            `Vanished. Returned.\nThe timeline noticed.\nMain character moment.`,
+            `${stats.activeDays} active days.\nYou took holiday breaks.\nYou returned stronger.\nRespect.`,
+            `Vanished. Returned.\nThe timeline noticed.\nMain character December moment. ⭐`,
           ])
         : randomItem([
-            `${stats.activeDays} days active.\nYou showed up.\nThat's what matters.`,
-            `${stats.activeDays} days in ${stats.month}.\nNot every day.\nBut enough days.`,
+            `${stats.activeDays} days active.\nYou showed up.\nSanta noticed. 🎅`,
+            `${stats.activeDays} days in December.\nNot every day.\nBut enough to make the nice list.`,
           ]),
       emoji: '🔥',
       color: 'gold',
@@ -141,9 +141,9 @@ export const useMonthlyWrappedData = (stats: MonthlyStats, savedJudgment?: Month
         title: 'Peak Moment',
         value: totalEngagement,
         funnyText: randomItem([
-          `Your biggest moment:\n${totalEngagement} total engagement.\n${stats.peakMoment.likes} ❤️ ${stats.peakMoment.recasts} 🔄 ${stats.peakMoment.replies} 💬\n\nThe internet shook briefly.`,
-          `Peak engagement: ${totalEngagement}\n\nOne cast.\nMaximum chaos.\nYou did that.`,
-          `${totalEngagement} engagement on your best cast.\n\nSome people post.\nYou performed.`,
+          `Your biggest December moment:\n${totalEngagement} total engagement.\n${stats.peakMoment.likes} ❤️ ${stats.peakMoment.recasts} 🔄 ${stats.peakMoment.replies} 💬\n\nThe internet shook briefly. ⚡`,
+          `Peak December engagement: ${totalEngagement}\n\nOne cast.\nMaximum holiday chaos.\nYou did that.`,
+          `${totalEngagement} engagement on your best December cast.\n\nSome people post.\nYou performed. 🌟`,
         ]),
         emoji: '⚡',
         color: 'purple',
@@ -157,9 +157,9 @@ export const useMonthlyWrappedData = (stats: MonthlyStats, savedJudgment?: Month
         title: 'Late Night Energy',
         value: stats.lateNightPosts,
         funnyText: randomItem([
-          `${stats.lateNightPosts} late-night posts with high engagement.\n\nNaughty moment detected.\nChaos caused.\nNo regrets.`,
-          `You posted after midnight.\nPeople engaged.\n\nDangerous takes.\nZero remorse.`,
-          `${stats.lateNightPosts} night owl posts.\n\nThe best ideas hit\nat the worst hours.`,
+          `${stats.lateNightPosts} late-night December posts with high engagement.\n\nNaughty moment detected.\nChaos caused.\nNo regrets. 😈`,
+          `You posted after midnight in December.\nPeople engaged.\n\nDangerous takes.\nZero remorse. 🌙`,
+          `${stats.lateNightPosts} night owl December posts.\n\nThe best holiday takes\nhit after midnight. ⭐`,
         ]),
         emoji: '🌙',
         color: 'purple',
@@ -172,9 +172,9 @@ export const useMonthlyWrappedData = (stats: MonthlyStats, savedJudgment?: Month
       title: 'Your Hour',
       value: formatHour(stats.mostActiveHour),
       funnyText: randomItem([
-        `Your peak hour: ${formatHour(stats.mostActiveHour)}.\n\nThis is when you hit different.\nThe timeline knows.`,
-        `${formatHour(stats.mostActiveHour)} is your time.\n\nPrime casting hours.\nMaximum impact.`,
-        `You post hardest at ${formatHour(stats.mostActiveHour)}.\n\nWe see the pattern.\nWe respect it.`,
+        `Your peak December hour: ${formatHour(stats.mostActiveHour)}.\n\nThis is when you hit different.\nSanta's watching. 🎅`,
+        `${formatHour(stats.mostActiveHour)} is your time.\n\nPrime December casting hours.\nMaximum holiday impact. 🎄`,
+        `You post hardest at ${formatHour(stats.mostActiveHour)}.\n\nWe see the pattern.\nThe elves respect it. 🧝`,
       ]),
       emoji: '⏰',
       color: 'green',

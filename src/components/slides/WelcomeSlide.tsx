@@ -6,10 +6,11 @@ interface WelcomeSlideProps {
 }
 
 const welcomeTexts = [
-  { main: "Ho ho ho… Santa has been stalking your casts 👀", sub: "Let's see what you've been up to!" },
-  { main: "Santa checked his list twice 📜", sub: "Time to reveal your Farcaster journey!" },
-  { main: "The elves have been watching 🧝", sub: "Your Wrapped is ready!" },
-  { main: "Jingle bells, your stats tell 🔔", sub: "Were you naughty or nice?" },
+  { main: "Ho ho ho... We've been watching your December 👀", sub: "Let's see if you've been naughty or nice!" },
+  { main: "Santa's elves tracked your December casts 🎅", sub: "Time to reveal your month!" },
+  { main: "December is almost over... 🎄", sub: "But first, let's judge your timeline behavior!" },
+  { main: "The North Pole reviewed your December activity ❄️", sub: "Were you nice? Were you naughty? Let's find out!" },
+  { main: "Jingle bells, your December tells 🔔", sub: "We know what you posted this month!" },
 ];
 
 const WelcomeSlide = ({ username, pfp }: WelcomeSlideProps) => {
@@ -43,20 +44,27 @@ const WelcomeSlide = ({ username, pfp }: WelcomeSlideProps) => {
 
       {/* Title */}
       <h1 
-        className={`font-display text-5xl md:text-6xl font-bold mb-2 transition-all duration-700 delay-200 ${
+        className={`font-display text-4xl md:text-5xl font-bold mb-2 transition-all duration-700 delay-200 ${
           animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
-        <span className="text-christmas-snow">Naughty or Nice</span>
+        <span className="text-christmas-snow">December</span>
       </h1>
       <h2
-        className={`font-display text-4xl md:text-5xl font-bold mb-6 transition-all duration-700 delay-300 ${
+        className={`font-display text-3xl md:text-4xl font-bold mb-2 transition-all duration-700 delay-300 ${
           animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
-        <span className="text-gradient-gold">Wrapped</span>
-        <span className="ml-3 text-4xl">🎄</span>
+        <span className="text-gradient-gold">Naughty or Nice</span>
       </h2>
+      <h3
+        className={`font-display text-4xl md:text-5xl font-bold mb-6 transition-all duration-700 delay-350 ${
+          animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}
+      >
+        <span className="text-christmas-red-light">Wrapped</span>
+        <span className="ml-3 text-4xl">🎄</span>
+      </h3>
 
       {/* Subtitle */}
       <p 
