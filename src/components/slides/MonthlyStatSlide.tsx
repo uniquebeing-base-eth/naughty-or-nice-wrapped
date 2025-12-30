@@ -147,11 +147,15 @@ const MonthlyStatSlide = ({ slide, stats, onShare, isGeneratingShare = false }: 
       </div>
 
       {/* Share button for all stat slides */}
-      <div className={`mt-4 transition-all duration-700 delay-700 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <div className={`mt-4 transition-all duration-700 delay-700 relative z-50 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         <Button 
-          onClick={(e) => { e.stopPropagation(); onShare(); }} 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            e.preventDefault();
+            onShare(); 
+          }} 
           disabled={isGeneratingShare}
-          className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-5 py-2.5 rounded-full font-bold gap-2 text-sm shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto disabled:opacity-70"
+          className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-5 py-2.5 rounded-full font-bold gap-2 text-sm shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto disabled:opacity-70 cursor-pointer touch-manipulation"
         >
           {isGeneratingShare ? (
             <>
