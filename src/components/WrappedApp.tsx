@@ -68,7 +68,7 @@ const WrappedApp = () => {
     activeDays: 0, longestStreak: 0, mostActiveHour: 12,
     mostRepliedCast: null, peakMoment: null,
     lateNightPosts: 0, hasGapReturn: false, flavorTitles: [],
-    month: 'December', year: 2025,
+    month: 'December', year: 2025, topEngagedUsers: [],
   });
 
   // Store saved judgment from API
@@ -104,6 +104,7 @@ const WrappedApp = () => {
             flavorTitles: data.stats.flavorTitles || [],
             month: data.stats.month || 'December',
             year: data.stats.year || 2025,
+            topEngagedUsers: data.stats.topEngagedUsers || [],
           }));
           
           if (data.stats.judgment) {
@@ -222,7 +223,8 @@ const WrappedApp = () => {
   };
 
   const handleShare = async () => {
-    const shareText = `Here's my ${stats.month} Wrapped by @uniquebeing404 ✨\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
+    const topTags = getTopUserTags();
+    const shareText = `December Naughty-or-Nice Wrapped by @uniquebeing404 ✨\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nThe timeline has spoken. 🎅${topTags}`;
     
     setIsGeneratingShare(true);
 
@@ -289,7 +291,8 @@ const WrappedApp = () => {
     const personality = savedEnergyResult || energyQuiz.result;
     if (!personality) return;
     
-    const shareText = `🎅✨ Naughty-or-Nice-Wrapped by @uniquebeing404 read my energy! Apparently I'm ${personality.name} — ${personality.shareCaption}\n\nDiscover yours 👇`;
+    const topTags = getTopUserTags();
+    const shareText = `🎅✨ December Naughty-or-Nice Wrapped by @uniquebeing404 read my energy!\n\nApparently I'm ${personality.name} — ${personality.shareCaption}${topTags}`;
     
     setIsGeneratingShare(true);
 
@@ -351,48 +354,57 @@ const WrappedApp = () => {
     }
   };
 
-  // Stat slide share handler - fun December-themed captions
+  // Generate tags for top engaged users
+  const getTopUserTags = () => {
+    if (!stats.topEngagedUsers || stats.topEngagedUsers.length === 0) return '';
+    const tags = stats.topEngagedUsers.slice(0, 4).map(u => `@${u.username}`).join(' ');
+    return `\n\n${tags}`;
+  };
+
+  // Stat slide share handler - fun December-themed captions with top user tags
   const handleStatShare = async (slide: typeof slides[0]) => {
+    const topTags = getTopUserTags();
+    
     const funCaptions: Record<string, string[]> = {
       'total-casts': [
-        `I dropped ${slide.value} casts in December 🎄\n\nSanta saw every single one.\nNo regrets.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
-        `${slide.value} casts this December.\n\nI talked my talk.\nThe timeline listened.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎅`,
-        `December gave me ${slide.value} things to say.\n\nI said them all.\nLoudly.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🔥`,
+        `I dropped ${slide.value} casts in December 🎄\n\nSanta saw every single one.\nNo regrets.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
+        `${slide.value} casts this December.\n\nI talked my talk.\nThe timeline listened.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎅`,
+        `December gave me ${slide.value} things to say.\n\nI said them all.\nLoudly.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🔥`,
       ],
       'replies-received': [
-        `${slide.value} people replied to me in December 💬\n\nI started conversations.\nThey couldn't resist.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
-        `December brought me ${slide.value} replies.\n\nI said things.\nPeople had opinions.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎄`,
-        `${slide.value} replies this December.\n\nMy casts? Irresistible.\nMy takes? Undeniable.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎅`,
+        `${slide.value} people replied to me in December 💬\n\nI started conversations.\nThey couldn't resist.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
+        `December brought me ${slide.value} replies.\n\nI said things.\nPeople had opinions.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎄`,
+        `${slide.value} replies this December.\n\nMy casts? Irresistible.\nMy takes? Undeniable.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎅`,
       ],
       'recasts-received': [
-        `My words traveled ${slide.value} times in December 🔄\n\nPeople didn't just read.\nThey spread the gospel.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
-        `${slide.value} recasts this December.\n\nMy energy? Contagious.\nMy influence? Growing.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎄`,
-        `December saw ${slide.value} people share my thoughts.\n\nI'm basically a movement now.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🚀`,
+        `My words traveled ${slide.value} times in December 🔄\n\nPeople didn't just read.\nThey spread the gospel.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
+        `${slide.value} recasts this December.\n\nMy energy? Contagious.\nMy influence? Growing.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎄`,
+        `December saw ${slide.value} people share my thoughts.\n\nI'm basically a movement now.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🚀`,
       ],
       'likes-received': [
-        `${slide.value} hearts collected in December ❤️\n\nThe timeline loved me.\nRepeatedly.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
-        `December brought me ${slide.value} likes.\n\nI'm not saying I'm lovable.\nBut the numbers don't lie.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 💙`,
-        `${slide.value} people smashed that heart button for me in December.\n\nValidation: unlocked.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎅`,
+        `${slide.value} hearts collected in December ❤️\n\nThe timeline loved me.\nRepeatedly.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
+        `December brought me ${slide.value} likes.\n\nI'm not saying I'm lovable.\nBut the numbers don't lie.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 💙`,
+        `${slide.value} people smashed that heart button for me in December.\n\nValidation: unlocked.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎅`,
       ],
       'active-days': [
-        `I showed up ${slide.value} days in December 🔥\n\nConsistency is my love language.\nThe timeline knows.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
-        `${slide.value} active days this December.\n\nI didn't miss a beat.\nThe elves were impressed.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎄`,
-        `December saw me online ${slide.value} days.\n\nTouch grass?\nNever heard of her.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 😈`,
+        `I showed up ${slide.value} days in December 🔥\n\nConsistency is my love language.\nThe timeline knows.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
+        `${slide.value} active days this December.\n\nI didn't miss a beat.\nThe elves were impressed.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🎄`,
+        `December saw me online ${slide.value} days.\n\nTouch grass?\nNever heard of her.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 😈`,
       ],
       'peak-moment': [
-        `My biggest December moment hit ${slide.value} total engagement ⚡\n\nOne cast.\nMaximum chaos.\nMain character activated.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
-        `${slide.value} engagement on my peak December cast.\n\nI broke the internet.\nBriefly.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🔥`,
+        `My biggest December moment hit ${slide.value} total engagement ⚡\n\nOne cast.\nMaximum chaos.\nMain character activated.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
+        `${slide.value} engagement on my peak December cast.\n\nI broke the internet.\nBriefly.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 🔥`,
       ],
       'late-night': [
-        `${slide.value} late-night bangers in December 🌙\n\nThe best takes drop after midnight.\nProven fact.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 😈`,
-        `December nights gave us ${slide.value} viral moments.\n\nNaughty behavior?\nMaybe.\nWorth it?\nAlways.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
+        `${slide.value} late-night bangers in December 🌙\n\nThe best takes drop after midnight.\nProven fact.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 😈`,
+        `December nights gave us ${slide.value} viral moments.\n\nNaughty behavior?\nMaybe.\nWorth it?\nAlways.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
       ],
       'most-active-hour': [
-        `My power hour in December: ${slide.value} ⏰\n\nThis is when I hit different.\nThe algorithm knows.\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
+        `My power hour in December: ${slide.value} ⏰\n\nThis is when I hit different.\nThe algorithm knows.${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`,
       ],
     };
 
-    const captions = funCaptions[slide.id] || [`Check out my December stats! 🎄\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`];
+    const captions = funCaptions[slide.id] || [`Check out my December stats! 🎄${topTags}\n\nDecember Naughty-or-Nice Wrapped by @uniquebeing404 ✨`];
     const shareText = captions[Math.floor(Math.random() * captions.length)];
 
     setIsGeneratingShare(true);

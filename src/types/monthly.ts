@@ -1,3 +1,9 @@
+export interface TopEngagedUser {
+  username: string;
+  fid: number;
+  engagementCount: number;
+}
+
 export interface MonthlyStats {
   fid: number;
   username: string;
@@ -26,6 +32,7 @@ export interface MonthlyStats {
   flavorTitles: string[];
   month: string;
   year: number;
+  topEngagedUsers: TopEngagedUser[];
 }
 
 export interface MonthlySlideContent {

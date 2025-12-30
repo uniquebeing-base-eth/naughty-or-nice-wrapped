@@ -131,6 +131,9 @@ serve(async (req) => {
     let peakMoment: any = null;
     let peakEngagement = 0;
 
+    // Track users the person engages with (replies to) and who engages with them
+    const engagementMap: Map<string, { username: string; fid: number; count: number }> = new Map();
+
     monthCasts.forEach((cast: any) => {
       const likes = cast.reactions?.likes_count || 0;
       const recasts = cast.reactions?.recasts_count || 0;
@@ -139,6 +142,36 @@ serve(async (req) => {
 
       totalLikesReceived += likes;
       totalRecastsReceived += recasts;
+
+      // Track parent author (who user is replying to)
+      if (cast.parent_author && cast.parent_author.fid && cast.parent_author.username) {
+        const parentFid = cast.parent_author.fid;
+        const parentUsername = cast.parent_author.username;
+        if (parentFid !== fid) { // Don't count self-replies
+          const key = String(parentFid);
+          const existing = engagementMap.get(key);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            engagementMap.set(key, { username: parentUsername, fid: parentFid, count: 1 });
+          }
+        }
+      }
+
+      // Track mentioned users in casts
+      if (cast.mentioned_profiles && Array.isArray(cast.mentioned_profiles)) {
+        cast.mentioned_profiles.forEach((mentioned: any) => {
+          if (mentioned.fid && mentioned.username && mentioned.fid !== fid) {
+            const key = String(mentioned.fid);
+            const existing = engagementMap.get(key);
+            if (existing) {
+              existing.count += 2; // Mentions count more
+            } else {
+              engagementMap.set(key, { username: mentioned.username, fid: mentioned.fid, count: 2 });
+            }
+          }
+        });
+      }
 
       if (repliesCount > maxReplies) {
         maxReplies = repliesCount;
@@ -160,6 +193,14 @@ serve(async (req) => {
         };
       }
     });
+
+    // Get top 4 engaged users
+    const topEngagedUsers = Array.from(engagementMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4)
+      .map(u => ({ username: u.username, fid: u.fid, engagementCount: u.count }));
+
+    console.log('Top engaged users:', topEngagedUsers.map(u => u.username));
 
     // Active days and streak
     const activeDaysSet = new Set(
@@ -309,6 +350,7 @@ serve(async (req) => {
       month: monthName,
       year,
       monthKey,
+      topEngagedUsers,
     };
 
     console.log('Monthly stats calculated:', { totalCasts, replies, likesReceived: totalLikesReceived, activeDays, score, isNice });
