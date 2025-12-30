@@ -628,9 +628,11 @@ const WrappedApp = () => {
       {isLoading ? <LoadingScreen onComplete={handleLoadingComplete} username={stats.username} pfp={stats.pfp} /> : (
         <>
           {!isLastSlide && !isJudgmentSlide && !isEnergyIntroSlide && !isEnergyQuizSlide && !isEnergyRevealSlide && (
-            <div className="fixed inset-0 z-20" onClick={handleTap} />
+            <div className="fixed inset-0 z-20 pointer-events-auto" onClick={handleTap} />
           )}
-          <div className="relative z-10 pb-24 pt-12 min-h-screen">{renderSlide()}</div>
+          <div className="relative z-30 pb-24 pt-12 min-h-screen pointer-events-none">
+            <div className="pointer-events-auto">{renderSlide()}</div>
+          </div>
           <SlideProgress currentSlide={getProgressSlide()} totalSlides={progressTotalSlides} />
         </>
       )}
