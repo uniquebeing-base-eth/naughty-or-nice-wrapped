@@ -37,6 +37,25 @@ serve(async (req) => {
 
     console.log(`Fetching monthly stats for FID: ${fid}, Month: ${monthName} ${year}`);
 
+    // Check if we already have saved stats for this month
+    const { data: existingStats, error: fetchError } = await supabase
+      .from('monthly_wrapped_stats')
+      .select('*')
+      .eq('fid', fid)
+      .eq('month_key', monthKey)
+      .maybeSingle();
+
+    if (existingStats && !fetchError) {
+      console.log(`Found existing stats for FID ${fid}, month ${monthKey}`);
+      return new Response(JSON.stringify({ 
+        stats: { ...existingStats.stats, judgment: existingStats.judgment },
+        user: existingStats.user_data,
+        energy_result: existingStats.energy_result
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Fetch user profile
     let user: any = null;
     try {
@@ -266,6 +285,14 @@ serve(async (req) => {
     const badges = isNice ? niceBadges : naughtyBadges;
     const badge = badges[Math.floor(Math.random() * badges.length)];
 
+    const judgment = {
+      score,
+      isNice,
+      badge,
+      nicePoints,
+      naughtyPoints
+    };
+
     const stats = {
       totalCasts,
       replies,
@@ -282,18 +309,28 @@ serve(async (req) => {
       month: monthName,
       year,
       monthKey,
-      judgment: {
-        score,
-        isNice,
-        badge,
-        nicePoints,
-        naughtyPoints
-      }
     };
 
     console.log('Monthly stats calculated:', { totalCasts, replies, likesReceived: totalLikesReceived, activeDays, score, isNice });
 
-    return new Response(JSON.stringify({ stats, user }), {
+    // Save stats to database
+    const { error: saveError } = await supabase
+      .from('monthly_wrapped_stats')
+      .upsert({
+        fid,
+        month_key: monthKey,
+        stats,
+        judgment,
+        user_data: user,
+      }, { onConflict: 'fid,month_key' });
+
+    if (saveError) {
+      console.error('Failed to save monthly stats:', saveError);
+    } else {
+      console.log('Monthly stats saved successfully for FID:', fid);
+    }
+
+    return new Response(JSON.stringify({ stats: { ...stats, judgment }, user }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {

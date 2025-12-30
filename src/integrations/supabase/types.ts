@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_wrapped_stats: {
+        Row: {
+          created_at: string
+          energy_result: Json | null
+          fid: number
+          id: string
+          judgment: Json
+          month_key: string
+          stats: Json
+          updated_at: string
+          user_data: Json | null
+        }
+        Insert: {
+          created_at?: string
+          energy_result?: Json | null
+          fid: number
+          id?: string
+          judgment: Json
+          month_key: string
+          stats: Json
+          updated_at?: string
+          user_data?: Json | null
+        }
+        Update: {
+          created_at?: string
+          energy_result?: Json | null
+          fid?: number
+          id?: string
+          judgment?: Json
+          month_key?: string
+          stats?: Json
+          updated_at?: string
+          user_data?: Json | null
+        }
+        Relationships: []
+      }
       wrapped_stats: {
         Row: {
           created_at: string
