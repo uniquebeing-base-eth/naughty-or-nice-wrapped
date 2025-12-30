@@ -11,50 +11,6 @@ interface MonthlyStatSlideProps {
   isGeneratingShare?: boolean;
 }
 
-// Fun share captions by @uniquebeing404
-const getShareCaption = (slideId: string, value: number | string, username: string): string => {
-  const captions: Record<string, string[]> = {
-    'total-casts': [
-      `${value} casts this month. I said what I said 💅`,
-      `Dropped ${value} casts in December. No regrets 🎄`,
-      `${value} posts this month. The timeline needed me 🔥`,
-    ],
-    'replies': [
-      `${value} replies received. I'm the conversation now 💬`,
-      `Got ${value} people talking to me this month. Main character energy ✨`,
-      `${value} replies?! The fam showed up 🎅`,
-    ],
-    'likes': [
-      `Collected ${value} likes this December. Validated 💙`,
-      `${value} likes this month. Touch grass? Never heard of it 🎄`,
-      `${value} hearts collected. I'm basically loved 😌`,
-    ],
-    'recasts': [
-      `${value} recasts this month. My words traveled 🚀`,
-      `People recast me ${value} times. The influence is real 👀`,
-      `${value} recasts?! The gospel spreads 📢`,
-    ],
-    'active-days': [
-      `Showed up ${value} days this month. Consistency unlocked 🔓`,
-      `${value} active days. That's commitment fr 💪`,
-      `${value} days on the timeline. No breaks allowed 🎄`,
-    ],
-    'streak': [
-      `${value}-day posting streak. I'm locked in 🔥`,
-      `Maintained a ${value}-day streak. Built different 💪`,
-      `${value} consecutive days. Sleep is for the weak 😈`,
-    ],
-    'peak-moment': [
-      `Had a main character moment in December ✨`,
-      `The timeline stopped for me this month 🔥`,
-      `Peak engagement achieved. History made 📈`,
-    ],
-  };
-
-  const slideType = slideId.replace('monthly-', '');
-  const options = captions[slideType] || [`Check out my December Wrapped stats! 🎄`];
-  return `${options[Math.floor(Math.random() * options.length)]}\n\nMy December Wrapped by @uniquebeing404 👇`;
-};
 
 const MonthlyStatSlide = ({ slide, stats, onShare, isGeneratingShare = false }: MonthlyStatSlideProps) => {
   const [animate, setAnimate] = useState(false);
@@ -124,9 +80,6 @@ const MonthlyStatSlide = ({ slide, stats, onShare, isGeneratingShare = false }: 
 
   const colors = colorClasses[slide.color];
 
-  // Check if this is a shareable stat slide (likes, replies, recasts)
-  const isShareableSlide = ['monthly-likes', 'monthly-replies', 'monthly-recasts', 'monthly-total-casts', 'monthly-active-days', 'monthly-streak'].includes(slide.id);
-
   return (
     <div className="flex flex-col items-center justify-center min-h-[75vh] text-center px-6">
       <div 
@@ -193,32 +146,28 @@ const MonthlyStatSlide = ({ slide, stats, onShare, isGeneratingShare = false }: 
         </div>
       </div>
 
-      {/* Share button for stat slides */}
-      {isShareableSlide && (
-        <div className={`mt-4 transition-all duration-700 delay-700 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <Button 
-            onClick={(e) => { e.stopPropagation(); onShare(); }} 
-            disabled={isGeneratingShare}
-            className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-5 py-2.5 rounded-full font-bold gap-2 text-sm shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto disabled:opacity-70"
-          >
-            {isGeneratingShare ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Share2 className="w-4 h-4" />
-                Share This
-              </>
-            )}
-          </Button>
-          <p className="text-[10px] text-christmas-gold/60 mt-2">by @uniquebeing404</p>
-        </div>
-      )}
+      {/* Share button for all stat slides */}
+      <div className={`mt-4 transition-all duration-700 delay-700 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <Button 
+          onClick={(e) => { e.stopPropagation(); onShare(); }} 
+          disabled={isGeneratingShare}
+          className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-5 py-2.5 rounded-full font-bold gap-2 text-sm shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto disabled:opacity-70"
+        >
+          {isGeneratingShare ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Share2 className="w-4 h-4" />
+              Share on Farcaster
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
 
-export { getShareCaption };
 export default MonthlyStatSlide;
