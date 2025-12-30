@@ -350,6 +350,111 @@ const WrappedApp = () => {
     }
   };
 
+  // Stat slide share handler - fun captions by @uniquebeing404
+  const handleStatShare = async (slide: typeof slides[0]) => {
+    const funCaptions: Record<string, string[]> = {
+      'monthly-total-casts': [
+        `${slide.value} casts this month. I said what I said 💅`,
+        `Dropped ${slide.value} casts in December. No regrets 🎄`,
+        `${slide.value} posts this month. The timeline needed me 🔥`,
+      ],
+      'monthly-replies': [
+        `${slide.value} replies received. I'm the conversation now 💬`,
+        `Got ${slide.value} people talking to me this month. Main character energy ✨`,
+        `${slide.value} replies?! The fam showed up 🎅`,
+      ],
+      'monthly-likes': [
+        `Collected ${slide.value} likes this December. Validated 💙`,
+        `${slide.value} likes this month. Touch grass? Never heard of it 🎄`,
+        `${slide.value} hearts collected. I'm basically loved 😌`,
+      ],
+      'monthly-recasts': [
+        `${slide.value} recasts this month. My words traveled 🚀`,
+        `People recast me ${slide.value} times. The influence is real 👀`,
+        `${slide.value} recasts?! The gospel spreads 📢`,
+      ],
+      'monthly-active-days': [
+        `Showed up ${slide.value} days this month. Consistency unlocked 🔓`,
+        `${slide.value} active days. That's commitment fr 💪`,
+        `${slide.value} days on the timeline. No breaks allowed 🎄`,
+      ],
+      'monthly-streak': [
+        `${slide.value}-day posting streak. I'm locked in 🔥`,
+        `Maintained a ${slide.value}-day streak. Built different 💪`,
+        `${slide.value} consecutive days. Sleep is for the weak 😈`,
+      ],
+    };
+
+    const captions = funCaptions[slide.id] || [`Check out my December Wrapped stats! 🎄`];
+    const shareText = `${captions[Math.floor(Math.random() * captions.length)]}\n\nMy ${stats.month} Wrapped by @uniquebeing404 👇`;
+
+    setIsGeneratingShare(true);
+
+    try {
+      // Wait for transaction to confirm before sharing
+      const txSuccess = await sendMicroTransaction();
+      if (!txSuccess) {
+        toast({ title: "Transaction needed", description: "Please confirm to share" });
+        setIsGeneratingShare(false);
+        return;
+      }
+      
+      toast({ title: "🎨 Generating your card...", description: "This takes a few seconds" });
+
+      const cardElement = document.getElementById(`stat-card-${slide.id}`);
+      if (!cardElement) throw new Error('Card element not found');
+
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: '#1a0505',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('Failed to create blob'));
+        }, 'image/png', 0.95);
+      });
+
+      const filename = `stat-cards/${stats.username}-${slide.id}-${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from('share-images')
+        .upload(filename, blob, { contentType: 'image/png', upsert: true });
+
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+      const { data: urlData } = supabase.storage.from('share-images').getPublicUrl(filename);
+      const imageUrl = urlData.publicUrl;
+      console.log('Stat card captured and uploaded:', imageUrl);
+
+      if (sdk?.actions?.composeCast) {
+        try {
+          const result = await sdk.actions.composeCast({ 
+            text: shareText, 
+            embeds: [imageUrl, 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped'] 
+          });
+          console.log('composeCast result:', result);
+          toast({ title: "🎄 Shared!", description: "Your stat has been posted" });
+        } catch (castError) {
+          console.error('composeCast error:', castError);
+          await navigator.clipboard.writeText(`${shareText}\n\nMy Stat: ${imageUrl}\n\nGet yours: https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped`);
+          toast({ title: "🎄 Copied!", description: "Paste to share" });
+        }
+      } else {
+        await navigator.clipboard.writeText(`${shareText}\n\nMy Stat: ${imageUrl}\n\nGet yours: https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped`);
+        toast({ title: "🎄 Copied!", description: "Paste to share" });
+      }
+    } catch (err) {
+      console.error('Share error:', err);
+      toast({ title: "Failed to generate", description: "Please try again", variant: "destructive" });
+    } finally {
+      setIsGeneratingShare(false);
+    }
+  };
+
   // Handle proceeding from judgment to energy quiz
   const handleProceedToEnergy = useCallback(() => {
     setCurrentSlide(energyIntroSlideIndex);
@@ -420,7 +525,15 @@ const WrappedApp = () => {
     
     // Stats slides
     if (currentSlide >= 1 && currentSlide <= slides.length) {
-      return <MonthlyStatSlide key={slides[currentSlide - 1].id} slide={slides[currentSlide - 1]} />;
+      return (
+        <MonthlyStatSlide 
+          key={slides[currentSlide - 1].id} 
+          slide={slides[currentSlide - 1]} 
+          stats={stats}
+          onShare={() => handleStatShare(slides[currentSlide - 1])}
+          isGeneratingShare={isGeneratingShare}
+        />
+      );
     }
     
     // Judgment slide
