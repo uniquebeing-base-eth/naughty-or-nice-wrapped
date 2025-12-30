@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { UserStats, JudgmentResult } from '@/types/wrapped';
-import { useWrappedData } from '@/hooks/useWrappedData';
+import { MonthlyStats, MonthlyJudgment } from '@/types/monthly';
+import { useMonthlyWrappedData } from '@/hooks/useMonthlyWrappedData';
 import { useEnergyQuiz } from '@/hooks/useEnergyQuiz';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useChristmasMusic } from '@/hooks/useChristmasMusic';
@@ -9,8 +9,8 @@ import ChristmasLights from './ChristmasLights';
 import ChristmasDecorations from './ChristmasDecorations';
 import LoadingScreen from './LoadingScreen';
 import WelcomeSlide from './slides/WelcomeSlide';
-import StatSlide from './slides/StatSlide';
-import JudgmentSlide from './slides/JudgmentSlide';
+import MonthlyStatSlide from './slides/MonthlyStatSlide';
+import MonthlyJudgmentSlide from './slides/MonthlyJudgmentSlide';
 import EnergyIntroSlide from './slides/EnergyIntroSlide';
 import EnergyQuizSlide from './slides/EnergyQuizSlide';
 import EnergyRevealSlide from './slides/EnergyRevealSlide';
@@ -59,52 +59,69 @@ const WrappedApp = () => {
   const [energyQuizStarted, setEnergyQuizStarted] = useState(false);
   const [savedEnergyResult, setSavedEnergyResult] = useState<typeof energyQuiz.result>(null);
 
-  const [stats, setStats] = useState<UserStats>({
+  const [stats, setStats] = useState<MonthlyStats>({
     fid: user?.fid || 12345,
     username: user?.username || 'uniquebeing404',
     pfp: user?.pfpUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=uniquebeing404',
-    replies: 0, likesGiven: 0, likesReceived: 0, recastsGiven: 0, recastsReceived: 0,
-    activeDays: 0, silentDays: 0, timeframe: 'year',
+    totalCasts: 0, replies: 0, likesReceived: 0, recastsReceived: 0,
+    activeDays: 0, longestStreak: 0, mostActiveHour: 12,
+    mostRepliedCast: null, peakMoment: null,
+    lateNightPosts: 0, hasGapReturn: false, flavorTitles: [],
+    month: 'December', year: 2025,
   });
 
   // Store saved judgment from API
-  const [savedJudgment, setSavedJudgment] = useState<JudgmentResult | null>(null);
+  const [savedJudgment, setSavedJudgment] = useState<MonthlyJudgment | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
       if (!user?.fid) {
-        setStats(prev => ({ ...prev, replies: 2000 + Math.floor(Math.random() * 500), likesGiven: 10000 + Math.floor(Math.random() * 2000), likesReceived: 20000 + Math.floor(Math.random() * 5000), recastsGiven: 2500 + Math.floor(Math.random() * 500), recastsReceived: 789, activeDays: 150 + Math.floor(Math.random() * 150), silentDays: 20 + Math.floor(Math.random() * 60) }));
+        setStats(prev => ({ ...prev, totalCasts: 50 + Math.floor(Math.random() * 100), replies: 30 + Math.floor(Math.random() * 50), likesReceived: 200 + Math.floor(Math.random() * 300), recastsReceived: 50 + Math.floor(Math.random() * 100), activeDays: 15 + Math.floor(Math.random() * 15), longestStreak: 3 + Math.floor(Math.random() * 7) }));
         setIsFetchingStats(false);
         return;
       }
       try {
-        const { data, error } = await supabase.functions.invoke('fetch-farcaster-stats', { body: { fid: user.fid } });
+        const { data, error } = await supabase.functions.invoke('fetch-monthly-stats', { body: { fid: user.fid } });
         if (error) throw error;
         if (data?.stats) {
-          setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl, replies: data.stats.replies || 0, likesGiven: data.stats.likes_given || 0, likesReceived: Math.floor((data.stats.likes_given || 0) * 1.5), recastsGiven: data.stats.recasts_given || 0, recastsReceived: Math.floor((data.stats.recasts_given || 0) * 1.2), activeDays: data.stats.active_days || 0, silentDays: data.stats.silent_days || 0 }));
+          setStats(prev => ({ 
+            ...prev, 
+            fid: user.fid, 
+            username: user.username, 
+            pfp: user.pfpUrl,
+            totalCasts: data.stats.totalCasts || 0,
+            replies: data.stats.replies || 0, 
+            likesReceived: data.stats.likesReceived || 0, 
+            recastsReceived: data.stats.recastsReceived || 0, 
+            activeDays: data.stats.activeDays || 0, 
+            longestStreak: data.stats.longestStreak || 0,
+            mostActiveHour: data.stats.mostActiveHour || 12,
+            mostRepliedCast: data.stats.mostRepliedCast,
+            peakMoment: data.stats.peakMoment,
+            lateNightPosts: data.stats.lateNightPosts || 0,
+            hasGapReturn: data.stats.hasGapReturn || false,
+            flavorTitles: data.stats.flavorTitles || [],
+            month: data.stats.month || 'December',
+            year: data.stats.year || 2025,
+          }));
           
-          // Use saved judgment if available
           if (data.stats.judgment) {
             setSavedJudgment(data.stats.judgment);
           }
           
-          // Load saved energy result if available
           if (data.energy_result) {
             console.log('Found saved energy result:', data.energy_result);
             setSavedEnergyResult(data.energy_result);
           }
         }
       } catch {
-        setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl, replies: 2000, likesGiven: 10000, likesReceived: 20000, recastsGiven: 2500, recastsReceived: 789, activeDays: 200, silentDays: 30 }));
+        setStats(prev => ({ ...prev, fid: user.fid, username: user.username, pfp: user.pfpUrl, totalCasts: 75, replies: 40, likesReceived: 300, recastsReceived: 80, activeDays: 20, longestStreak: 5, month: 'December', year: 2025 }));
       } finally { setIsFetchingStats(false); }
     };
     if (isSDKLoaded) fetchStats();
   }, [user?.fid, isSDKLoaded]);
 
-  const { slides, judgment: calculatedJudgment } = useWrappedData(stats);
-  
-  // Use saved judgment if available, otherwise use calculated (for new users or fallback)
-  const judgment = savedJudgment || calculatedJudgment;
+  const { slides, judgment } = useMonthlyWrappedData(stats, savedJudgment);
   
   // Slide structure:
   // 0: Welcome
@@ -204,7 +221,7 @@ const WrappedApp = () => {
   };
 
   const handleShare = async () => {
-    const shareText = `Here's my Naughty or Nice Wrapped by @uniquebeing404 ❄️\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
+    const shareText = `Here's my ${stats.month} Wrapped by @uniquebeing404 ✨\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nCheck yours 👇`;
     
     setIsGeneratingShare(true);
 
@@ -403,13 +420,13 @@ const WrappedApp = () => {
     
     // Stats slides
     if (currentSlide >= 1 && currentSlide <= slides.length) {
-      return <StatSlide key={slides[currentSlide - 1].id} slide={slides[currentSlide - 1]} />;
+      return <MonthlyStatSlide key={slides[currentSlide - 1].id} slide={slides[currentSlide - 1]} />;
     }
     
     // Judgment slide
     if (currentSlide === judgmentSlideIndex) {
       return (
-        <JudgmentSlide 
+        <MonthlyJudgmentSlide 
           stats={stats} 
           judgment={judgment} 
           onShare={handleShare} 

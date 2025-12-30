@@ -46,3 +46,6 @@ verify_jwt = false
 
 [functions.save-energy-result]
 verify_jwt = false
+
+[functions.fetch-monthly-stats]
+verify_jwt = false
