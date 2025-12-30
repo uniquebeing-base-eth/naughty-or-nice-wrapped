@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { EnergyPersonality } from '@/types/energy';
-import { UserStats } from '@/types/wrapped';
+import { MonthlyStats } from '@/types/monthly';
 import { Button } from '@/components/ui/button';
 import { Share2, Sparkles, Flower2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface EnergyRevealSlideProps {
   personality: EnergyPersonality;
-  stats: UserStats;
+  stats: MonthlyStats;
   onShare: () => void;
   isGeneratingShare?: boolean;
 }
