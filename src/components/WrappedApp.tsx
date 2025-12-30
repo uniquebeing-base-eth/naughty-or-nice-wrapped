@@ -15,6 +15,7 @@ import EnergyIntroSlide from './slides/EnergyIntroSlide';
 import EnergyQuizSlide from './slides/EnergyQuizSlide';
 import EnergyRevealSlide from './slides/EnergyRevealSlide';
 import SlideProgress from './SlideProgress';
+import SlideNavigation from './SlideNavigation';
 import MusicControl from './MusicControl';
 import { useToast } from '@/hooks/use-toast';
 import { sdk } from '@farcaster/miniapp-sdk';
@@ -622,6 +623,10 @@ const WrappedApp = () => {
 
   const progressTotalSlides = judgmentSlideIndex + 4; // Welcome + stats + judgment + energy intro + quiz + reveal
 
+  // Determine which nav buttons to show
+  const showPrevNav = currentSlide > 0 && !isEnergyQuizSlide;
+  const showNextNav = currentSlide < totalSlides - 1 && !isJudgmentSlide && !isEnergyIntroSlide && !isEnergyQuizSlide && !isEnergyRevealSlide;
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <Snowfall /><ChristmasLights /><ChristmasDecorations /><MusicControl isMuted={isMuted} onToggle={toggleMute} />
@@ -633,6 +638,12 @@ const WrappedApp = () => {
           <div className="relative z-30 pb-24 pt-12 min-h-screen pointer-events-none">
             <div className="pointer-events-auto">{renderSlide()}</div>
           </div>
+          <SlideNavigation 
+            onPrev={handlePrev}
+            onNext={handleNext}
+            showPrev={showPrevNav}
+            showNext={showNextNav}
+          />
           <SlideProgress currentSlide={getProgressSlide()} totalSlides={progressTotalSlides} />
         </>
       )}

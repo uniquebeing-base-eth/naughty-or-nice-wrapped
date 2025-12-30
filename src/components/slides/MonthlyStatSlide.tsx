@@ -47,30 +47,31 @@ const MonthlyStatSlide = ({ slide, stats, onShare, isGeneratingShare = false }: 
     return () => clearInterval(timer);
   }, [animate, numericValue, isNumeric]);
 
+  // Use solid colors for html2canvas capture (gradients don't capture well)
   const colorClasses = {
     red: {
-      gradient: 'from-christmas-red via-christmas-red-light to-christmas-red',
+      solid: '#ef4444',
       glow: 'shadow-[0_0_100px_hsl(var(--christmas-red)/0.6)]',
       text: 'text-christmas-red-light',
       border: 'border-christmas-red/40',
       bg: 'bg-christmas-red/20',
     },
     green: {
-      gradient: 'from-christmas-green via-christmas-green-light to-christmas-green',
+      solid: '#22c55e',
       glow: 'shadow-[0_0_100px_hsl(var(--christmas-green)/0.6)]',
       text: 'text-christmas-green-light',
       border: 'border-christmas-green/40',
       bg: 'bg-christmas-green/20',
     },
     gold: {
-      gradient: 'from-christmas-gold via-christmas-gold-light to-christmas-gold',
+      solid: '#fbbf24',
       glow: 'shadow-[0_0_100px_hsl(var(--christmas-gold)/0.6)]',
       text: 'text-christmas-gold-light',
       border: 'border-christmas-gold/40',
       bg: 'bg-christmas-gold/20',
     },
     purple: {
-      gradient: 'from-purple-500 via-purple-400 to-purple-500',
+      solid: '#a855f7',
       glow: 'shadow-[0_0_100px_rgba(168,85,247,0.6)]',
       text: 'text-purple-400',
       border: 'border-purple-500/40',
@@ -118,18 +119,19 @@ const MonthlyStatSlide = ({ slide, stats, onShare, isGeneratingShare = false }: 
             {slide.title}
           </h2>
 
-          {/* Big number or text */}
+          {/* Big number or text - using solid color for proper capture */}
           <div 
-            className={`font-display text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-b ${colors.gradient} bg-clip-text text-transparent transition-all duration-700 delay-400 ${
+            className={`font-display text-6xl md:text-7xl font-bold mb-6 transition-all duration-700 delay-400 ${
               animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
+            style={{ color: colors.solid }}
           >
             {isNumeric ? countValue.toLocaleString() : slide.value}
           </div>
 
           {/* Decorative line */}
           <div className={`h-1.5 w-24 mx-auto rounded-full ${colors.bg} mb-6`}>
-            <div className={`h-full rounded-full bg-gradient-to-r ${colors.gradient} animate-shimmer`} />
+            <div className="h-full rounded-full animate-shimmer" style={{ backgroundColor: colors.solid }} />
           </div>
 
           {/* Description */}
@@ -141,8 +143,6 @@ const MonthlyStatSlide = ({ slide, stats, onShare, isGeneratingShare = false }: 
             {slide.funnyText}
           </p>
 
-          {/* Username attribution */}
-          <p className="text-[10px] text-christmas-snow/50 mt-4">@{stats.username}</p>
         </div>
       </div>
 
