@@ -328,23 +328,33 @@ serve(async (req) => {
 
     // judgment will be defined as cleanJudgment later
 
+    // Helper to sanitize text - remove invalid Unicode surrogate pairs
+    const sanitizeText = (text: string | undefined | null): string => {
+      if (!text) return '';
+      // Remove lone surrogates that break JSON
+      return String(text)
+        .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '') // Remove lone high surrogates
+        .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '') // Remove lone low surrogates
+        .substring(0, 500);
+    };
+
     // Clean complex objects to ensure they serialize properly
     const cleanPeakMoment = peakMoment ? {
       likes: peakMoment.likes || 0,
       recasts: peakMoment.recasts || 0,
       replies: peakMoment.replies || 0,
-      text: peakMoment.text ? String(peakMoment.text).substring(0, 500) : '',
+      text: sanitizeText(peakMoment.text),
       timestamp: peakMoment.timestamp || null,
     } : null;
 
     const cleanMostRepliedCast = mostRepliedCast ? {
-      text: mostRepliedCast.text ? String(mostRepliedCast.text).substring(0, 500) : '',
+      text: sanitizeText(mostRepliedCast.text),
       replies_count: mostRepliedCast.replies_count || 0,
       timestamp: mostRepliedCast.timestamp || null,
     } : null;
 
     const cleanTopEngagedUsers = topEngagedUsers.map((u: any) => ({
-      username: String(u.username || ''),
+      username: sanitizeText(u.username),
       fid: Number(u.fid || 0),
       count: Number(u.count || 0),
     }));
