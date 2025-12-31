@@ -355,19 +355,44 @@ serve(async (req) => {
 
     console.log('Monthly stats calculated:', { totalCasts, replies, likesReceived: totalLikesReceived, activeDays, score, isNice });
 
-    // Save stats to database
-    const { error: saveError } = await supabase
-      .from('monthly_wrapped_stats')
-      .upsert({
-        fid,
-        month_key: monthKey,
-        stats,
-        judgment,
-        user_data: user,
-      }, { onConflict: 'fid,month_key' });
+    // Save stats to database - use insert with proper conflict handling
+    const dataToSave = {
+      fid: Number(fid),
+      month_key: monthKey,
+      stats: JSON.parse(JSON.stringify(stats)), // Ensure clean JSON
+      judgment: JSON.parse(JSON.stringify(judgment)),
+      user_data: JSON.parse(JSON.stringify(user)),
+    };
 
-    if (saveError) {
-      console.error('Failed to save monthly stats:', saveError);
+    console.log('Saving data for FID:', fid, 'month_key:', monthKey);
+
+    // Try to insert first
+    const { error: insertError } = await supabase
+      .from('monthly_wrapped_stats')
+      .insert(dataToSave);
+
+    if (insertError) {
+      // If insert fails due to conflict, update instead
+      if (insertError.code === '23505') { // Unique violation
+        console.log('Record exists, updating...');
+        const { error: updateError } = await supabase
+          .from('monthly_wrapped_stats')
+          .update({
+            stats: dataToSave.stats,
+            judgment: dataToSave.judgment,
+            user_data: dataToSave.user_data,
+          })
+          .eq('fid', Number(fid))
+          .eq('month_key', monthKey);
+
+        if (updateError) {
+          console.error('Failed to update monthly stats:', updateError);
+        } else {
+          console.log('Monthly stats updated successfully for FID:', fid);
+        }
+      } else {
+        console.error('Failed to insert monthly stats:', insertError);
+      }
     } else {
       console.log('Monthly stats saved successfully for FID:', fid);
     }
