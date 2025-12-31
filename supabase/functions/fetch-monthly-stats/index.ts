@@ -326,64 +326,98 @@ serve(async (req) => {
     const badges = isNice ? niceBadges : naughtyBadges;
     const badge = badges[Math.floor(Math.random() * badges.length)];
 
-    const judgment = {
-      score,
-      isNice,
-      badge,
-      nicePoints,
-      naughtyPoints
+    // judgment will be defined as cleanJudgment later
+
+    // Clean complex objects to ensure they serialize properly
+    const cleanPeakMoment = peakMoment ? {
+      likes: peakMoment.likes || 0,
+      recasts: peakMoment.recasts || 0,
+      replies: peakMoment.replies || 0,
+      text: peakMoment.text ? String(peakMoment.text).substring(0, 500) : '',
+      timestamp: peakMoment.timestamp || null,
+    } : null;
+
+    const cleanMostRepliedCast = mostRepliedCast ? {
+      text: mostRepliedCast.text ? String(mostRepliedCast.text).substring(0, 500) : '',
+      replies_count: mostRepliedCast.replies_count || 0,
+      timestamp: mostRepliedCast.timestamp || null,
+    } : null;
+
+    const cleanTopEngagedUsers = topEngagedUsers.map((u: any) => ({
+      username: String(u.username || ''),
+      fid: Number(u.fid || 0),
+      count: Number(u.count || 0),
+    }));
+
+    const cleanUser = {
+      fid: Number(user.fid || fid),
+      username: String(user.username || `user${fid}`),
+      display_name: String(user.display_name || 'Farcaster User'),
+      pfp_url: user.pfp_url ? String(user.pfp_url) : null,
     };
 
     const stats = {
-      totalCasts,
-      replies,
-      likesReceived: totalLikesReceived,
-      recastsReceived: totalRecastsReceived,
-      activeDays,
-      longestStreak,
-      mostActiveHour: parseInt(mostActiveHour),
-      mostRepliedCast,
-      peakMoment,
-      lateNightPosts: lateNightCasts.length,
-      hasGapReturn,
-      flavorTitles,
-      month: monthName,
-      year,
-      monthKey,
-      topEngagedUsers,
+      totalCasts: Number(totalCasts),
+      replies: Number(replies),
+      likesReceived: Number(totalLikesReceived),
+      recastsReceived: Number(totalRecastsReceived),
+      activeDays: Number(activeDays),
+      longestStreak: Number(longestStreak),
+      mostActiveHour: parseInt(mostActiveHour) || 12,
+      mostRepliedCast: cleanMostRepliedCast,
+      peakMoment: cleanPeakMoment,
+      lateNightPosts: Number(lateNightCasts.length),
+      hasGapReturn: Boolean(hasGapReturn),
+      flavorTitles: flavorTitles.map((t: string) => String(t)),
+      month: String(monthName),
+      year: Number(year),
+      monthKey: String(monthKey),
+      topEngagedUsers: cleanTopEngagedUsers,
+    };
+
+    const cleanJudgment = {
+      score: Number(score),
+      isNice: Boolean(isNice),
+      badge: String(badge),
+      nicePoints: Number(nicePoints),
+      naughtyPoints: Number(naughtyPoints),
     };
 
     console.log('Monthly stats calculated:', { totalCasts, replies, likesReceived: totalLikesReceived, activeDays, score, isNice });
 
-    // Save stats to database - use insert with proper conflict handling
+    // Save stats to database
     const dataToSave = {
       fid: Number(fid),
-      month_key: monthKey,
-      stats: JSON.parse(JSON.stringify(stats)), // Ensure clean JSON
-      judgment: JSON.parse(JSON.stringify(judgment)),
-      user_data: JSON.parse(JSON.stringify(user)),
+      month_key: String(monthKey),
+      stats: stats,
+      judgment: cleanJudgment,
+      user_data: cleanUser,
     };
 
     console.log('Saving data for FID:', fid, 'month_key:', monthKey);
+    console.log('Data to save structure:', JSON.stringify(dataToSave).substring(0, 500));
 
     // Try to insert first
-    const { error: insertError } = await supabase
+    const { data: insertData, error: insertError } = await supabase
       .from('monthly_wrapped_stats')
-      .insert(dataToSave);
+      .insert([dataToSave])
+      .select();
 
     if (insertError) {
+      console.error('Insert error code:', insertError.code, 'message:', insertError.message);
+      
       // If insert fails due to conflict, update instead
       if (insertError.code === '23505') { // Unique violation
         console.log('Record exists, updating...');
         const { error: updateError } = await supabase
           .from('monthly_wrapped_stats')
           .update({
-            stats: dataToSave.stats,
-            judgment: dataToSave.judgment,
-            user_data: dataToSave.user_data,
+            stats: stats,
+            judgment: cleanJudgment,
+            user_data: cleanUser,
           })
           .eq('fid', Number(fid))
-          .eq('month_key', monthKey);
+          .eq('month_key', String(monthKey));
 
         if (updateError) {
           console.error('Failed to update monthly stats:', updateError);
@@ -394,10 +428,11 @@ serve(async (req) => {
         console.error('Failed to insert monthly stats:', insertError);
       }
     } else {
-      console.log('Monthly stats saved successfully for FID:', fid);
+      console.log('Monthly stats saved successfully for FID:', fid, 'insertData:', insertData);
     }
 
-    return new Response(JSON.stringify({ stats: { ...stats, judgment }, user }), {
+    // Return with cleaned judgment and user
+    return new Response(JSON.stringify({ stats: { ...stats, judgment: cleanJudgment }, user: cleanUser }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: unknown) {
