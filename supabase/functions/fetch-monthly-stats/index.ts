@@ -77,13 +77,14 @@ serve(async (req) => {
       user = { fid, username: `user${fid}`, display_name: 'Farcaster User', pfp_url: null };
     }
 
-    // Fetch user's casts with pagination
+    // Fetch user's casts with pagination - fetch more to get accurate active days
     let allCasts: any[] = [];
     let cursor: string | null = null;
     let fetchCount = 0;
-    const maxFetches = 5;
+    const maxFetches = 15; // Increased to get more accurate data for very active users
+    let foundOldCasts = false;
 
-    while (fetchCount < maxFetches) {
+    while (fetchCount < maxFetches && !foundOldCasts) {
       const castsUrl: string = cursor
         ? `https://api.neynar.com/v2/farcaster/feed/user/casts?fid=${fid}&limit=150&cursor=${cursor}`
         : `https://api.neynar.com/v2/farcaster/feed/user/casts?fid=${fid}&limit=150`;
@@ -103,13 +104,21 @@ serve(async (req) => {
       console.log(`Page ${fetchCount + 1}: Got ${casts.length} casts`);
 
       if (casts.length === 0) break;
+      
+      // Check if we've gone past the start of the month (optimization - stop early)
+      const oldestCastDate = casts.length > 0 ? new Date(casts[casts.length - 1].timestamp) : null;
+      if (oldestCastDate && oldestCastDate < monthStart) {
+        console.log(`Reached casts before ${monthName}, stopping pagination`);
+        foundOldCasts = true;
+      }
+      
       allCasts = [...allCasts, ...casts];
       cursor = castsData.next?.cursor;
       fetchCount++;
       if (!cursor) break;
     }
 
-    console.log(`Total casts fetched: ${allCasts.length}`);
+    console.log(`Total casts fetched: ${allCasts.length} across ${fetchCount} pages`);
 
     // Filter for current month only
     const monthCasts = allCasts.filter((cast: any) => {
