@@ -329,40 +329,42 @@ serve(async (req) => {
     // judgment will be defined as cleanJudgment later
 
     // Helper to sanitize text - remove invalid Unicode surrogate pairs
-    const sanitizeText = (text: string | undefined | null): string => {
+    const sanitizeText = (text: string | undefined | null, maxLength: number = 500): string => {
       if (!text) return '';
-      // Remove lone surrogates that break JSON
+      // Remove lone surrogates that break JSON, also handle other problematic chars
       return String(text)
         .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '') // Remove lone high surrogates
         .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '') // Remove lone low surrogates
-        .substring(0, 500);
+        .replace(/[\uFFFE\uFFFF]/g, '') // Remove BOM and invalid chars
+        .replace(/\u0000/g, '') // Remove null chars
+        .substring(0, maxLength);
     };
 
     // Clean complex objects to ensure they serialize properly
     const cleanPeakMoment = peakMoment ? {
-      likes: peakMoment.likes || 0,
-      recasts: peakMoment.recasts || 0,
-      replies: peakMoment.replies || 0,
+      likes: Number(peakMoment.likes) || 0,
+      recasts: Number(peakMoment.recasts) || 0,
+      replies: Number(peakMoment.replies) || 0,
       text: sanitizeText(peakMoment.text),
       timestamp: peakMoment.timestamp || null,
     } : null;
 
     const cleanMostRepliedCast = mostRepliedCast ? {
       text: sanitizeText(mostRepliedCast.text),
-      replies_count: mostRepliedCast.replies_count || 0,
+      replies_count: Number(mostRepliedCast.repliesCount) || 0,
       timestamp: mostRepliedCast.timestamp || null,
     } : null;
 
     const cleanTopEngagedUsers = topEngagedUsers.map((u: any) => ({
-      username: sanitizeText(u.username),
+      username: sanitizeText(u.username, 100),
       fid: Number(u.fid || 0),
       count: Number(u.count || 0),
     }));
 
     const cleanUser = {
       fid: Number(user.fid || fid),
-      username: String(user.username || `user${fid}`),
-      display_name: String(user.display_name || 'Farcaster User'),
+      username: sanitizeText(user.username, 100) || `user${fid}`,
+      display_name: sanitizeText(user.display_name, 200) || 'Farcaster User',
       pfp_url: user.pfp_url ? String(user.pfp_url) : null,
     };
 
