@@ -49,3 +49,6 @@ verify_jwt = false
 
 [functions.fetch-monthly-stats]
 verify_jwt = false
+
+[functions.fetch-bloom-price]
+verify_jwt = false
