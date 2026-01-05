@@ -1,6 +1,12 @@
 import { createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 
+// BLOOM Token on Base
+export const BLOOM_TOKEN_ADDRESS = '0xd6B69E58D44e523EB58645F1B78425c96Dfa648C' as const;
+
+// BLOOM Tipping Contract on Base (TODO: Deploy)
+export const BLOOM_TIPPING_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
+
 // BloomersVerdictClaim contract on Base (ENB)
 export const BLOOMERS_VERDICT_ADDRESS = '0xf2BD230858D30e5858937a27A0C2FB8309E47997' as const;
 

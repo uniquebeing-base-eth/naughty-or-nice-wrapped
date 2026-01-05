@@ -1,4 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Coins } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface WelcomeSlideProps {
   username: string;
@@ -15,6 +18,7 @@ const welcomeTexts = [
 
 const WelcomeSlide = ({ username, pfp }: WelcomeSlideProps) => {
   const [animate, setAnimate] = useState(false);
+  const navigate = useNavigate();
   
   const welcomeText = useMemo(() => welcomeTexts[Math.floor(Math.random() * welcomeTexts.length)], []);
 
@@ -90,6 +94,17 @@ const WelcomeSlide = ({ username, pfp }: WelcomeSlideProps) => {
       >
         <span className="text-christmas-gold font-bold text-lg">@{username}</span>
       </div>
+
+      {/* Tip BLOOM Button */}
+      <Button
+        onClick={() => navigate('/bloom-tipping')}
+        className={`mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-full font-bold gap-2 shadow-lg shadow-purple-500/30 border border-purple-400/30 transition-all duration-700 delay-700 ${
+          animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}
+      >
+        <Coins className="w-4 h-4" />
+        Tip BLOOM
+      </Button>
     </div>
   );
 };
