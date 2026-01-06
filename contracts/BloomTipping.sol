@@ -11,15 +11,24 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title BloomTipping
- * @dev Secure tipping contract for BLOOM tokens on Farcaster
+ * @dev Minimal, permissive tipping contract for BLOOM tokens on Farcaster
  * 
- * Security Features:
- * - Signature-based authorization (prevents unauthorized tips)
- * - Nonce tracking (prevents replay attacks)
- * - Rate limiting per user (anti-Sybil)
- * - Daily tip limits (anti-abuse)
- * - Pausable for emergencies
+ * Philosophy: Fun, free, and repeatable. The contract is neutral infrastructure.
+ * Backend decides what to sign. Contract only enforces signature validity and nonce correctness.
+ * 
+ * Security Features (only real security primitives):
+ * - Backend signature authorization (prevents unauthorized tips)
+ * - Per-user nonce tracking (prevents replay attacks)
+ * - Deadline on signatures (prevents stale signatures)
  * - Reentrancy protection
+ * - Pause switch for emergencies
+ * 
+ * NOT enforced onchain (backend handles if needed):
+ * - Daily limits
+ * - Max tips per day  
+ * - Volume caps
+ * - Min/max tip amounts
+ * - One-tip-per-cast restrictions
  */
 contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -31,22 +40,8 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     IERC20 public immutable bloomToken;
     address public signer; // Backend signer for tip authorization
     
-    // Anti-Sybil: Rate limiting
-    uint256 public maxTipsPerDay = 50; // Max tips per user per day
-    uint256 public maxTipAmount = 1_000_000 * 1e18; // Max single tip: 1M BLOOM
-    uint256 public minTipAmount = 1 * 1e18; // Min single tip: 1 BLOOM
-    uint256 public dailyTipLimit = 10_000_000 * 1e18; // Max total tips per user per day: 10M BLOOM
-    
-    // Nonce tracking per user (anti-replay)
+    // Per-user nonce tracking (anti-replay)
     mapping(address => uint256) public nonces;
-    
-    // Daily rate limiting
-    mapping(address => mapping(uint256 => uint256)) public dailyTipCount; // user => day => count
-    mapping(address => mapping(uint256 => uint256)) public dailyTipVolume; // user => day => volume
-    
-    // Farcaster ID verification (optional extra security)
-    mapping(uint256 => address) public fidToAddress; // FID => verified address
-    mapping(address => uint256) public addressToFid; // address => FID
     
     // Tip history for transparency
     struct Tip {
@@ -60,7 +55,6 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     }
     
     Tip[] public tips;
-    mapping(bytes32 => bool) public processedCasts; // castHash => processed
     
     // ============ Events ============
     
@@ -75,23 +69,16 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     );
     
     event SignerUpdated(address indexed oldSigner, address indexed newSigner);
-    event FidVerified(uint256 indexed fid, address indexed wallet);
-    event LimitsUpdated(uint256 maxTipsPerDay, uint256 maxTipAmount, uint256 dailyTipLimit);
     
     // ============ Errors ============
     
     error InvalidSignature();
     error InvalidNonce();
-    error TipAlreadyProcessed();
-    error ExceedsMaxTipAmount();
-    error BelowMinTipAmount();
-    error ExceedsDailyTipCount();
-    error ExceedsDailyTipLimit();
+    error SignatureExpired();
     error InsufficientAllowance();
     error InsufficientBalance();
     error InvalidRecipient();
-    error FidAlreadyVerified();
-    error AddressAlreadyVerified();
+    error ZeroAmount();
 
     // ============ Constructor ============
     
@@ -107,12 +94,15 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     
     /**
      * @dev Process a tip with signature verification
+     * Users can tip the same cast multiple times - no restrictions.
+     * Backend controls what gets signed.
+     * 
      * @param to Recipient address
      * @param amount Tip amount in BLOOM tokens
      * @param fromFid Sender's Farcaster ID
      * @param toFid Recipient's Farcaster ID
-     * @param castHash Hash of the cast containing the tip
-     * @param nonce Unique nonce for this tip
+     * @param castHash Hash of the cast containing the tip (for reference only)
+     * @param nonce Unique nonce for this tip (must match user's current nonce)
      * @param deadline Timestamp after which signature is invalid
      * @param signature Backend signature authorizing the tip
      */
@@ -126,17 +116,13 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         uint256 deadline,
         bytes calldata signature
     ) external nonReentrant whenNotPaused {
-        // Validate inputs
+        // Basic validation
         if (to == address(0) || to == msg.sender) revert InvalidRecipient();
-        if (amount > maxTipAmount) revert ExceedsMaxTipAmount();
-        if (amount < minTipAmount) revert BelowMinTipAmount();
+        if (amount == 0) revert ZeroAmount();
         if (nonces[msg.sender] != nonce) revert InvalidNonce();
-        if (processedCasts[castHash]) revert TipAlreadyProcessed();
+        if (block.timestamp > deadline) revert SignatureExpired();
         
-        // Check deadline
-        require(block.timestamp <= deadline, "Signature expired");
-        
-        // Verify signature
+        // Verify signature from authorized backend
         bytes32 messageHash = keccak256(abi.encodePacked(
             msg.sender,
             to,
@@ -155,17 +141,6 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         
         if (recoveredSigner != signer) revert InvalidSignature();
         
-        // Rate limiting checks
-        uint256 today = block.timestamp / 1 days;
-        
-        if (dailyTipCount[msg.sender][today] >= maxTipsPerDay) {
-            revert ExceedsDailyTipCount();
-        }
-        
-        if (dailyTipVolume[msg.sender][today] + amount > dailyTipLimit) {
-            revert ExceedsDailyTipLimit();
-        }
-        
         // Check allowance and balance
         if (bloomToken.allowance(msg.sender, address(this)) < amount) {
             revert InsufficientAllowance();
@@ -177,11 +152,8 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         
         // Update state before transfer (CEI pattern)
         nonces[msg.sender]++;
-        dailyTipCount[msg.sender][today]++;
-        dailyTipVolume[msg.sender][today] += amount;
-        processedCasts[castHash] = true;
         
-        // Record tip
+        // Record tip for transparency
         tips.push(Tip({
             from: msg.sender,
             to: to,
@@ -200,6 +172,7 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     
     /**
      * @dev Batch process multiple tips (gas efficient for backend)
+     * No restrictions on re-tipping same casts.
      */
     function batchTip(
         address[] calldata recipients,
@@ -213,7 +186,7 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     ) external nonReentrant whenNotPaused {
         require(recipients.length == amounts.length, "Length mismatch");
         require(recipients.length == signatures.length, "Length mismatch");
-        require(recipients.length <= 20, "Too many tips"); // Gas limit
+        require(recipients.length <= 50, "Too many tips"); // Gas limit
         
         for (uint256 i = 0; i < recipients.length; i++) {
             _processTip(
@@ -239,10 +212,10 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         uint256 deadline,
         bytes calldata signature
     ) internal {
-        if (to == address(0) || to == msg.sender) return; // Skip invalid
-        if (amount > maxTipAmount || amount < minTipAmount) return;
+        // Skip invalid tips silently in batch
+        if (to == address(0) || to == msg.sender) return;
+        if (amount == 0) return;
         if (nonces[msg.sender] != nonce) return;
-        if (processedCasts[castHash]) return;
         if (block.timestamp > deadline) return;
         
         bytes32 messageHash = keccak256(abi.encodePacked(
@@ -262,17 +235,10 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         address recoveredSigner = ethSignedHash.recover(signature);
         
         if (recoveredSigner != signer) return;
-        
-        uint256 today = block.timestamp / 1 days;
-        if (dailyTipCount[msg.sender][today] >= maxTipsPerDay) return;
-        if (dailyTipVolume[msg.sender][today] + amount > dailyTipLimit) return;
         if (bloomToken.allowance(msg.sender, address(this)) < amount) return;
         if (bloomToken.balanceOf(msg.sender) < amount) return;
         
         nonces[msg.sender]++;
-        dailyTipCount[msg.sender][today]++;
-        dailyTipVolume[msg.sender][today] += amount;
-        processedCasts[castHash] = true;
         
         tips.push(Tip({
             from: msg.sender,
@@ -287,39 +253,6 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         bloomToken.safeTransferFrom(msg.sender, to, amount);
         
         emit TipSent(msg.sender, to, amount, fromFid, toFid, castHash, block.timestamp);
-    }
-
-    // ============ FID Verification ============
-    
-    /**
-     * @dev Verify a Farcaster ID is linked to an address (for enhanced security)
-     * Only the signer (backend) can verify FIDs
-     */
-    function verifyFid(
-        uint256 fid,
-        address wallet,
-        bytes calldata signature
-    ) external {
-        if (fidToAddress[fid] != address(0)) revert FidAlreadyVerified();
-        if (addressToFid[wallet] != 0) revert AddressAlreadyVerified();
-        
-        bytes32 messageHash = keccak256(abi.encodePacked(
-            "VERIFY_FID",
-            fid,
-            wallet,
-            block.chainid,
-            address(this)
-        ));
-        
-        bytes32 ethSignedHash = messageHash.toEthSignedMessageHash();
-        address recoveredSigner = ethSignedHash.recover(signature);
-        
-        if (recoveredSigner != signer) revert InvalidSignature();
-        
-        fidToAddress[fid] = wallet;
-        addressToFid[wallet] = fid;
-        
-        emit FidVerified(fid, wallet);
     }
 
     // ============ View Functions ============
@@ -340,19 +273,8 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         return result;
     }
     
-    function getUserStats(address user) external view returns (
-        uint256 nonce,
-        uint256 todayTipCount,
-        uint256 todayTipVolume,
-        uint256 remainingTips,
-        uint256 remainingVolume
-    ) {
-        uint256 today = block.timestamp / 1 days;
-        nonce = nonces[user];
-        todayTipCount = dailyTipCount[user][today];
-        todayTipVolume = dailyTipVolume[user][today];
-        remainingTips = maxTipsPerDay > todayTipCount ? maxTipsPerDay - todayTipCount : 0;
-        remainingVolume = dailyTipLimit > todayTipVolume ? dailyTipLimit - todayTipVolume : 0;
+    function getUserNonce(address user) external view returns (uint256) {
+        return nonces[user];
     }
 
     // ============ Admin Functions ============
@@ -362,20 +284,6 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         address oldSigner = signer;
         signer = _signer;
         emit SignerUpdated(oldSigner, _signer);
-    }
-    
-    function setLimits(
-        uint256 _maxTipsPerDay,
-        uint256 _maxTipAmount,
-        uint256 _minTipAmount,
-        uint256 _dailyTipLimit
-    ) external onlyOwner {
-        require(_maxTipAmount >= _minTipAmount, "Invalid limits");
-        maxTipsPerDay = _maxTipsPerDay;
-        maxTipAmount = _maxTipAmount;
-        minTipAmount = _minTipAmount;
-        dailyTipLimit = _dailyTipLimit;
-        emit LimitsUpdated(_maxTipsPerDay, _maxTipAmount, _dailyTipLimit);
     }
     
     function pause() external onlyOwner {
