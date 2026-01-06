@@ -3,7 +3,8 @@ import { useFarcaster } from '@/contexts/FarcasterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, Loader2, Coins, TrendingUp, Wallet, CheckCircle2, ShoppingCart } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Loader2, Coins, TrendingUp, Wallet, CheckCircle2, Plus, ArrowUpRight, ArrowDownLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,11 +16,16 @@ import Snowfall from '@/components/Snowfall';
 // BLOOM Token on Base
 const BLOOM_TOKEN_ADDRESS = '0xd6B69E58D44e523EB58645F1B78425c96Dfa648C' as const;
 
-// Token for buying (the one users swap to)
-const BLOOM_SWAP_TOKEN = '0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07' as const;
-
 // BLOOM Tipping Contract (deploy and update this address)
 const BLOOM_TIPPING_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
+
+// Quick approve presets
+const APPROVE_PRESETS = [
+  { label: '100K 🌸', value: '100000' },
+  { label: '500K 🌸', value: '500000' },
+  { label: '1M 🌸', value: '1000000' },
+  { label: '5M 🌸', value: '5000000' },
+];
 
 // ERC20 ABI for approval and balance
 const ERC20_ABI = [
@@ -68,6 +74,19 @@ interface NeynarUser {
   };
 }
 
+interface TipRecord {
+  id: string;
+  from_address: string;
+  to_address: string;
+  amount: string;
+  from_fid: number;
+  to_fid: number;
+  cast_hash: string;
+  timestamp: string;
+  from_username?: string;
+  to_username?: string;
+}
+
 const BloomTipping = () => {
   const { user, isInMiniApp } = useFarcaster();
   const navigate = useNavigate();
@@ -81,6 +100,10 @@ const BloomTipping = () => {
   const [bloomBalance, setBloomBalance] = useState<string>('0');
   const [loadingWallet, setLoadingWallet] = useState(true);
   const [loadingBalances, setLoadingBalances] = useState(false);
+  const [activeTab, setActiveTab] = useState('approve');
+  const [tipsSent, setTipsSent] = useState<TipRecord[]>([]);
+  const [tipsReceived, setTipsReceived] = useState<TipRecord[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Fetch wallet address from Neynar using FID
   const fetchWalletFromNeynar = useCallback(async () => {
@@ -89,7 +112,6 @@ const BloomTipping = () => {
     try {
       setLoadingWallet(true);
       
-      // Use the fetch-users-by-address edge function to get user data
       const { data, error } = await supabase.functions.invoke('fetch-users-by-address', {
         body: { fid: user.fid }
       });
@@ -138,7 +160,6 @@ const BloomTipping = () => {
         transport: http(),
       });
 
-      // Get balance - use any to bypass viem strict typing
       const balanceResult = await (publicClient as unknown as { readContract: (args: unknown) => Promise<bigint> }).readContract({
         address: BLOOM_TOKEN_ADDRESS,
         abi: ERC20_ABI,
@@ -146,7 +167,6 @@ const BloomTipping = () => {
         args: [walletAddress],
       });
       
-      // Get allowance for tipping contract
       const allowanceResult = await (publicClient as unknown as { readContract: (args: unknown) => Promise<bigint> }).readContract({
         address: BLOOM_TOKEN_ADDRESS,
         abi: ERC20_ABI,
@@ -160,6 +180,23 @@ const BloomTipping = () => {
       console.error('Error fetching balances:', error);
     } finally {
       setLoadingBalances(false);
+    }
+  }, [walletAddress]);
+
+  // Mock tip history - in production, fetch from your backend
+  const fetchTipHistory = useCallback(async () => {
+    if (!walletAddress) return;
+    
+    try {
+      setLoadingHistory(true);
+      // TODO: Replace with actual backend call to fetch tip history
+      // For now, using empty arrays as placeholder
+      setTipsSent([]);
+      setTipsReceived([]);
+    } catch (error) {
+      console.error('Error fetching tip history:', error);
+    } finally {
+      setLoadingHistory(false);
     }
   }, [walletAddress]);
 
@@ -178,12 +215,15 @@ const BloomTipping = () => {
   useEffect(() => {
     if (walletAddress) {
       fetchBalances();
+      fetchTipHistory();
     }
-  }, [walletAddress, fetchBalances]);
+  }, [walletAddress, fetchBalances, fetchTipHistory]);
 
   // Handle approval using Farcaster wallet
-  const handleApprove = async () => {
-    if (!walletAddress || !approvalAmount) {
+  const handleApprove = async (amount?: string) => {
+    const amountToApprove = amount || approvalAmount;
+    
+    if (!walletAddress || !amountToApprove) {
       toast.error('Please enter an amount');
       return;
     }
@@ -197,17 +237,15 @@ const BloomTipping = () => {
       setIsApproving(true);
       
       const provider = sdk.wallet.ethProvider;
-      const amount = parseUnits(approvalAmount, 18);
+      const parsedAmount = parseUnits(amountToApprove, 18);
       
-      // Encode the approve function call
       const { encodeFunctionData } = await import('viem');
       const data = encodeFunctionData({
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [BLOOM_TIPPING_ADDRESS, amount],
+        args: [BLOOM_TIPPING_ADDRESS, parsedAmount],
       });
 
-      // Send transaction via Farcaster wallet
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
@@ -217,11 +255,10 @@ const BloomTipping = () => {
         }],
       });
 
-      toast.success('Approval submitted!', {
+      toast.success('Approval submitted! 🌸', {
         description: `Transaction: ${String(txHash).slice(0, 10)}...`,
       });
 
-      // Refresh balances after a delay
       setTimeout(() => {
         fetchBalances();
       }, 5000);
@@ -237,29 +274,19 @@ const BloomTipping = () => {
     }
   };
 
-  // Handle buy button - open Farcaster native swap
-  const handleBuyBloom = async () => {
-    if (!sdk?.wallet?.ethProvider) {
-      toast.error('Wallet not available');
+  // Handle increase allowance
+  const handleIncreaseAllowance = async () => {
+    if (!approvalAmount || parseFloat(approvalAmount) <= 0) {
+      toast.error('Please enter an amount to add');
       return;
     }
+    
+    const newTotal = parseFloat(currentAllowance) + parseFloat(approvalAmount);
+    await handleApprove(newTotal.toString());
+  };
 
-    try {
-      // Use Farcaster's native swap action if available
-      if (sdk.actions && 'openUrl' in sdk.actions) {
-        // Open the swap in Warpcast which will use Warplet
-        await (sdk.actions as { openUrl: (url: string) => Promise<void> }).openUrl(
-          `https://warpcast.com/~/swap?token=${BLOOM_SWAP_TOKEN}`
-        );
-      } else {
-        // Fallback: try to open via provider
-        window.open(`https://warpcast.com/~/swap?token=${BLOOM_SWAP_TOKEN}`, '_blank');
-      }
-    } catch (error) {
-      console.error('Error opening swap:', error);
-      // Fallback to direct URL
-      window.open(`https://warpcast.com/~/swap?token=${BLOOM_SWAP_TOKEN}`, '_blank');
-    }
+  const handlePresetClick = (value: string) => {
+    setApprovalAmount(value);
   };
 
   const handleMax = () => {
@@ -273,11 +300,10 @@ const BloomTipping = () => {
     return n.toFixed(4);
   };
 
-  // Format price with 8 decimals for small values
   const formatPrice = (priceStr: string) => {
     const price = parseFloat(priceStr);
     if (price < 0.0001) {
-      return price.toFixed(10); // Show up to 10 decimals for very small prices
+      return price.toFixed(10);
     } else if (price < 0.01) {
       return price.toFixed(8);
     } else if (price < 1) {
@@ -286,17 +312,26 @@ const BloomTipping = () => {
     return price.toFixed(4);
   };
 
+  const formatDate = (timestamp: string) => {
+    return new Date(timestamp).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   if (!isInMiniApp) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#1a0a28] to-[#0a1628] flex items-center justify-center p-4">
-        <Card className="bg-black/40 border-purple-500/30 backdrop-blur-xl">
+        <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
           <CardContent className="p-8 text-center">
-            <Coins className="w-16 h-16 mx-auto mb-4 text-purple-400" />
+            <span className="text-5xl mb-4 block">🌸</span>
             <h2 className="text-2xl font-bold text-white mb-2">BLOOM Tipping</h2>
-            <p className="text-purple-200/70 mb-4">Open in Farcaster to access BLOOM tipping</p>
+            <p className="text-pink-200/70 mb-4">Open in Farcaster to access BLOOM tipping</p>
             <Button
               onClick={() => window.open('https://warpcast.com', '_blank')}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-pink-600 hover:bg-pink-700"
             >
               Open in Warpcast
             </Button>
@@ -311,18 +346,18 @@ const BloomTipping = () => {
       <Snowfall />
       
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-black/40 backdrop-blur-xl border-b border-purple-500/20 p-4">
+      <div className="sticky top-0 z-50 bg-black/40 backdrop-blur-xl border-b border-pink-500/20 p-4">
         <div className="flex items-center justify-between max-w-lg mx-auto">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/bloomers')}
-            className="text-purple-300 hover:text-white hover:bg-purple-500/20"
+            className="text-pink-300 hover:text-white hover:bg-pink-500/20"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Coins className="w-5 h-5 text-purple-400" />
+            <span className="text-2xl">🌸</span>
             BLOOM Tipping
           </h1>
           <div className="w-10" />
@@ -331,16 +366,16 @@ const BloomTipping = () => {
 
       <div className="max-w-lg mx-auto p-4 space-y-4 pb-24">
         {/* Price Card */}
-        <Card className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-purple-500/30 backdrop-blur-xl overflow-hidden">
+        <Card className="bg-gradient-to-br from-pink-900/40 to-purple-900/40 border-pink-500/30 backdrop-blur-xl overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-purple-200 flex items-center gap-2">
+            <CardTitle className="text-lg text-pink-200 flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
               BLOOM Price
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loadingPrice ? (
-              <div className="flex items-center gap-2 text-purple-300">
+              <div className="flex items-center gap-2 text-pink-300">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Loading price...
               </div>
@@ -354,38 +389,30 @@ const BloomTipping = () => {
                     {bloomPrice.priceChange24h >= 0 ? '+' : ''}{bloomPrice.priceChange24h.toFixed(2)}%
                   </span>
                 </div>
-                <p className="text-sm text-purple-300/70">
+                <p className="text-sm text-pink-300/70">
                   24h Volume: ${formatNumber(bloomPrice.volume24h)}
                 </p>
               </div>
             ) : (
-              <p className="text-purple-300/70">Unable to load price</p>
+              <p className="text-pink-300/70">Unable to load price</p>
             )}
-            
-            <Button
-              className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold"
-              onClick={handleBuyBloom}
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Buy BLOOM
-            </Button>
           </CardContent>
         </Card>
 
         {/* Wallet & Balance Card */}
         {loadingWallet ? (
-          <Card className="bg-black/40 border-purple-500/30 backdrop-blur-xl">
+          <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
             <CardContent className="p-6 text-center">
-              <Loader2 className="w-8 h-8 mx-auto mb-4 text-purple-400 animate-spin" />
-              <p className="text-purple-200/70">Loading wallet...</p>
+              <Loader2 className="w-8 h-8 mx-auto mb-4 text-pink-400 animate-spin" />
+              <p className="text-pink-200/70">Loading wallet...</p>
             </CardContent>
           </Card>
         ) : !walletAddress ? (
-          <Card className="bg-black/40 border-purple-500/30 backdrop-blur-xl">
+          <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
             <CardContent className="p-6 text-center">
-              <Wallet className="w-12 h-12 mx-auto mb-4 text-purple-400" />
+              <Wallet className="w-12 h-12 mx-auto mb-4 text-pink-400" />
               <h3 className="text-lg font-bold text-white mb-2">No Verified Wallet</h3>
-              <p className="text-purple-200/70 text-sm">
+              <p className="text-pink-200/70 text-sm">
                 Please verify your wallet address on Farcaster to use BLOOM tipping
               </p>
             </CardContent>
@@ -393,33 +420,33 @@ const BloomTipping = () => {
         ) : (
           <>
             {/* Balance Card */}
-            <Card className="bg-black/40 border-purple-500/30 backdrop-blur-xl">
+            <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-purple-200 flex items-center gap-2">
+                <CardTitle className="text-lg text-pink-200 flex items-center gap-2">
                   <Wallet className="w-5 h-5" />
-                  Your BLOOM
+                  Your BLOOM 🌸
                 </CardTitle>
-                <p className="text-xs text-purple-400/60 font-mono">
+                <p className="text-xs text-pink-400/60 font-mono">
                   {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {loadingBalances ? (
-                  <div className="flex items-center gap-2 text-purple-300">
+                  <div className="flex items-center gap-2 text-pink-300">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading...
                   </div>
                 ) : (
                   <>
                     <div className="flex justify-between items-center">
-                      <span className="text-purple-300/70">Balance:</span>
-                      <span className="text-white font-bold">{formatNumber(bloomBalance)} BLOOM</span>
+                      <span className="text-pink-300/70">Balance:</span>
+                      <span className="text-white font-bold">{formatNumber(bloomBalance)} 🌸</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-purple-300/70">Approved for Tipping:</span>
+                      <span className="text-pink-300/70">Approved for Tipping:</span>
                       <span className="text-green-400 font-bold flex items-center gap-1">
                         {parseFloat(currentAllowance) > 0 && <CheckCircle2 className="w-4 h-4" />}
-                        {formatNumber(currentAllowance)} BLOOM
+                        {formatNumber(currentAllowance)} 🌸
                       </span>
                     </div>
                   </>
@@ -427,83 +454,212 @@ const BloomTipping = () => {
               </CardContent>
             </Card>
 
-            {/* Approval Card */}
-            <Card className="bg-black/40 border-purple-500/30 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-lg text-purple-200">Approve BLOOM for Tipping</CardTitle>
-                <CardDescription className="text-purple-300/70">
-                  Set the amount of BLOOM you want to allow for auto-tipping via comments
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="relative">
-                  <Input
-                    type="number"
-                    placeholder="Enter amount"
-                    value={approvalAmount}
-                    onChange={(e) => setApprovalAmount(e.target.value)}
-                    className="bg-black/40 border-purple-500/30 text-white pr-16"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleMax}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-300 h-7 px-2"
-                  >
-                    MAX
-                  </Button>
-                </div>
-                
-                {approvalAmount && bloomPrice && (
-                  <p className="text-sm text-purple-300/70">
-                    ≈ ${(parseFloat(approvalAmount) * parseFloat(bloomPrice.priceUsd)).toFixed(6)} USD
-                  </p>
-                )}
+            {/* Tabs for Approve / History */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 bg-black/40 border border-pink-500/30">
+                <TabsTrigger value="approve" className="data-[state=active]:bg-pink-600 data-[state=active]:text-white">
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  Approve
+                </TabsTrigger>
+                <TabsTrigger value="sent" className="data-[state=active]:bg-pink-600 data-[state=active]:text-white">
+                  <ArrowUpRight className="w-4 h-4 mr-1" />
+                  Sent
+                </TabsTrigger>
+                <TabsTrigger value="received" className="data-[state=active]:bg-pink-600 data-[state=active]:text-white">
+                  <ArrowDownLeft className="w-4 h-4 mr-1" />
+                  Received
+                </TabsTrigger>
+              </TabsList>
 
-                <Button
-                  onClick={handleApprove}
-                  disabled={isApproving || !approvalAmount || parseFloat(approvalAmount) <= 0}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
-                >
-                  {isApproving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Approving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Approve BLOOM
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+              {/* Approve Tab */}
+              <TabsContent value="approve" className="mt-4 space-y-4">
+                <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-pink-200">Approve BLOOM for Tipping 🌸</CardTitle>
+                    <CardDescription className="text-pink-300/70">
+                      Set how much BLOOM you want available for auto-tipping
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Quick Presets */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {APPROVE_PRESETS.map((preset) => (
+                        <Button
+                          key={preset.value}
+                          variant="outline"
+                          onClick={() => handlePresetClick(preset.value)}
+                          className={`border-pink-500/30 hover:bg-pink-500/20 hover:border-pink-400 transition-all ${
+                            approvalAmount === preset.value ? 'bg-pink-500/30 border-pink-400' : ''
+                          }`}
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
 
-            {/* How It Works */}
-            <Card className="bg-black/40 border-purple-500/30 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-lg text-purple-200">How Tipping Works</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-purple-200/80 text-sm">
-                <div className="flex gap-3">
-                  <span className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs shrink-0">1</span>
-                  <p>Approve the amount of BLOOM you want available for tipping</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs shrink-0">2</span>
-                  <p>Comment on any cast mentioning <span className="text-purple-400 font-mono">$bloom</span> followed by an amount</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs shrink-0">3</span>
-                  <p>Example: <span className="text-purple-400 font-mono">"Great cast! $bloom 100"</span></p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs shrink-0">4</span>
-                  <p>The BLOOM is automatically sent to the cast author</p>
-                </div>
-              </CardContent>
-            </Card>
+                    {/* Custom Input */}
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        placeholder="Or enter custom amount"
+                        value={approvalAmount}
+                        onChange={(e) => setApprovalAmount(e.target.value)}
+                        className="bg-black/40 border-pink-500/30 text-white pr-16"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleMax}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-pink-400 hover:text-pink-300 h-7 px-2"
+                      >
+                        MAX
+                      </Button>
+                    </div>
+                    
+                    {approvalAmount && bloomPrice && (
+                      <p className="text-sm text-pink-300/70">
+                        ≈ ${(parseFloat(approvalAmount) * parseFloat(bloomPrice.priceUsd)).toFixed(6)} USD
+                      </p>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        onClick={() => handleApprove()}
+                        disabled={isApproving || !approvalAmount || parseFloat(approvalAmount) <= 0}
+                        className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold"
+                      >
+                        {isApproving ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Approve
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={handleIncreaseAllowance}
+                        disabled={isApproving || !approvalAmount || parseFloat(approvalAmount) <= 0 || parseFloat(currentAllowance) <= 0}
+                        variant="outline"
+                        className="border-green-500/50 text-green-400 hover:bg-green-500/20 hover:border-green-400"
+                      >
+                        {isApproving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add More
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* How It Works */}
+                <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-pink-200">How Tipping Works 💫</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-pink-200/80 text-sm">
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-full bg-pink-600 flex items-center justify-center text-white font-bold text-xs shrink-0">1</span>
+                      <p>Approve the amount of BLOOM you want available for tipping</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-full bg-pink-600 flex items-center justify-center text-white font-bold text-xs shrink-0">2</span>
+                      <p>Comment on any cast with <span className="text-pink-400 font-mono">$bloom</span> + amount</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-full bg-pink-600 flex items-center justify-center text-white font-bold text-xs shrink-0">3</span>
+                      <p>Example: <span className="text-pink-400 font-mono">"Love this! 🌸 $bloom 1000"</span></p>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-full bg-pink-600 flex items-center justify-center text-white font-bold text-xs shrink-0">4</span>
+                      <p>Tip the same cast as many times as you want! 💕</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Tips Sent Tab */}
+              <TabsContent value="sent" className="mt-4">
+                <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-pink-200 flex items-center gap-2">
+                      <ArrowUpRight className="w-5 h-5 text-pink-400" />
+                      Tips Sent
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingHistory ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
+                      </div>
+                    ) : tipsSent.length === 0 ? (
+                      <div className="text-center py-8">
+                        <span className="text-4xl mb-3 block">🌸</span>
+                        <p className="text-pink-300/70 text-sm">No tips sent yet</p>
+                        <p className="text-pink-400/50 text-xs mt-1">Start spreading the BLOOM love!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {tipsSent.map((tip) => (
+                          <div key={tip.id} className="flex items-center justify-between p-3 bg-pink-900/20 rounded-lg border border-pink-500/20">
+                            <div>
+                              <p className="text-white font-medium">To @{tip.to_username || 'user'}</p>
+                              <p className="text-pink-400/60 text-xs">{formatDate(tip.timestamp)}</p>
+                            </div>
+                            <span className="text-pink-400 font-bold">{formatNumber(tip.amount)} 🌸</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Tips Received Tab */}
+              <TabsContent value="received" className="mt-4">
+                <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-pink-200 flex items-center gap-2">
+                      <ArrowDownLeft className="w-5 h-5 text-green-400" />
+                      Tips Received
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingHistory ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
+                      </div>
+                    ) : tipsReceived.length === 0 ? (
+                      <div className="text-center py-8">
+                        <span className="text-4xl mb-3 block">💕</span>
+                        <p className="text-pink-300/70 text-sm">No tips received yet</p>
+                        <p className="text-pink-400/50 text-xs mt-1">Keep creating great content!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {tipsReceived.map((tip) => (
+                          <div key={tip.id} className="flex items-center justify-between p-3 bg-green-900/20 rounded-lg border border-green-500/20">
+                            <div>
+                              <p className="text-white font-medium">From @{tip.from_username || 'user'}</p>
+                              <p className="text-green-400/60 text-xs">{formatDate(tip.timestamp)}</p>
+                            </div>
+                            <span className="text-green-400 font-bold">+{formatNumber(tip.amount)} 🌸</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </>
         )}
       </div>
