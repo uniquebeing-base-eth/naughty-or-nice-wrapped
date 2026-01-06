@@ -3,21 +3,25 @@ import { useFarcaster } from '@/contexts/FarcasterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, ExternalLink, Loader2, Coins, TrendingUp, Wallet, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Coins, TrendingUp, Wallet, CheckCircle2, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useFarcasterWallet } from '@/hooks/useFarcasterWallet';
-import { parseUnits, formatUnits } from 'viem';
+import { parseUnits, formatUnits, createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
+import { sdk } from '@farcaster/miniapp-sdk';
 import Snowfall from '@/components/Snowfall';
 
 // BLOOM Token on Base
 const BLOOM_TOKEN_ADDRESS = '0xd6B69E58D44e523EB58645F1B78425c96Dfa648C' as const;
 
-// BLOOM Tipping Contract (will be deployed)
-const BLOOM_TIPPING_ADDRESS = '0x0000000000000000000000000000000000000000' as const; // TODO: Deploy and update
+// Token for buying (the one users swap to)
+const BLOOM_SWAP_TOKEN = '0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07' as const;
 
-// ERC20 ABI for approval
+// BLOOM Tipping Contract (deploy and update this address)
+const BLOOM_TIPPING_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
+
+// ERC20 ABI for approval and balance
 const ERC20_ABI = [
   {
     name: 'approve',
@@ -46,13 +50,6 @@ const ERC20_ABI = [
     inputs: [{ name: 'account', type: 'address' }],
     outputs: [{ name: '', type: 'uint256' }],
   },
-  {
-    name: 'decimals',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [],
-    outputs: [{ name: '', type: 'uint8' }],
-  },
 ] as const;
 
 interface BloomPrice {
@@ -61,18 +58,55 @@ interface BloomPrice {
   volume24h: string;
 }
 
+interface NeynarUser {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp_url: string;
+  verified_addresses: {
+    eth_addresses: string[];
+  };
+}
+
 const BloomTipping = () => {
-  const { isInMiniApp } = useFarcaster();
+  const { user, isInMiniApp } = useFarcaster();
   const navigate = useNavigate();
-  const { address, isConnected, connect, walletClient } = useFarcasterWallet();
   
+  const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(null);
   const [bloomPrice, setBloomPrice] = useState<BloomPrice | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(true);
   const [approvalAmount, setApprovalAmount] = useState('');
   const [isApproving, setIsApproving] = useState(false);
   const [currentAllowance, setCurrentAllowance] = useState<string>('0');
   const [bloomBalance, setBloomBalance] = useState<string>('0');
+  const [loadingWallet, setLoadingWallet] = useState(true);
   const [loadingBalances, setLoadingBalances] = useState(false);
+
+  // Fetch wallet address from Neynar using FID
+  const fetchWalletFromNeynar = useCallback(async () => {
+    if (!user?.fid) return;
+    
+    try {
+      setLoadingWallet(true);
+      
+      // Use the fetch-users-by-address edge function to get user data
+      const { data, error } = await supabase.functions.invoke('fetch-users-by-address', {
+        body: { fid: user.fid }
+      });
+      
+      if (error) throw error;
+      
+      const neynarUser = data?.users?.[0] as NeynarUser | undefined;
+      if (neynarUser?.verified_addresses?.eth_addresses?.length > 0) {
+        const address = neynarUser.verified_addresses.eth_addresses[0] as `0x${string}`;
+        setWalletAddress(address);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet from Neynar:', error);
+    } finally {
+      setLoadingWallet(false);
+    }
+  }, [user?.fid]);
 
   // Fetch BLOOM price
   const fetchBloomPrice = useCallback(async () => {
@@ -87,91 +121,107 @@ const BloomTipping = () => {
       }
     } catch (error) {
       console.error('Error fetching BLOOM price:', error);
-      toast.error('Failed to fetch BLOOM price');
     } finally {
       setLoadingPrice(false);
     }
   }, []);
 
-  // Fetch user's BLOOM balance and allowance
+  // Fetch user's BLOOM balance and allowance from chain
   const fetchBalances = useCallback(async () => {
-    if (!address || !walletClient) return;
+    if (!walletAddress) return;
     
     try {
       setLoadingBalances(true);
-      const { createPublicClient, http } = await import('viem');
-      const { base } = await import('viem/chains');
       
       const publicClient = createPublicClient({
         chain: base,
         transport: http(),
       });
 
-      // Get balance - use any to bypass strict typing issues
-      const balanceResult = await (publicClient as any).readContract({
+      // Get balance - use any to bypass viem strict typing
+      const balanceResult = await (publicClient as unknown as { readContract: (args: unknown) => Promise<bigint> }).readContract({
         address: BLOOM_TOKEN_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'balanceOf',
-        args: [address],
+        args: [walletAddress],
       });
       
       // Get allowance for tipping contract
-      const allowanceResult = await (publicClient as any).readContract({
+      const allowanceResult = await (publicClient as unknown as { readContract: (args: unknown) => Promise<bigint> }).readContract({
         address: BLOOM_TOKEN_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'allowance',
-        args: [address, BLOOM_TIPPING_ADDRESS],
+        args: [walletAddress, BLOOM_TIPPING_ADDRESS],
       });
 
-      setBloomBalance(formatUnits(BigInt(balanceResult), 18));
-      setCurrentAllowance(formatUnits(BigInt(allowanceResult), 18));
+      setBloomBalance(formatUnits(balanceResult, 18));
+      setCurrentAllowance(formatUnits(allowanceResult, 18));
     } catch (error) {
       console.error('Error fetching balances:', error);
     } finally {
       setLoadingBalances(false);
     }
-  }, [address, walletClient]);
+  }, [walletAddress]);
 
   useEffect(() => {
     fetchBloomPrice();
-    // Refresh price every 30 seconds
     const interval = setInterval(fetchBloomPrice, 30000);
     return () => clearInterval(interval);
   }, [fetchBloomPrice]);
 
   useEffect(() => {
-    if (isConnected && address) {
+    if (user?.fid) {
+      fetchWalletFromNeynar();
+    }
+  }, [user?.fid, fetchWalletFromNeynar]);
+
+  useEffect(() => {
+    if (walletAddress) {
       fetchBalances();
     }
-  }, [isConnected, address, fetchBalances]);
+  }, [walletAddress, fetchBalances]);
 
-  // Handle approval
+  // Handle approval using Farcaster wallet
   const handleApprove = async () => {
-    if (!walletClient || !address || !approvalAmount) {
-      toast.error('Please connect wallet and enter an amount');
+    if (!walletAddress || !approvalAmount) {
+      toast.error('Please enter an amount');
+      return;
+    }
+
+    if (!sdk?.wallet?.ethProvider) {
+      toast.error('Wallet not available');
       return;
     }
 
     try {
       setIsApproving(true);
       
-      const { base } = await import('viem/chains');
+      const provider = sdk.wallet.ethProvider;
       const amount = parseUnits(approvalAmount, 18);
       
-      const hash = await walletClient.writeContract({
-        address: BLOOM_TOKEN_ADDRESS,
+      // Encode the approve function call
+      const { encodeFunctionData } = await import('viem');
+      const data = encodeFunctionData({
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [BLOOM_TIPPING_ADDRESS, amount],
-        chain: base,
-        account: address as `0x${string}`,
+      });
+
+      // Send transaction via Farcaster wallet
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: walletAddress,
+          to: BLOOM_TOKEN_ADDRESS,
+          data: data,
+        }],
       });
 
       toast.success('Approval submitted!', {
-        description: `Transaction: ${hash.slice(0, 10)}...`,
+        description: `Transaction: ${String(txHash).slice(0, 10)}...`,
       });
 
-      // Wait a bit and refresh allowance
+      // Refresh balances after a delay
       setTimeout(() => {
         fetchBalances();
       }, 5000);
@@ -187,7 +237,31 @@ const BloomTipping = () => {
     }
   };
 
-  // Handle max button
+  // Handle buy button - open Farcaster native swap
+  const handleBuyBloom = async () => {
+    if (!sdk?.wallet?.ethProvider) {
+      toast.error('Wallet not available');
+      return;
+    }
+
+    try {
+      // Use Farcaster's native swap action if available
+      if (sdk.actions && 'openUrl' in sdk.actions) {
+        // Open the swap in Warpcast which will use Warplet
+        await (sdk.actions as { openUrl: (url: string) => Promise<void> }).openUrl(
+          `https://warpcast.com/~/swap?token=${BLOOM_SWAP_TOKEN}`
+        );
+      } else {
+        // Fallback: try to open via provider
+        window.open(`https://warpcast.com/~/swap?token=${BLOOM_SWAP_TOKEN}`, '_blank');
+      }
+    } catch (error) {
+      console.error('Error opening swap:', error);
+      // Fallback to direct URL
+      window.open(`https://warpcast.com/~/swap?token=${BLOOM_SWAP_TOKEN}`, '_blank');
+    }
+  };
+
   const handleMax = () => {
     setApprovalAmount(bloomBalance);
   };
@@ -199,6 +273,19 @@ const BloomTipping = () => {
     return n.toFixed(4);
   };
 
+  // Format price with 8 decimals for small values
+  const formatPrice = (priceStr: string) => {
+    const price = parseFloat(priceStr);
+    if (price < 0.0001) {
+      return price.toFixed(10); // Show up to 10 decimals for very small prices
+    } else if (price < 0.01) {
+      return price.toFixed(8);
+    } else if (price < 1) {
+      return price.toFixed(6);
+    }
+    return price.toFixed(4);
+  };
+
   if (!isInMiniApp) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#1a0a28] to-[#0a1628] flex items-center justify-center p-4">
@@ -208,7 +295,7 @@ const BloomTipping = () => {
             <h2 className="text-2xl font-bold text-white mb-2">BLOOM Tipping</h2>
             <p className="text-purple-200/70 mb-4">Open in Farcaster to access BLOOM tipping</p>
             <Button
-              onClick={() => window.open('https://warpcast.com/~/composer-actions?url=https://bloomers.app/bloomers', '_blank')}
+              onClick={() => window.open('https://warpcast.com', '_blank')}
               className="bg-purple-600 hover:bg-purple-700"
             >
               Open in Warpcast
@@ -261,7 +348,7 @@ const BloomTipping = () => {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-white">
-                    ${parseFloat(bloomPrice.priceUsd).toFixed(6)}
+                    ${formatPrice(bloomPrice.priceUsd)}
                   </span>
                   <span className={`text-sm font-medium ${bloomPrice.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {bloomPrice.priceChange24h >= 0 ? '+' : ''}{bloomPrice.priceChange24h.toFixed(2)}%
@@ -277,29 +364,30 @@ const BloomTipping = () => {
             
             <Button
               className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold"
-              onClick={() => window.open('https://app.uniswap.org/swap?chain=base&outputCurrency=0xd6B69E58D44e523EB58645F1B78425c96Dfa648C', '_blank')}
+              onClick={handleBuyBloom}
             >
-              <ExternalLink className="w-4 h-4 mr-2" />
+              <ShoppingCart className="w-4 h-4 mr-2" />
               Buy BLOOM
             </Button>
           </CardContent>
         </Card>
 
-        {/* Wallet Connection */}
-        {!isConnected ? (
+        {/* Wallet & Balance Card */}
+        {loadingWallet ? (
+          <Card className="bg-black/40 border-purple-500/30 backdrop-blur-xl">
+            <CardContent className="p-6 text-center">
+              <Loader2 className="w-8 h-8 mx-auto mb-4 text-purple-400 animate-spin" />
+              <p className="text-purple-200/70">Loading wallet...</p>
+            </CardContent>
+          </Card>
+        ) : !walletAddress ? (
           <Card className="bg-black/40 border-purple-500/30 backdrop-blur-xl">
             <CardContent className="p-6 text-center">
               <Wallet className="w-12 h-12 mx-auto mb-4 text-purple-400" />
-              <h3 className="text-lg font-bold text-white mb-2">Connect Wallet</h3>
-              <p className="text-purple-200/70 text-sm mb-4">
-                Connect your wallet to approve BLOOM for tipping
+              <h3 className="text-lg font-bold text-white mb-2">No Verified Wallet</h3>
+              <p className="text-purple-200/70 text-sm">
+                Please verify your wallet address on Farcaster to use BLOOM tipping
               </p>
-              <Button
-                onClick={connect}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                Connect Wallet
-              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -311,6 +399,9 @@ const BloomTipping = () => {
                   <Wallet className="w-5 h-5" />
                   Your BLOOM
                 </CardTitle>
+                <p className="text-xs text-purple-400/60 font-mono">
+                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                </p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {loadingBalances ? (
@@ -365,7 +456,7 @@ const BloomTipping = () => {
                 
                 {approvalAmount && bloomPrice && (
                   <p className="text-sm text-purple-300/70">
-                    ≈ ${(parseFloat(approvalAmount) * parseFloat(bloomPrice.priceUsd)).toFixed(2)} USD
+                    ≈ ${(parseFloat(approvalAmount) * parseFloat(bloomPrice.priceUsd)).toFixed(6)} USD
                   </p>
                 )}
 

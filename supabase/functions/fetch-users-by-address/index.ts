@@ -11,21 +11,57 @@ serve(async (req) => {
   }
 
   try {
-    const { addresses } = await req.json();
+    const body = await req.json();
+    const { addresses, fid } = body;
     
-    if (!addresses || !Array.isArray(addresses) || addresses.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'addresses array is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const NEYNAR_API_KEY = Deno.env.get('NEYNAR_API_KEY');
     if (!NEYNAR_API_KEY) {
       console.error('NEYNAR_API_KEY not configured');
       return new Response(
         JSON.stringify({ users: {} }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If FID is provided, fetch user by FID
+    if (fid) {
+      try {
+        const response = await fetch(
+          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`,
+          {
+            headers: {
+              'accept': 'application/json',
+              'x-api-key': NEYNAR_API_KEY,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          console.error(`Neynar API error: ${response.status}`);
+          return new Response(
+            JSON.stringify({ users: [] }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const data = await response.json();
+        return new Response(
+          JSON.stringify({ users: data.users || [] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (err) {
+        console.error('Error fetching user by FID:', err);
+        return new Response(
+          JSON.stringify({ users: [] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    
+    if (!addresses || !Array.isArray(addresses) || addresses.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'addresses array or fid is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
