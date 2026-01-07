@@ -29,6 +29,12 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  * - Volume caps
  * - Min/max tip amounts
  * - One-tip-per-cast restrictions
+ * 
+ * Batch Behavior:
+ * - Deterministic: batch either fully succeeds or fully reverts
+ * - Sequential nonce enforcement: tipNonces[i] == startNonce + i
+ * - No silent skips - invalid conditions revert entire batch
+ * - Nonce updated once after successful batch completion
  */
 contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -54,7 +60,23 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         uint256 timestamp;
     }
     
+    // Struct for batch tips (fixes stack-too-deep error)
+    struct TipData {
+        address to;
+        uint256 amount;
+        uint256 fromFid;
+        uint256 toFid;
+        bytes32 castHash;
+        uint256 nonce;
+        uint256 deadline;
+        bytes signature;
+    }
+    
     Tip[] public tips;
+    
+    // User tip tracking for history
+    mapping(address => uint256[]) public tipsSent;
+    mapping(address => uint256[]) public tipsReceived;
     
     // ============ Events ============
     
@@ -69,6 +91,7 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     );
     
     event SignerUpdated(address indexed oldSigner, address indexed newSigner);
+    event BatchTipCompleted(address indexed from, uint256 tipCount, uint256 totalAmount);
     
     // ============ Errors ============
     
@@ -79,6 +102,9 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     error InsufficientBalance();
     error InvalidRecipient();
     error ZeroAmount();
+    error EmptyBatch();
+    error BatchTooLarge();
+    error InvalidNonceSequence();
 
     // ============ Constructor ============
     
@@ -90,10 +116,10 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         signer = _signer;
     }
 
-    // ============ Core Functions ============
+    // ============ Single Tip (Permissive) ============
     
     /**
-     * @dev Process a tip with signature verification
+     * @dev Process a single tip with signature verification
      * Users can tip the same cast multiple times - no restrictions.
      * Backend controls what gets signed.
      * 
@@ -154,6 +180,7 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         nonces[msg.sender]++;
         
         // Record tip for transparency
+        uint256 tipIndex = tips.length;
         tips.push(Tip({
             from: msg.sender,
             to: to,
@@ -163,6 +190,10 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
             castHash: castHash,
             timestamp: block.timestamp
         }));
+        
+        // Track for user history
+        tipsSent[msg.sender].push(tipIndex);
+        tipsReceived[to].push(tipIndex);
         
         // Transfer tokens
         bloomToken.safeTransferFrom(msg.sender, to, amount);
@@ -170,95 +201,126 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
         emit TipSent(msg.sender, to, amount, fromFid, toFid, castHash, block.timestamp);
     }
     
+    // ============ Batch Tip (Strict - All or Nothing) ============
+    
     /**
-     * @dev Batch process multiple tips (gas efficient for backend)
-     * No restrictions on re-tipping same casts.
+     * @dev Batch process multiple tips with deterministic execution
+     * 
+     * Behavior:
+     * - Batch either fully succeeds or fully reverts (no silent skips)
+     * - Sequential nonce enforcement: tipNonces[i] == startNonce + i
+     * - Nonce updated once after successful batch completion
+     * - No restrictions on re-tipping same casts
+     * 
+     * @param tipDataArray Array of TipData structs containing all tip information
      */
-    function batchTip(
-        address[] calldata recipients,
-        uint256[] calldata amounts,
-        uint256[] calldata fromFids,
-        uint256[] calldata toFids,
-        bytes32[] calldata castHashes,
-        uint256[] calldata tipNonces,
-        uint256[] calldata deadlines,
-        bytes[] calldata signatures
-    ) external nonReentrant whenNotPaused {
-        require(recipients.length == amounts.length, "Length mismatch");
-        require(recipients.length == signatures.length, "Length mismatch");
-        require(recipients.length <= 50, "Too many tips"); // Gas limit
+    function batchTip(TipData[] calldata tipDataArray) external nonReentrant whenNotPaused {
+        uint256 batchSize = tipDataArray.length;
+        if (batchSize == 0) revert EmptyBatch();
+        if (batchSize > 50) revert BatchTooLarge();
         
-        for (uint256 i = 0; i < recipients.length; i++) {
-            _processTip(
-                recipients[i],
-                amounts[i],
-                fromFids[i],
-                toFids[i],
-                castHashes[i],
-                tipNonces[i],
-                deadlines[i],
-                signatures[i]
-            );
+        uint256 startNonce = nonces[msg.sender];
+        uint256 totalAmount = 0;
+        
+        // Pre-calculate total amount for upfront balance/allowance check
+        for (uint256 i = 0; i < batchSize; i++) {
+            totalAmount += tipDataArray[i].amount;
         }
+        
+        // Check balance and allowance upfront for entire batch
+        if (bloomToken.balanceOf(msg.sender) < totalAmount) {
+            revert InsufficientBalance();
+        }
+        if (bloomToken.allowance(msg.sender, address(this)) < totalAmount) {
+            revert InsufficientAllowance();
+        }
+        
+        // Process each tip strictly (reverts on any failure)
+        for (uint256 i = 0; i < batchSize; i++) {
+            _processTipStrict(tipDataArray[i], startNonce + i);
+        }
+        
+        // Update nonce once after successful batch
+        nonces[msg.sender] = startNonce + batchSize;
+        
+        emit BatchTipCompleted(msg.sender, batchSize, totalAmount);
     }
     
-    function _processTip(
-        address to,
-        uint256 amount,
-        uint256 fromFid,
-        uint256 toFid,
-        bytes32 castHash,
-        uint256 nonce,
-        uint256 deadline,
-        bytes calldata signature
+    /**
+     * @dev Internal strict tip processing for batch operations
+     * Reverts on any validation failure - no silent skips
+     * Does NOT increment nonce (caller handles this)
+     */
+    function _processTipStrict(
+        TipData calldata tipData,
+        uint256 expectedNonce
     ) internal {
-        // Skip invalid tips silently in batch
-        if (to == address(0) || to == msg.sender) return;
-        if (amount == 0) return;
-        if (nonces[msg.sender] != nonce) return;
-        if (block.timestamp > deadline) return;
+        // Strict validation - revert on any failure
+        if (tipData.to == address(0) || tipData.to == msg.sender) {
+            revert InvalidRecipient();
+        }
+        if (tipData.amount == 0) revert ZeroAmount();
+        if (tipData.nonce != expectedNonce) revert InvalidNonceSequence();
+        if (block.timestamp > tipData.deadline) revert SignatureExpired();
         
+        // Verify signature
         bytes32 messageHash = keccak256(abi.encodePacked(
             msg.sender,
-            to,
-            amount,
-            fromFid,
-            toFid,
-            castHash,
-            nonce,
-            deadline,
+            tipData.to,
+            tipData.amount,
+            tipData.fromFid,
+            tipData.toFid,
+            tipData.castHash,
+            tipData.nonce,
+            tipData.deadline,
             block.chainid,
             address(this)
         ));
         
         bytes32 ethSignedHash = messageHash.toEthSignedMessageHash();
-        address recoveredSigner = ethSignedHash.recover(signature);
+        address recoveredSigner = ethSignedHash.recover(tipData.signature);
         
-        if (recoveredSigner != signer) return;
-        if (bloomToken.allowance(msg.sender, address(this)) < amount) return;
-        if (bloomToken.balanceOf(msg.sender) < amount) return;
+        if (recoveredSigner != signer) revert InvalidSignature();
         
-        nonces[msg.sender]++;
-        
+        // Record tip
+        uint256 tipIndex = tips.length;
         tips.push(Tip({
             from: msg.sender,
-            to: to,
-            amount: amount,
-            fromFid: fromFid,
-            toFid: toFid,
-            castHash: castHash,
+            to: tipData.to,
+            amount: tipData.amount,
+            fromFid: tipData.fromFid,
+            toFid: tipData.toFid,
+            castHash: tipData.castHash,
             timestamp: block.timestamp
         }));
         
-        bloomToken.safeTransferFrom(msg.sender, to, amount);
+        // Track for user history
+        tipsSent[msg.sender].push(tipIndex);
+        tipsReceived[tipData.to].push(tipIndex);
         
-        emit TipSent(msg.sender, to, amount, fromFid, toFid, castHash, block.timestamp);
+        // Transfer tokens
+        bloomToken.safeTransferFrom(msg.sender, tipData.to, tipData.amount);
+        
+        emit TipSent(
+            msg.sender,
+            tipData.to,
+            tipData.amount,
+            tipData.fromFid,
+            tipData.toFid,
+            tipData.castHash,
+            block.timestamp
+        );
     }
 
     // ============ View Functions ============
     
     function getTipCount() external view returns (uint256) {
         return tips.length;
+    }
+    
+    function getTip(uint256 index) external view returns (Tip memory) {
+        require(index < tips.length, "Index out of bounds");
+        return tips[index];
     }
     
     function getTips(uint256 offset, uint256 limit) external view returns (Tip[] memory) {
@@ -275,6 +337,50 @@ contract BloomTipping is Ownable, ReentrancyGuard, Pausable {
     
     function getUserNonce(address user) external view returns (uint256) {
         return nonces[user];
+    }
+    
+    function getTipsSentCount(address user) external view returns (uint256) {
+        return tipsSent[user].length;
+    }
+    
+    function getTipsReceivedCount(address user) external view returns (uint256) {
+        return tipsReceived[user].length;
+    }
+    
+    function getTipsSentByUser(address user, uint256 offset, uint256 limit) 
+        external view returns (Tip[] memory) 
+    {
+        uint256[] storage indices = tipsSent[user];
+        uint256 total = indices.length;
+        
+        if (offset >= total) return new Tip[](0);
+        
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        
+        Tip[] memory result = new Tip[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            result[i - offset] = tips[indices[i]];
+        }
+        return result;
+    }
+    
+    function getTipsReceivedByUser(address user, uint256 offset, uint256 limit) 
+        external view returns (Tip[] memory) 
+    {
+        uint256[] storage indices = tipsReceived[user];
+        uint256 total = indices.length;
+        
+        if (offset >= total) return new Tip[](0);
+        
+        uint256 end = offset + limit;
+        if (end > total) end = total;
+        
+        Tip[] memory result = new Tip[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            result[i - offset] = tips[indices[i]];
+        }
+        return result;
     }
 
     // ============ Admin Functions ============
