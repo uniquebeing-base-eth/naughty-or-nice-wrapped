@@ -4,20 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, Coins, TrendingUp, Wallet, CheckCircle2, Plus, ArrowUpRight, ArrowDownLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, TrendingUp, Wallet, CheckCircle2, Plus, ArrowUpRight, ArrowDownLeft, Sparkles, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { parseUnits, formatUnits, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import { sdk } from '@farcaster/miniapp-sdk';
 import Snowfall from '@/components/Snowfall';
-
-// BLOOM Token on Base
-const BLOOM_TOKEN_ADDRESS = '0xd6B69E58D44e523EB58645F1B78425c96Dfa648C' as const;
-
-// BLOOM Tipping Contract (deploy and update this address)
-const BLOOM_TIPPING_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
+import { BLOOM_TOKEN_ADDRESS, BLOOM_TIPPING_ADDRESS, BLOOM_TIPPING_ABI } from '@/config/wagmi';
 
 // Quick approve presets
 const APPROVE_PRESETS = [
@@ -74,18 +68,31 @@ interface NeynarUser {
   };
 }
 
-interface TipRecord {
-  id: string;
-  from_address: string;
-  to_address: string;
-  amount: string;
-  from_fid: number;
-  to_fid: number;
-  cast_hash: string;
-  timestamp: string;
-  from_username?: string;
-  to_username?: string;
+interface OnChainTip {
+  from: `0x${string}`;
+  to: `0x${string}`;
+  amount: bigint;
+  fromFid: bigint;
+  toFid: bigint;
+  castHash: `0x${string}`;
+  timestamp: bigint;
 }
+
+interface TipDisplay {
+  id: string;
+  from: string;
+  to: string;
+  amount: string;
+  fromFid: number;
+  toFid: number;
+  timestamp: Date;
+  username?: string;
+}
+
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(),
+});
 
 const BloomTipping = () => {
   const { user, isInMiniApp } = useFarcaster();
@@ -101,9 +108,11 @@ const BloomTipping = () => {
   const [loadingWallet, setLoadingWallet] = useState(true);
   const [loadingBalances, setLoadingBalances] = useState(false);
   const [activeTab, setActiveTab] = useState('approve');
-  const [tipsSent, setTipsSent] = useState<TipRecord[]>([]);
-  const [tipsReceived, setTipsReceived] = useState<TipRecord[]>([]);
+  const [tipsSent, setTipsSent] = useState<TipDisplay[]>([]);
+  const [tipsReceived, setTipsReceived] = useState<TipDisplay[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [userNonce, setUserNonce] = useState<bigint>(0n);
+  const [tipStats, setTipStats] = useState<{ sent: number; received: number }>({ sent: 0, received: 0 });
 
   // Fetch wallet address from Neynar using FID
   const fetchWalletFromNeynar = useCallback(async () => {
@@ -148,34 +157,40 @@ const BloomTipping = () => {
     }
   }, []);
 
-  // Fetch user's BLOOM balance and allowance from chain
+  // Fetch user's BLOOM balance, allowance, and nonce from chain
   const fetchBalances = useCallback(async () => {
     if (!walletAddress) return;
     
     try {
       setLoadingBalances(true);
       
-      const publicClient = createPublicClient({
-        chain: base,
-        transport: http(),
-      });
-
-      const balanceResult = await (publicClient as unknown as { readContract: (args: unknown) => Promise<bigint> }).readContract({
-        address: BLOOM_TOKEN_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: 'balanceOf',
-        args: [walletAddress],
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = publicClient as any;
       
-      const allowanceResult = await (publicClient as unknown as { readContract: (args: unknown) => Promise<bigint> }).readContract({
-        address: BLOOM_TOKEN_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: 'allowance',
-        args: [walletAddress, BLOOM_TIPPING_ADDRESS],
-      });
+      const [balanceResult, allowanceResult, nonceResult] = await Promise.all([
+        client.readContract({
+          address: BLOOM_TOKEN_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'balanceOf',
+          args: [walletAddress],
+        }),
+        client.readContract({
+          address: BLOOM_TOKEN_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'allowance',
+          args: [walletAddress, BLOOM_TIPPING_ADDRESS],
+        }),
+        client.readContract({
+          address: BLOOM_TIPPING_ADDRESS,
+          abi: BLOOM_TIPPING_ABI,
+          functionName: 'getUserNonce',
+          args: [walletAddress],
+        }),
+      ]) as [bigint, bigint, bigint];
 
       setBloomBalance(formatUnits(balanceResult, 18));
       setCurrentAllowance(formatUnits(allowanceResult, 18));
+      setUserNonce(nonceResult);
     } catch (error) {
       console.error('Error fetching balances:', error);
     } finally {
@@ -183,16 +198,67 @@ const BloomTipping = () => {
     }
   }, [walletAddress]);
 
-  // Mock tip history - in production, fetch from your backend
+  // Fetch tip history from contract
   const fetchTipHistory = useCallback(async () => {
     if (!walletAddress) return;
     
     try {
       setLoadingHistory(true);
-      // TODO: Replace with actual backend call to fetch tip history
-      // For now, using empty arrays as placeholder
-      setTipsSent([]);
-      setTipsReceived([]);
+      
+      // Fetch counts first
+      const [sentCount, receivedCount] = await Promise.all([
+        publicClient.readContract({
+          address: BLOOM_TIPPING_ADDRESS,
+          abi: BLOOM_TIPPING_ABI,
+          functionName: 'getTipsSentCount',
+          args: [walletAddress],
+        } as const),
+        publicClient.readContract({
+          address: BLOOM_TIPPING_ADDRESS,
+          abi: BLOOM_TIPPING_ABI,
+          functionName: 'getTipsReceivedCount',
+          args: [walletAddress],
+        } as const),
+      ]) as [bigint, bigint];
+
+      setTipStats({ sent: Number(sentCount), received: Number(receivedCount) });
+
+      // Fetch recent tips (up to 20 each)
+      const limit = 20n;
+      const [sentTips, receivedTips] = await Promise.all([
+        sentCount > 0n
+          ? (publicClient.readContract({
+              address: BLOOM_TIPPING_ADDRESS,
+              abi: BLOOM_TIPPING_ABI,
+              functionName: 'getTipsSentByUser',
+              args: [walletAddress, 0n, limit],
+            } as const) as Promise<readonly OnChainTip[]>)
+          : Promise.resolve([] as readonly OnChainTip[]),
+        receivedCount > 0n
+          ? (publicClient.readContract({
+              address: BLOOM_TIPPING_ADDRESS,
+              abi: BLOOM_TIPPING_ABI,
+              functionName: 'getTipsReceivedByUser',
+              args: [walletAddress, 0n, limit],
+            } as const) as Promise<readonly OnChainTip[]>)
+          : Promise.resolve([] as readonly OnChainTip[]),
+      ]);
+
+      // Convert to display format
+      const formatTips = (tips: readonly OnChainTip[], isSent: boolean): TipDisplay[] => {
+        return (tips as OnChainTip[]).map((tip, index) => ({
+          id: `${isSent ? 'sent' : 'received'}-${index}`,
+          from: tip.from,
+          to: tip.to,
+          amount: formatUnits(tip.amount, 18),
+          fromFid: Number(tip.fromFid),
+          toFid: Number(tip.toFid),
+          timestamp: new Date(Number(tip.timestamp) * 1000),
+        }));
+      };
+
+      setTipsSent(formatTips(sentTips as readonly OnChainTip[], true).reverse());
+      setTipsReceived(formatTips(receivedTips as readonly OnChainTip[], false).reverse());
     } catch (error) {
       console.error('Error fetching tip history:', error);
     } finally {
@@ -228,12 +294,15 @@ const BloomTipping = () => {
       return;
     }
 
-    if (!sdk?.wallet?.ethProvider) {
-      toast.error('Wallet not available');
-      return;
-    }
-
     try {
+      // Dynamically import sdk only when needed in Farcaster environment
+      const { sdk } = await import('@farcaster/miniapp-sdk');
+      
+      if (!sdk?.wallet?.ethProvider) {
+        toast.error('Wallet not available');
+        return;
+      }
+
       setIsApproving(true);
       
       const provider = sdk.wallet.ethProvider;
@@ -293,11 +362,16 @@ const BloomTipping = () => {
     setApprovalAmount(bloomBalance);
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([fetchBalances(), fetchTipHistory()]);
+    toast.success('Refreshed! 🌸');
+  };
+
   const formatNumber = (num: string | number) => {
     const n = typeof num === 'string' ? parseFloat(num) : num;
     if (n >= 1000000) return `${(n / 1000000).toFixed(2)}M`;
     if (n >= 1000) return `${(n / 1000).toFixed(2)}K`;
-    return n.toFixed(4);
+    return n.toFixed(2);
   };
 
   const formatPrice = (priceStr: string) => {
@@ -312,13 +386,17 @@ const BloomTipping = () => {
     return price.toFixed(4);
   };
 
-  const formatDate = (timestamp: string) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const formatAddress = (addr: string) => {
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
   if (!isInMiniApp) {
@@ -360,7 +438,14 @@ const BloomTipping = () => {
             <span className="text-2xl">🌸</span>
             BLOOM Tipping
           </h1>
-          <div className="w-10" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            className="text-pink-300 hover:text-white hover:bg-pink-500/20"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </Button>
         </div>
       </div>
 
@@ -427,7 +512,7 @@ const BloomTipping = () => {
                   Your BLOOM 🌸
                 </CardTitle>
                 <p className="text-xs text-pink-400/60 font-mono">
-                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                  {formatAddress(walletAddress)}
                 </p>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -449,6 +534,14 @@ const BloomTipping = () => {
                         {formatNumber(currentAllowance)} 🌸
                       </span>
                     </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-pink-300/50">Tips Sent:</span>
+                      <span className="text-pink-300">{tipStats.sent}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-pink-300/50">Tips Received:</span>
+                      <span className="text-green-300">{tipStats.received}</span>
+                    </div>
                   </>
                 )}
               </CardContent>
@@ -463,11 +556,11 @@ const BloomTipping = () => {
                 </TabsTrigger>
                 <TabsTrigger value="sent" className="data-[state=active]:bg-pink-600 data-[state=active]:text-white">
                   <ArrowUpRight className="w-4 h-4 mr-1" />
-                  Sent
+                  Sent ({tipStats.sent})
                 </TabsTrigger>
                 <TabsTrigger value="received" className="data-[state=active]:bg-pink-600 data-[state=active]:text-white">
                   <ArrowDownLeft className="w-4 h-4 mr-1" />
-                  Received
+                  Received ({tipStats.received})
                 </TabsTrigger>
               </TabsList>
 
@@ -584,6 +677,15 @@ const BloomTipping = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Contract Info */}
+                <Card className="bg-black/20 border-pink-500/20 backdrop-blur-xl">
+                  <CardContent className="py-3">
+                    <p className="text-xs text-pink-400/50 text-center">
+                      Contract: {formatAddress(BLOOM_TIPPING_ADDRESS)} · Nonce: {userNonce.toString()}
+                    </p>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               {/* Tips Sent Tab */}
@@ -611,8 +713,8 @@ const BloomTipping = () => {
                         {tipsSent.map((tip) => (
                           <div key={tip.id} className="flex items-center justify-between p-3 bg-pink-900/20 rounded-lg border border-pink-500/20">
                             <div>
-                              <p className="text-white font-medium">To @{tip.to_username || 'user'}</p>
-                              <p className="text-pink-400/60 text-xs">{formatDate(tip.timestamp)}</p>
+                              <p className="text-white font-medium">To {formatAddress(tip.to)}</p>
+                              <p className="text-pink-400/60 text-xs">FID: {tip.toFid} · {formatDate(tip.timestamp)}</p>
                             </div>
                             <span className="text-pink-400 font-bold">{formatNumber(tip.amount)} 🌸</span>
                           </div>
@@ -648,8 +750,8 @@ const BloomTipping = () => {
                         {tipsReceived.map((tip) => (
                           <div key={tip.id} className="flex items-center justify-between p-3 bg-green-900/20 rounded-lg border border-green-500/20">
                             <div>
-                              <p className="text-white font-medium">From @{tip.from_username || 'user'}</p>
-                              <p className="text-green-400/60 text-xs">{formatDate(tip.timestamp)}</p>
+                              <p className="text-white font-medium">From {formatAddress(tip.from)}</p>
+                              <p className="text-green-400/60 text-xs">FID: {tip.fromFid} · {formatDate(tip.timestamp)}</p>
                             </div>
                             <span className="text-green-400 font-bold">+{formatNumber(tip.amount)} 🌸</span>
                           </div>
