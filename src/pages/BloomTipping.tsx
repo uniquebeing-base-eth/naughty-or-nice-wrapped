@@ -117,21 +117,42 @@ const BloomTipping = () => {
 
   // Fetch wallet address from Neynar using FID
   const fetchWalletFromNeynar = useCallback(async () => {
-    if (!user?.fid) return;
+    if (!user?.fid) {
+      console.log('No FID available, skipping wallet fetch');
+      setLoadingWallet(false);
+      return;
+    }
     
     try {
       setLoadingWallet(true);
+      console.log('Fetching wallet for FID:', user.fid);
       
       const { data, error } = await supabase.functions.invoke('fetch-users-by-address', {
         body: { fid: user.fid }
       });
       
-      if (error) throw error;
+      console.log('Neynar response:', data);
+      
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
       
       const neynarUser = data?.users?.[0] as NeynarUser | undefined;
+      console.log('Neynar user:', neynarUser);
+      
+      // Try verified addresses first, then custody address
       if (neynarUser?.verified_addresses?.eth_addresses?.length > 0) {
         const address = neynarUser.verified_addresses.eth_addresses[0] as `0x${string}`;
+        console.log('Found verified wallet:', address);
         setWalletAddress(address);
+      } else if ((neynarUser as any)?.custody_address) {
+        // Fallback to custody address if no verified addresses
+        const custodyAddr = (neynarUser as any).custody_address as `0x${string}`;
+        console.log('Using custody address:', custodyAddr);
+        setWalletAddress(custodyAddr);
+      } else {
+        console.log('No wallet address found for user');
       }
     } catch (error) {
       console.error('Error fetching wallet from Neynar:', error);
