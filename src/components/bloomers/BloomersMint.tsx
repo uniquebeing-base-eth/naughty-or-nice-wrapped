@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Upload, ExternalLink, Share2, Loader2, Gift, RefreshCw } from 'lucide-react';
