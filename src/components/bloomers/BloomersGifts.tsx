@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Gift, Share2, ExternalLink, X, Loader2, CheckCircle } from 'lucide-react';
