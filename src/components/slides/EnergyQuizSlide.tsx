@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { QuizQuestion } from '@/types/energy';
 import { Sparkles } from 'lucide-react';
