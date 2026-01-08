@@ -1,3 +1,4 @@
+
 interface SlideProgressProps {
   currentSlide: number;
   totalSlides: number;
