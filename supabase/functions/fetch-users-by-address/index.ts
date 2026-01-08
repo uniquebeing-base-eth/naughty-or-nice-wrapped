@@ -26,6 +26,7 @@ serve(async (req) => {
     // If FID is provided, fetch user by FID
     if (fid) {
       try {
+        console.log(`Fetching user data for FID: ${fid}`);
         const response = await fetch(
           `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`,
           {
@@ -37,22 +38,40 @@ serve(async (req) => {
         );
 
         if (!response.ok) {
-          console.error(`Neynar API error: ${response.status}`);
+          console.error(`Neynar API error: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          console.error('Error body:', errorText);
           return new Response(
-            JSON.stringify({ users: [] }),
+            JSON.stringify({ users: [], error: `Neynar API error: ${response.status}` }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
         const data = await response.json();
+        console.log('Neynar response for FID:', JSON.stringify(data));
+        
+        // Extract users with verified addresses
+        const users = (data.users || []).map((user: any) => ({
+          fid: user.fid,
+          username: user.username,
+          display_name: user.display_name,
+          pfp_url: user.pfp_url,
+          verified_addresses: {
+            eth_addresses: user.verified_addresses?.eth_addresses || [],
+          },
+          custody_address: user.custody_address,
+        }));
+        
+        console.log('Processed users:', JSON.stringify(users));
+        
         return new Response(
-          JSON.stringify({ users: data.users || [] }),
+          JSON.stringify({ users }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } catch (err) {
         console.error('Error fetching user by FID:', err);
         return new Response(
-          JSON.stringify({ users: [] }),
+          JSON.stringify({ users: [], error: String(err) }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
