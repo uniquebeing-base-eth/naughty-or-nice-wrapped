@@ -1,3 +1,4 @@
+
 import { Volume2, VolumeX } from 'lucide-react';
 
 interface MusicControlProps {
