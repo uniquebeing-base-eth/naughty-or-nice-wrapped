@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { MonthlyStats, MonthlyJudgment } from '@/types/monthly';
 import { useMonthlyWrappedData } from '@/hooks/useMonthlyWrappedData';
