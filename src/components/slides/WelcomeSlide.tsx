@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Coins } from 'lucide-react';
