@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { MonthlySlideContent, MonthlyStats } from '@/types/monthly';
 import ChristmasCharacterIcon from '../ChristmasCharacterIcon';
