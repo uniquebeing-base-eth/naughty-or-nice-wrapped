@@ -1,3 +1,4 @@
+
 interface ChristmasCharacterIconProps {
   emoji: string;
   className?: string;
