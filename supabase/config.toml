@@ -52,3 +52,9 @@ verify_jwt = false
 
 [functions.fetch-bloom-price]
 verify_jwt = false
+
+[functions.sign-tip]
+verify_jwt = false
+
+[functions.process-tip-webhook]
+verify_jwt = false

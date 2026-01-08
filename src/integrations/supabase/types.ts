@@ -77,6 +77,54 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_tips: {
+        Row: {
+          amount: string
+          cast_hash: string
+          created_at: string
+          executed_at: string | null
+          id: string
+          receiver_fid: number
+          receiver_wallet: string
+          sender_fid: number
+          sender_username: string | null
+          sender_wallet: string
+          signature: string | null
+          status: string
+          tx_hash: string | null
+        }
+        Insert: {
+          amount: string
+          cast_hash: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          receiver_fid: number
+          receiver_wallet: string
+          sender_fid: number
+          sender_username?: string | null
+          sender_wallet: string
+          signature?: string | null
+          status?: string
+          tx_hash?: string | null
+        }
+        Update: {
+          amount?: string
+          cast_hash?: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          receiver_fid?: number
+          receiver_wallet?: string
+          sender_fid?: number
+          sender_username?: string | null
+          sender_wallet?: string
+          signature?: string | null
+          status?: string
+          tx_hash?: string | null
+        }
+        Relationships: []
+      }
       wrapped_stats: {
         Row: {
           created_at: string
