@@ -254,13 +254,6 @@ export const BLOOM_TIPPING_ABI = [
       },
     ],
   },
-  {
-    name: 'getUserNonce',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'user', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
 ] as const;
 
 // Create wagmi config for Base network
