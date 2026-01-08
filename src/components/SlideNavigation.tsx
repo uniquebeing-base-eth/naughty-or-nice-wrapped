@@ -1,4 +1,5 @@
 
+
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SlideNavigationProps {
