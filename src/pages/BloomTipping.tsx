@@ -115,8 +115,8 @@ const BloomTipping = () => {
   const [userNonce, setUserNonce] = useState<bigint>(0n);
   const [tipStats, setTipStats] = useState<{ sent: number; received: number }>({ sent: 0, received: 0 });
 
-  // Fetch wallet address from Neynar using FID
-  const fetchWalletFromNeynar = useCallback(async () => {
+  // Fetch wallet address directly from Farcaster SDK
+  const fetchWalletFromFarcaster = useCallback(async () => {
     if (!user?.fid) {
       console.log('No FID available, skipping wallet fetch');
       setLoadingWallet(false);
@@ -125,37 +125,33 @@ const BloomTipping = () => {
     
     try {
       setLoadingWallet(true);
-      console.log('Fetching wallet for FID:', user.fid);
+      console.log('Fetching wallet from Farcaster SDK for FID:', user.fid);
       
-      const { data, error } = await supabase.functions.invoke('fetch-users-by-address', {
-        body: { fid: user.fid }
-      });
+      // Import SDK dynamically
+      const { sdk } = await import('@farcaster/miniapp-sdk');
       
-      console.log('Neynar response:', data);
-      
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
+      if (!sdk?.wallet?.ethProvider) {
+        console.log('Farcaster wallet provider not available');
+        setLoadingWallet(false);
+        return;
       }
+
+      const provider = sdk.wallet.ethProvider;
       
-      const neynarUser = data?.users?.[0] as NeynarUser | undefined;
-      console.log('Neynar user:', neynarUser);
+      // Request accounts from the Farcaster wallet
+      const accounts = await provider.request({ 
+        method: 'eth_requestAccounts' 
+      }) as string[];
       
-      // Try verified addresses first, then custody address
-      if (neynarUser?.verified_addresses?.eth_addresses?.length > 0) {
-        const address = neynarUser.verified_addresses.eth_addresses[0] as `0x${string}`;
-        console.log('Found verified wallet:', address);
+      if (accounts && accounts.length > 0) {
+        const address = accounts[0] as `0x${string}`;
+        console.log('Got wallet from Farcaster SDK:', address);
         setWalletAddress(address);
-      } else if ((neynarUser as any)?.custody_address) {
-        // Fallback to custody address if no verified addresses
-        const custodyAddr = (neynarUser as any).custody_address as `0x${string}`;
-        console.log('Using custody address:', custodyAddr);
-        setWalletAddress(custodyAddr);
       } else {
-        console.log('No wallet address found for user');
+        console.log('No accounts returned from Farcaster wallet');
       }
     } catch (error) {
-      console.error('Error fetching wallet from Neynar:', error);
+      console.error('Error fetching wallet from Farcaster SDK:', error);
     } finally {
       setLoadingWallet(false);
     }
@@ -293,9 +289,9 @@ const BloomTipping = () => {
 
   useEffect(() => {
     if (user?.fid) {
-      fetchWalletFromNeynar();
+      fetchWalletFromFarcaster();
     }
-  }, [user?.fid, fetchWalletFromNeynar]);
+  }, [user?.fid, fetchWalletFromFarcaster]);
 
   useEffect(() => {
     if (walletAddress) {
