@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { Button } from '@/components/ui/button';
-import { Share2, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Share2, ArrowLeft, ExternalLink, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +9,10 @@ import { sdk } from '@farcaster/miniapp-sdk';
 import html2canvas from 'html2canvas';
 
 const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped';
+
+// Contract address for gasless transaction
+const CONTRACT_ADDRESS = '0x301dA08F829F9da52eBe7fF1F6d1f0c3E2017d38';
+const MICRO_AMOUNT = '0x2540BE400'; // 0.00000001 ETH
 
 interface SavedJudgment {
   score: number;
@@ -25,6 +29,7 @@ const Wrapped = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const [animate, setAnimate] = useState(false);
+  const [topEngagedUsers, setTopEngagedUsers] = useState<{ username: string }[]>([]);
 
   useEffect(() => {
     const fetchVerdict = async () => {
@@ -43,9 +48,12 @@ const Wrapped = () => {
         if (error) throw error;
 
         if (data?.stats) {
-          const stats = data.stats as { judgment?: SavedJudgment };
+          const stats = data.stats as { judgment?: SavedJudgment; topEngagedUsers?: { username: string }[] };
           if (stats.judgment) {
             setJudgment(stats.judgment);
+          }
+          if (stats.topEngagedUsers) {
+            setTopEngagedUsers(stats.topEngagedUsers);
           }
         }
       } catch (err) {
@@ -59,13 +67,58 @@ const Wrapped = () => {
     if (isSDKLoaded) fetchVerdict();
   }, [user?.fid, isSDKLoaded]);
 
+  // Get top user tags for sharing
+  const getTopUserTags = () => {
+    if (!topEngagedUsers || topEngagedUsers.length === 0) return '';
+    const tags = topEngagedUsers.slice(0, 4).map(u => `@${u.username}`).join(' ');
+    return `\n\n${tags}`;
+  };
+
+  // Gasless transaction before sharing
+  const sendMicroTransaction = async (): Promise<boolean> => {
+    if (!isInMiniApp || !sdk?.wallet?.ethProvider) {
+      console.log('Wallet not available, skipping transaction');
+      return true;
+    }
+
+    try {
+      toast({ title: "🎁 Supporting the app...", description: "Confirm the micro transaction" });
+      
+      const provider = sdk.wallet.ethProvider;
+      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+      if (!accounts || accounts.length === 0) {
+        console.log('No accounts available');
+        return true;
+      }
+
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: accounts[0],
+          to: CONTRACT_ADDRESS,
+          value: MICRO_AMOUNT,
+          chainId: '0x2105',
+        }],
+      });
+
+      console.log('Transaction sent:', txHash);
+      toast({ title: "✅ Thanks for supporting!", description: "Generating your card..." });
+      return true;
+    } catch (err) {
+      console.log('Transaction skipped or failed:', err);
+      return true;
+    }
+  };
+
   const handleShare = async () => {
     if (!judgment) return;
     
     setIsSharing(true);
-    const shareText = `Naughty or Nice Wrapped by @uniquebeing404 ✨\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nThe timeline has spoken. 🎅`;
+    const topTags = getTopUserTags();
+    const shareText = `🎁 Naughty or Nice Wrapped by @uniquebeing404\n\nI'm ${judgment.score}% ${judgment.isNice ? 'NICE' : 'NAUGHTY'} — ${judgment.badge}!\n\nThe timeline has spoken. See you next December! 🎅${topTags}`;
 
     try {
+      await sendMicroTransaction();
       toast({ title: "🎨 Generating your card...", description: "This takes a few seconds" });
 
       const cardElement = document.getElementById('verdict-card');
@@ -149,7 +202,18 @@ const Wrapped = () => {
         <div className="text-center max-w-sm">
           <div className="text-6xl mb-4">🎁</div>
           <h2 className="font-display text-2xl font-bold text-white mb-4">No Verdict Yet</h2>
-          <p className="text-white/60 mb-6">You haven't received your Naughty or Nice verdict yet. Check back during the next Wrapped season!</p>
+          <p className="text-white/60 mb-4">You haven't received your Naughty or Nice verdict yet.</p>
+          
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 mb-6">
+            <div className="flex items-center gap-2 text-amber-400 mb-2">
+              <Calendar className="w-4 h-4" />
+              <span className="text-sm font-bold">Annual Event</span>
+            </div>
+            <p className="text-white/50 text-sm">
+              Wrapped happens once a year in December. Come back next December to see your verdict!
+            </p>
+          </div>
+          
           <Link to="/">
             <Button className="bg-white/10 hover:bg-white/20 text-white rounded-full gap-2">
               <ArrowLeft className="w-4 h-4" />
@@ -209,6 +273,17 @@ const Wrapped = () => {
             {/* Attribution */}
             <p className="text-white/30 text-xs">Made with 🌸 by @uniquebeing404</p>
           </div>
+        </div>
+        
+        {/* Annual reminder */}
+        <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 w-full max-w-sm mt-4 transition-all duration-500 ${animate ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex items-center gap-2 text-amber-400 mb-1">
+            <Calendar className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Yearly Event</span>
+          </div>
+          <p className="text-white/50 text-xs">
+            Wrapped happens every December. Share your verdict and see you next year! ✨
+          </p>
         </div>
 
         {/* Share Button */}

@@ -13,6 +13,10 @@ import EnergyQuizSlide from '@/components/slides/EnergyQuizSlide';
 
 const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped';
 
+// Contract address for gasless transaction
+const CONTRACT_ADDRESS = '0x301dA08F829F9da52eBe7fF1F6d1f0c3E2017d38';
+const MICRO_AMOUNT = '0x2540BE400'; // 0.00000001 ETH
+
 // Daily affirmations pool - different ones for each user/day combo
 const DAILY_AFFIRMATIONS = [
   { text: "Today, I choose to see the magic in ordinary moments.", emoji: "✨" },
@@ -67,6 +71,8 @@ const Energy = () => {
   const [showQuiz, setShowQuiz] = useState(false);
   const [animate, setAnimate] = useState(false);
   const [quizSlide, setQuizSlide] = useState(0);
+  const [isAffirmationSharing, setIsAffirmationSharing] = useState(false);
+  const [topEngagedUsers, setTopEngagedUsers] = useState<{ username: string }[]>([]);
 
   const dailyAffirmation = useMemo(() => {
     if (!user?.fid) return DAILY_AFFIRMATIONS[0];
@@ -126,6 +132,73 @@ const Energy = () => {
     if (isSDKLoaded) fetchEnergy();
   }, [user?.fid, isSDKLoaded]);
 
+  // Fetch top engaged users for tagging
+  useEffect(() => {
+    const fetchTopUsers = async () => {
+      if (!user?.fid) return;
+      try {
+        const { data } = await supabase
+          .from('wrapped_stats')
+          .select('stats')
+          .eq('fid', user.fid)
+          .maybeSingle();
+        
+        if (data?.stats) {
+          const stats = data.stats as { topEngagedUsers?: { username: string }[] };
+          if (stats.topEngagedUsers) {
+            setTopEngagedUsers(stats.topEngagedUsers);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching top users:', err);
+      }
+    };
+    fetchTopUsers();
+  }, [user?.fid]);
+
+  // Get top user tags for sharing
+  const getTopUserTags = () => {
+    if (!topEngagedUsers || topEngagedUsers.length === 0) return '';
+    const tags = topEngagedUsers.slice(0, 4).map(u => `@${u.username}`).join(' ');
+    return `\n\n${tags}`;
+  };
+
+  // Gasless transaction before sharing
+  const sendMicroTransaction = async (): Promise<boolean> => {
+    if (!sdk?.wallet?.ethProvider) {
+      console.log('Wallet not available, skipping transaction');
+      return true;
+    }
+
+    try {
+      toast({ title: "🎁 Supporting the app...", description: "Confirm the micro transaction" });
+      
+      const provider = sdk.wallet.ethProvider;
+      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+      if (!accounts || accounts.length === 0) {
+        console.log('No accounts available');
+        return true;
+      }
+
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: accounts[0],
+          to: CONTRACT_ADDRESS,
+          value: MICRO_AMOUNT,
+          chainId: '0x2105',
+        }],
+      });
+
+      console.log('Transaction sent:', txHash);
+      toast({ title: "✅ Thanks for supporting!", description: "Generating your card..." });
+      return true;
+    } catch (err) {
+      console.log('Transaction skipped or failed:', err);
+      return true;
+    }
+  };
+
   // Handle quiz answer
   const handleQuizAnswer = useCallback((optionLabel: string) => {
     energyQuiz.selectAnswer(optionLabel);
@@ -160,9 +233,11 @@ const Energy = () => {
     if (!savedEnergy) return;
     
     setIsSharing(true);
-    const shareText = `✨ Reveal Energy by @uniquebeing404\n\nMy energy is ${savedEnergy.name} ${savedEnergy.emoji}\n\n${savedEnergy.shareCaption}`;
+    const topTags = getTopUserTags();
+    const shareText = `✨ Reveal Energy by @uniquebeing404\n\nMy vibe? ${savedEnergy.name} ${savedEnergy.emoji}\n\n"${savedEnergy.shareCaption}"${topTags}`;
 
     try {
+      await sendMicroTransaction();
       toast({ title: "🎨 Generating your card...", description: "This takes a few seconds" });
 
       const cardElement = document.getElementById('energy-card');
@@ -212,21 +287,57 @@ const Energy = () => {
   };
 
   const handleShareAffirmation = async () => {
-    const shareText = `${dailyAffirmation.emoji} Daily Affirmation\n\n"${dailyAffirmation.text}"\n\nReveal your energy by @uniquebeing404 ✨`;
+    setIsAffirmationSharing(true);
+    const topTags = getTopUserTags();
+    const shareText = `${dailyAffirmation.emoji} "${dailyAffirmation.text}"\n\nDaily Affirmation from Reveal Energy ✨\nWhat's your vibe today?${topTags}`;
 
     try {
+      await sendMicroTransaction();
+      toast({ title: "🎨 Generating affirmation card...", description: "This takes a few seconds" });
+
+      const cardElement = document.getElementById('affirmation-card');
+      if (!cardElement) throw new Error('Card element not found');
+
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: '#1a0a15',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('Failed to create blob'));
+        }, 'image/png', 0.95);
+      });
+
+      const filename = `affirmation-cards/${user?.username}-${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from('share-images')
+        .upload(filename, blob, { contentType: 'image/png', upsert: true });
+
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+      const { data: urlData } = supabase.storage.from('share-images').getPublicUrl(filename);
+      const imageUrl = urlData.publicUrl;
+
       if (sdk?.actions?.composeCast) {
         await sdk.actions.composeCast({ 
           text: shareText, 
-          embeds: [FARCASTER_MINIAPP_URL] 
+          embeds: [imageUrl, FARCASTER_MINIAPP_URL] 
         });
         toast({ title: "✨ Shared!", description: "Your affirmation has been posted" });
       } else {
-        await navigator.clipboard.writeText(shareText);
+        await navigator.clipboard.writeText(`${shareText}\n\nGet yours: ${FARCASTER_MINIAPP_URL}`);
         toast({ title: "📋 Copied!", description: "Paste to share" });
       }
     } catch (err) {
       console.error('Share error:', err);
+      toast({ title: "Failed to share", description: "Please try again", variant: "destructive" });
+    } finally {
+      setIsAffirmationSharing(false);
     }
   };
 
@@ -299,26 +410,54 @@ const Energy = () => {
       </Link>
 
       <div className="flex flex-col items-center justify-start min-h-screen pt-16 pb-8 space-y-6">
-        {/* Daily Affirmation Card */}
-        <div className={`w-full max-w-sm transition-all duration-700 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="p-6 rounded-3xl bg-gradient-to-b from-amber-500/10 to-orange-500/5 border border-amber-500/20">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span className="text-xs uppercase tracking-widest text-amber-400 font-bold">Daily Affirmation</span>
+        {/* Daily Affirmation Card - Shareable */}
+        <div 
+          id="affirmation-card"
+          className={`w-full max-w-sm transition-all duration-700 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
+          <div className="p-6 rounded-3xl bg-gradient-to-b from-[#2d1f1f] to-[#1a1212] border border-amber-600/30 relative overflow-hidden">
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-900/20 via-transparent to-transparent" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span className="text-xs uppercase tracking-widest text-amber-500 font-bold">Daily Affirmation</span>
+              </div>
+              
+              <p className="text-white text-xl font-semibold mb-3 leading-relaxed">
+                "{dailyAffirmation.text}"
+              </p>
+              
+              <div className="text-4xl mb-4">{dailyAffirmation.emoji}</div>
+              
+              <div className="pt-3 border-t border-amber-800/30">
+                <p className="text-amber-600/80 text-xs font-medium">Reveal Energy by @uniquebeing404</p>
+              </div>
             </div>
-            <p className="text-white text-lg font-medium mb-4">
-              "{dailyAffirmation.text}" {dailyAffirmation.emoji}
-            </p>
-            <Button 
-              onClick={handleShareAffirmation}
-              variant="outline"
-              className="w-full bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20 rounded-full gap-2"
-            >
-              <Share2 className="w-4 h-4" />
-              Share Affirmation
-            </Button>
           </div>
         </div>
+        
+        {/* Share Affirmation Button */}
+        <Button 
+          onClick={handleShareAffirmation}
+          disabled={isAffirmationSharing}
+          className={`w-full max-w-sm bg-gradient-to-r from-amber-600 to-orange-600 hover:brightness-110 text-white px-8 py-3 rounded-full font-bold gap-2 shadow-lg transition-all duration-700 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
+          {isAffirmationSharing ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Share2 className="w-4 h-4" />
+              Share Today's Affirmation
+            </>
+          )}
+        </Button>
+
+        <div className="w-full max-w-sm h-px bg-white/10 my-2" />
 
         {/* Energy Card or Reveal Button */}
         {savedEnergy ? (
