@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import Share from "./pages/Share";
 import Bloomers from "./pages/Bloomers";
 import BloomTipping from "./pages/BloomTipping";
+import Wrapped from "./pages/Wrapped";
+import Energy from "./pages/Energy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
               <Route path="/share" element={<Share />} />
               <Route path="/bloomers" element={<Bloomers />} />
               <Route path="/bloom-tipping" element={<BloomTipping />} />
+              <Route path="/wrapped" element={<Wrapped />} />
+              <Route path="/energy" element={<Energy />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
