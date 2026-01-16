@@ -1,3 +1,4 @@
+
 export type EnergyType =
   | 'main-character-energy'
   | 'quiet-power'
