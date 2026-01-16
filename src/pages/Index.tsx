@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { Button } from '@/components/ui/button';
