@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import type { MiniAppContext, UserContext } from '@farcaster/miniapp-core/dist/context';
