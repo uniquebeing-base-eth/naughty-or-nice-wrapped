@@ -49,6 +49,16 @@ const DAILY_AFFIRMATIONS = [
   { text: "My dreams are valid and achievable.", emoji: "🌈" },
   { text: "I am grateful for this moment.", emoji: "🙏" },
   { text: "I shine brightest when I'm authentic.", emoji: "💡" },
+  { text: "I wake up every day with purpose, clarity, and confidence, knowing that everything I need to succeed is already within me and waiting to be activated.", emoji: "💙" },
+  { text: "I am aligned with greatness, and I allow my creativity, intelligence, and originality to flow freely and boldly into everything I do.", emoji: "💛" } ,
+  { text: "I trust the process of my life, even when I cannot see the full picture, because every step is shaping me into a stronger and wiser person.", emoji: "🙏" } ,
+  { text: "I attract opportunities that match my vision, my energy, and my dedication, and I am always ready to receive them with gratitude.", emoji: "🤭" } ,
+  { text: "I am disciplined and consistent, and through small daily actions, I build extraordinary results over time.", emoji: "😁" } ,
+  { text: "My voice, my ideas, and my talents are powerful, and they deserve to be expressed without fear or hesitation.", emoji: "😊" } ,
+  { text: "I am becoming more confident in who I am and more secure in what I bring to the world every single day.", emoji: "🥰" } ,
+  { text: "I am open to growth, learning, and improvement, and I welcome challenges as proof that I am evolving.",emoji: "😊" } , 
+  { text: "Everything I create carries positive energy, authenticity, and impact, and it reaches the people who need it most.", emoji: "💜" } ,
+  
 ];
 
 // Get a deterministic daily affirmation based on user FID and date
