@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import BloomersHero from '@/components/bloomers/BloomersHero';
