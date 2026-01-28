@@ -10,11 +10,11 @@ interface WelcomeSlideProps {
 }
 
 const welcomeTexts = [
-  { main: "Ho ho ho... We've been watching your December 👀", sub: "Let's see if you've been naughty or nice!" },
-  { main: "Santa's elves tracked your December casts 🎅", sub: "Time to reveal your month!" },
-  { main: "December is almost over... 🎄", sub: "But first, let's judge your timeline behavior!" },
-  { main: "The North Pole reviewed your December activity ❄️", sub: "Were you nice? Were you naughty? Let's find out!" },
-  { main: "Jingle bells, your December tells 🔔", sub: "We know what you posted this month!" },
+{ main: "Ho ho ho... we’ve been spying on your December 👀", sub: "Ready to see if you’ve been naughty or nice?" },
+{ main: "Santa’s elves stalked your December casts 🎅", sub: "It’s reveal time!" },
+{ main: "December is almost wrapped up... 🎄", sub: "But first, let’s rate your timeline vibes!" },
+{ main: "The North Pole audited your December energy ❄️", sub: "Nice? Naughty? Or somewhere in between?" },
+{ main: "Jingle bells, your December tells 🔔", sub: "Your posts have a story to tell!" },
 ];
 
 const WelcomeSlide = ({ username, pfp }: WelcomeSlideProps) => {
