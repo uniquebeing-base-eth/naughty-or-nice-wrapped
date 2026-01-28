@@ -1,4 +1,5 @@
 
+
 import { UserVerdict } from '@/pages/Bloomers';
 
 interface BloomersVerdictProps {
