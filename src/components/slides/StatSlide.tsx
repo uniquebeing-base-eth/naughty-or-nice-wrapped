@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { SlideContent } from '@/types/wrapped';
 import ChristmasCharacterIcon from '../ChristmasCharacterIcon';
@@ -129,5 +128,6 @@ const StatSlide = ({ slide }: StatSlideProps) => {
     </div>
   );
 };
+
 
 export default StatSlide;
