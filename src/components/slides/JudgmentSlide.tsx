@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from 'react';
 import { JudgmentResult, UserStats } from '@/types/wrapped';
 import { Button } from '@/components/ui/button';
@@ -154,6 +152,7 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false, on
         </div>
       </div>
 
+      
       <div className={`mt-4 flex flex-col gap-3 transition-all duration-700 delay-1000 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <Button 
           onClick={(e) => { e.stopPropagation(); onShare(); }} 
