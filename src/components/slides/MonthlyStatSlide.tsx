@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { MonthlySlideContent, MonthlyStats } from '@/types/monthly';
 import ChristmasCharacterIcon from '../ChristmasCharacterIcon';
@@ -174,5 +173,6 @@ const MonthlyStatSlide = ({ slide, stats, onShare, isGeneratingShare = false }: 
     </div>
   );
 };
+
 
 export default MonthlyStatSlide;
