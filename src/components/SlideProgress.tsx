@@ -1,8 +1,8 @@
-
 interface SlideProgressProps {
   currentSlide: number;
   totalSlides: number;
 }
+
 
 const SlideProgress = ({ currentSlide, totalSlides }: SlideProgressProps) => {
   return (
