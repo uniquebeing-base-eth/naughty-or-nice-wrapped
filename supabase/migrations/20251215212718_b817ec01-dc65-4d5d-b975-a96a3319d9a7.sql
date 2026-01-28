@@ -1,3 +1,4 @@
+
 -- Create public bucket for NFT metadata JSON files
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('bloomers-metadata', 'bloomers-metadata', true)
