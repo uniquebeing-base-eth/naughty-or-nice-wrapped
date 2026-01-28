@@ -21,9 +21,9 @@ const PaginationContent = React.forwardRef<HTMLUListElement, React.ComponentProp
 );
 PaginationContent.displayName = "PaginationContent";
 
-const PaginationItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(({ className, ...props }, ref) => (
-  <li ref={ref} className={cn("", className)} {...props} />
-));
+const PaginationItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(
+  ({ className, ...props }, ref) => <li ref={ref} className={cn("", className)} {...props} />
+);
 PaginationItem.displayName = "PaginationItem";
 
 type PaginationLinkProps = {
@@ -39,7 +39,7 @@ const PaginationLink = ({ className, isActive, size = "icon", ...props }: Pagina
         variant: isActive ? "outline" : "ghost",
         size,
       }),
-      className,
+      className
     )}
     {...props}
   />
