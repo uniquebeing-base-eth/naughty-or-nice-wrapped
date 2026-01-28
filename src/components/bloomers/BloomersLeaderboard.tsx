@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Trophy, Coins, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+
 interface LeaderboardEntry {
   user_address: string;
   fid: number | null;
