@@ -1,3 +1,4 @@
+
 -- Create storage bucket for bloomers
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('bloomers', 'bloomers', true)
