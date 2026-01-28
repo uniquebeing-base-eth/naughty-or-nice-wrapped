@@ -1,12 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -14,6 +12,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  
   try {
     const { fid } = await req.json();
     const NEYNAR_API_KEY = Deno.env.get('NEYNAR_API_KEY');
@@ -24,6 +23,7 @@ serve(async (req) => {
       throw new Error('NEYNAR_API_KEY is not configured');
     }
 
+    
     if (!fid) {
       throw new Error('FID is required');
     }
