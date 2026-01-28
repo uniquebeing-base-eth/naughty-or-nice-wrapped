@@ -1,10 +1,11 @@
-
 import { Volume2, VolumeX } from 'lucide-react';
+
 
 interface MusicControlProps {
   isMuted: boolean;
   onToggle: () => void;
 }
+
 
 const MusicControl = ({ isMuted, onToggle }: MusicControlProps) => {
   return (
