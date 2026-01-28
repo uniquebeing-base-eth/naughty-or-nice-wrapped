@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -71,6 +72,7 @@ serve(async (req) => {
         target_fids: target_fids || [], // Empty array sends to all opted-in users
       }),
     });
+     
 
     const responseText = await response.text();
     console.log('Neynar API response status:', response.status);
