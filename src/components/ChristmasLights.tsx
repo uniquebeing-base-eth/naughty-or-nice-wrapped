@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 
 const ChristmasLights = () => {
@@ -10,6 +9,7 @@ const ChristmasLights = () => {
       'bg-christmas-candy',
       'bg-christmas-ice',
     ];
+
     
     return Array.from({ length: 20 }, (_, i) => ({
       id: i,
@@ -18,6 +18,7 @@ const ChristmasLights = () => {
     }));
   }, []);
 
+  
   return (
     <div className="fixed top-0 left-0 right-0 z-10 flex justify-center">
       <div className="flex gap-6 py-2">
