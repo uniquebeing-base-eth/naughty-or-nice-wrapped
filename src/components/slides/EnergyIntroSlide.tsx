@@ -1,4 +1,5 @@
 
+
 import { useEffect, useState } from 'react';
 import { Sparkles, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ const EnergyIntroSlide = ({ onStart }: EnergyIntroSlideProps) => {
         <div className="absolute top-1/2 right-8 text-2xl animate-float" style={{ animationDelay: '2.5s' }}>🦋</div>
       </div>
 
+     // mainly for discovery and good ui experience 
+      
       {/* Main card */}
       <div 
         className={`relative christmas-card shadow-[0_0_100px_hsl(280_70%_50%/0.5)] border-2 border-purple-500/30 max-w-sm w-full transition-all duration-1000 ${
