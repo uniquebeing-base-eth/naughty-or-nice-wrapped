@@ -12,11 +12,12 @@ import bloomerGoldenSpirit from '@/assets/bloomers/bloomer-golden-spirit.png';
 import bloomerFrostGuardian from '@/assets/bloomers/bloomer-frost-guardian.png';
 
 const BLOOMER_VARIATIONS = [
-  { image: bloomerCelestialFox, color: 'from-amber-400 to-yellow-500', name: 'Celestial Fox' },
-  { image: bloomerMysticKitsune, color: 'from-purple-500 to-pink-500', name: 'Mystic Kitsune' },
-  { image: bloomerBlossomFairy, color: 'from-pink-400 to-rose-500', name: 'Blossom Fairy' },
-  { image: bloomerGoldenSpirit, color: 'from-yellow-400 to-amber-500', name: 'Golden Spirit' },
-  { image: bloomerFrostGuardian, color: 'from-cyan-400 to-blue-500', name: 'Frost Guardian' },
+{ image: bloomerCelestialFox, color: 'from-orange-500 to-red-500', name: 'Celestial Fox' },
+{ image: bloomerMysticKitsune, color: 'from-indigo-500 to-fuchsia-500', name: 'Mystic Kitsune' },
+{ image: bloomerBlossomFairy, color: 'from-rose-400 to-fuchsia-500', name: 'Blossom Fairy' },
+{ image: bloomerGoldenSpirit, color: 'from-amber-500 to-orange-600', name: 'Golden Spirit' },
+{ image: bloomerFrostGuardian, color: 'from-sky-400 to-indigo-500', name: 'Frost Guardian' },
+  
 ];
 
 const VERDICT_TITLES = [
