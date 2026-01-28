@@ -9,11 +9,11 @@ import bloomerGoldenSpirit from '@/assets/bloomers/bloomer-golden-spirit.png';
 import bloomerFrostGuardian from '@/assets/bloomers/bloomer-frost-guardian.png';
 
 const CREATURE_TYPES = [
-  { image: bloomerCelestialFox, name: 'Celestial Fox', desc: 'Angelic guardians with golden wings' },
-  { image: bloomerMysticKitsune, name: 'Mystic Kitsune', desc: 'Crystal spirits of the winter realm' },
-  { image: bloomerBlossomFairy, name: 'Blossom Fairy', desc: 'Keepers of eternal spring magic' },
-  { image: bloomerGoldenSpirit, name: 'Golden Spirit', desc: 'Radiant beings of pure light' },
-  { image: bloomerFrostGuardian, name: 'Frost Guardian', desc: 'Protectors of the frozen wonderland' },
+{ image: bloomerCelestialFox, name: 'Celestial Fox', desc: 'Celestial guides with starlit energy' },
+{ image: bloomerMysticKitsune, name: 'Mystic Kitsune', desc: 'Arcane spirits of hidden wisdom' },
+{ image: bloomerBlossomFairy, name: 'Blossom Fairy', desc: 'Bearers of blooming harmony and life' },
+{ image: bloomerGoldenSpirit, name: 'Golden Spirit', desc: 'Luminous entities of radiant power' },
+{ image: bloomerFrostGuardian, name: 'Frost Guardian', desc: 'Sentinels of the icy frontier' },
 ];
 
 const BloomersTeaser = () => {
