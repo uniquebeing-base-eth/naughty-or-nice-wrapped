@@ -1,3 +1,4 @@
+
 -- Create table to store wrapped stats per FID
 CREATE TABLE public.wrapped_stats (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
