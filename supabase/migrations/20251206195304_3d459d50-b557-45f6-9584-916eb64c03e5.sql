@@ -1,3 +1,4 @@
+
 -- Create storage bucket for share card images
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('share-cards', 'share-cards', true);
