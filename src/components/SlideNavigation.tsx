@@ -1,6 +1,5 @@
-
-
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 
 interface SlideNavigationProps {
   onPrev: () => void;
@@ -8,6 +7,7 @@ interface SlideNavigationProps {
   showPrev: boolean;
   showNext: boolean;
 }
+
 
 const SlideNavigation = ({ onPrev, onNext, showPrev, showNext }: SlideNavigationProps) => {
   return (
