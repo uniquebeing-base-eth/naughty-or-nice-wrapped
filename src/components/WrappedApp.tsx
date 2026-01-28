@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { MonthlyStats, MonthlyJudgment } from '@/types/monthly';
 import { useMonthlyWrappedData } from '@/hooks/useMonthlyWrappedData';
@@ -25,7 +24,9 @@ import { Button } from '@/components/ui/button';
 import html2canvas from 'html2canvas';
 import { ExternalLink } from 'lucide-react';
 
+
 const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped';
+
 
 const FarcasterOnlyGuard = () => (
   <div className="relative min-h-screen overflow-hidden flex items-center justify-center">
