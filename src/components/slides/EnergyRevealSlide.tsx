@@ -1,4 +1,5 @@
 
+
 import { useEffect, useState } from 'react';
 import { EnergyPersonality } from '@/types/energy';
 import { MonthlyStats } from '@/types/monthly';
