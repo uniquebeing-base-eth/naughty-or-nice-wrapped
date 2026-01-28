@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -17,6 +16,7 @@ const getCurrentMonthBounds = () => {
   const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
   return { start, end, monthName: start.toLocaleString('en-US', { month: 'long' }), year };
 };
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
