@@ -1,3 +1,4 @@
+
 -- Create table for minted bloomers
 CREATE TABLE public.minted_bloomers (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
