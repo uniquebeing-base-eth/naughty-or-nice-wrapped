@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 
 const Snowfall = () => {
@@ -10,6 +9,7 @@ const Snowfall = () => {
       const left = Math.random() * 100;
       const opacity = 0.4 + Math.random() * 0.6;
 
+      
       return {
         id: i,
         size,
