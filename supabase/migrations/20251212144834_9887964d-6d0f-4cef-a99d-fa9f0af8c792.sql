@@ -1,3 +1,4 @@
+
 -- Create a public bucket for static assets
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('assets', 'assets', true)
