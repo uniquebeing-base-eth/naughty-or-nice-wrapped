@@ -1,3 +1,4 @@
+
 -- Add fid column to minted_bloomers for linking to Farcaster profiles
 ALTER TABLE public.minted_bloomers 
 ADD COLUMN IF NOT EXISTS fid bigint;
