@@ -1,3 +1,4 @@
+
 -- Add energy_result column to wrapped_stats table
 ALTER TABLE public.wrapped_stats 
 ADD COLUMN energy_result jsonb;
