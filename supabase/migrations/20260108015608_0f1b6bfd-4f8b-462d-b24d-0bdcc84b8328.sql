@@ -1,3 +1,4 @@
+
 -- Create pending_tips table to store tips detected from Farcaster comments
 CREATE TABLE IF NOT EXISTS public.pending_tips (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
