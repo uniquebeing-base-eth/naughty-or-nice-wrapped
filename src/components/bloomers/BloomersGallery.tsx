@@ -9,10 +9,10 @@ interface BloomersGalleryProps {
 
 // Placeholder bloomer examples for empty state
 const EXAMPLE_BLOOMERS = [
-  { name: 'Glowtail Bloomer', verdict: 'Holiday Hero', emoji: '🦊', gradient: 'from-amber-500 to-orange-600' },
-  { name: 'Bloomwing Bloomer', verdict: 'Mischief Spark', emoji: '🦋', gradient: 'from-purple-500 to-pink-500' },
-  { name: 'Starpaw Bloomer', verdict: 'Winter Guardian', emoji: '🐺', gradient: 'from-slate-400 to-blue-600' },
-  { name: 'Crystalheart Bloomer', verdict: 'Joy Bringer', emoji: '🦄', gradient: 'from-pink-400 to-purple-500' },
+{ name: 'Glowtail Bloomer', verdict: 'Chain Champion', emoji: '🦊', gradient: 'from-amber-500 to-orange-600' },
+{ name: 'Bloomwing Bloomer', verdict: 'Vibe Creator', emoji: '🦋', gradient: 'from-purple-500 to-pink-500' },
+{ name: 'Starpaw Bloomer', verdict: 'Space Pioneer', emoji: '🐺', gradient: 'from-slate-400 to-blue-600' },
+{ name: 'Crystalheart Bloomer', verdict: 'Joy Catalyst', emoji: '🦄', gradient: 'from-pink-400 to-purple-500' },
 ];
 
 const BloomersGallery = ({ mintedBloomers }: BloomersGalleryProps) => {
