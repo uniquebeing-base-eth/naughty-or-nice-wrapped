@@ -415,117 +415,200 @@ const BloomTipping = () => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  if (!isInMiniApp) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#1a0a28] to-[#0a1628] flex items-center justify-center p-4">
-        <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
-          <CardContent className="p-8 text-center">
-            <span className="text-5xl mb-4 block">🌸</span>
-            <h2 className="text-2xl font-bold text-white mb-2">BLOOM Tipping</h2>
-            <p className="text-pink-200/70 mb-4">Open in Farcaster to access BLOOM tipping</p>
-            <Button
-              onClick={() => window.open('https://warpcast.com', '_blank')}
-              className="bg-pink-600 hover:bg-pink-700"
-            >
-              Open in Warpcast
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#1a0a28] to-[#0a1628] relative overflow-hidden">
-      {/* Coming Soon Overlay */}
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="text-center px-6 max-w-sm">
-          <div className="p-8 rounded-3xl bg-gradient-to-b from-white/10 to-white/5 border border-pink-500/30 backdrop-blur-xl">
-            <div className="text-6xl mb-4">🌸</div>
-            <h2 className="font-display text-3xl font-bold text-white mb-3">Coming Soon</h2>
-            <p className="text-pink-200/70 mb-6">
-              BLOOM Tipping is being prepared. Check back soon to tip your favorite creators!
-            </p>
-            <Button
-              onClick={() => navigate('/')}
-              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:brightness-110 text-white px-8 py-3 rounded-full font-bold gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </Button>
-          </div>
-        </div>
-      </div>
-      
       <Snowfall />
       
-      {/* Blurred Content Behind */}
-      <div className="blur-sm pointer-events-none opacity-30">
-        {/* Header */}
-        <div className="sticky top-0 z-40 bg-black/40 backdrop-blur-xl border-b border-pink-500/20 p-4">
-          <div className="flex items-center justify-between max-w-lg mx-auto">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-pink-300"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <span className="text-2xl">🌸</span>
-              BLOOM Tipping
-            </h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-pink-300"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </Button>
-          </div>
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-black/40 backdrop-blur-xl border-b border-pink-500/20 p-4">
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          <Button variant="ghost" size="icon" className="text-pink-300" onClick={() => navigate('/')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+            <span className="text-2xl">🌸</span> BLOOM Tipping
+          </h1>
+          <Button variant="ghost" size="icon" className="text-pink-300" onClick={handleRefresh}>
+            <RefreshCw className={`w-5 h-5 ${loadingBalances ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
+      </div>
 
-        <div className="max-w-lg mx-auto p-4 space-y-4 pb-24">
-          {/* Price Card */}
-          <Card className="bg-gradient-to-br from-pink-900/40 to-purple-900/40 border-pink-500/30 backdrop-blur-xl overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-pink-200 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                BLOOM Price
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+      <div className="max-w-lg mx-auto p-4 space-y-4 pb-24">
+        {/* Price Card */}
+        <Card className="bg-gradient-to-br from-pink-900/40 to-purple-900/40 border-pink-500/30 backdrop-blur-xl overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-pink-200 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" /> BLOOM Price
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingPrice ? (
+              <Loader2 className="w-6 h-6 animate-spin text-pink-300" />
+            ) : bloomPrice ? (
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-white">$0.000001</span>
-                  <span className="text-sm font-medium text-green-400">+2.50%</span>
+                  <span className="text-3xl font-bold text-white">${formatPrice(bloomPrice.priceUsd)}</span>
+                  <span className={`text-sm font-medium ${bloomPrice.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {bloomPrice.priceChange24h >= 0 ? '+' : ''}{bloomPrice.priceChange24h.toFixed(2)}%
+                  </span>
                 </div>
+                <p className="text-xs text-pink-300/60">24h Vol: ${formatNumber(bloomPrice.volume24h)}</p>
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              <p className="text-pink-300/60">Unable to load price</p>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Wallet Card */}
+        {/* Wallet */}
+        {loadingWallet ? (
           <Card className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-purple-500/30 backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-purple-200 flex items-center gap-2">
-                <Wallet className="w-5 h-5" />
-                Your Wallet
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-purple-300/70">Balance</span>
-                  <span className="text-white font-bold">1,000,000 🌸</span>
-                </div>
-              </div>
+            <CardContent className="p-6 flex items-center justify-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-purple-300" />
+              <span className="text-purple-200">Connecting wallet...</span>
             </CardContent>
           </Card>
-        </div>
+        ) : !walletAddress ? (
+          <Card className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-purple-500/30 backdrop-blur-xl">
+            <CardContent className="p-6 text-center">
+              <Wallet className="w-8 h-8 text-purple-300 mx-auto mb-3" />
+              <p className="text-purple-200 mb-4">Connect your wallet to manage BLOOM tipping</p>
+              <Button onClick={fetchWalletFromFarcaster} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white px-6 py-3 rounded-full font-bold">
+                Connect Wallet
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <Card className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-purple-500/30 backdrop-blur-xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg text-purple-200 flex items-center gap-2">
+                  <Wallet className="w-5 h-5" /> Your Wallet
+                </CardTitle>
+                <CardDescription className="text-purple-300/60 font-mono text-xs">{formatAddress(walletAddress)}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-300/70">Balance</span>
+                    <span className="text-white font-bold">{formatNumber(bloomBalance)} 🌸</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-300/70">Allowance</span>
+                    <span className="text-white font-bold">{formatNumber(currentAllowance)} 🌸</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-300/70">Tips Sent / Received</span>
+                    <span className="text-white font-bold">{tipStats.sent} / {tipStats.received}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-black/40 border border-pink-500/20">
+                <TabsTrigger value="approve" className="data-[state=active]:bg-pink-600/30 text-white">
+                  <Sparkles className="w-4 h-4 mr-1" /> Approve
+                </TabsTrigger>
+                <TabsTrigger value="history" className="data-[state=active]:bg-purple-600/30 text-white">
+                  <ArrowUpRight className="w-4 h-4 mr-1" /> History
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="approve" className="space-y-4 mt-4">
+                <Card className="bg-black/30 border-pink-500/20 backdrop-blur-xl">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg text-pink-200">Approve BLOOM for Tipping</CardTitle>
+                    <CardDescription className="text-pink-300/60">Set how much BLOOM the tipping contract can use</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-4 gap-2">
+                      {APPROVE_PRESETS.map((preset) => (
+                        <Button key={preset.value} variant="outline" size="sm" onClick={() => handlePresetClick(preset.value)} className="border-pink-500/30 text-pink-200 hover:bg-pink-500/20 text-xs">
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="relative">
+                      <Input type="number" placeholder="Enter BLOOM amount" value={approvalAmount} onChange={(e) => setApprovalAmount(e.target.value)} className="bg-black/30 border-pink-500/30 text-white placeholder:text-pink-300/40 pr-16" />
+                      <Button variant="ghost" size="sm" onClick={handleMax} className="absolute right-1 top-1/2 -translate-y-1/2 text-pink-400 hover:text-pink-300 text-xs h-7">MAX</Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleApprove()} disabled={isApproving || !approvalAmount} className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:brightness-110 text-white font-bold rounded-full">
+                        {isApproving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                        Set Approval
+                      </Button>
+                      <Button onClick={handleIncreaseAllowance} disabled={isApproving || !approvalAmount} variant="outline" className="border-pink-500/30 text-pink-200 hover:bg-pink-500/20 rounded-full">
+                        <Plus className="w-4 h-4 mr-1" /> Add
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="history" className="space-y-4 mt-4">
+                {loadingHistory ? (
+                  <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-purple-300" /></div>
+                ) : (
+                  <div className="space-y-4">
+                    <Card className="bg-black/30 border-pink-500/20 backdrop-blur-xl">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-pink-200 flex items-center gap-2">
+                          <ArrowUpRight className="w-4 h-4 text-red-400" /> Sent ({tipStats.sent})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {tipsSent.length === 0 ? (
+                          <p className="text-pink-300/50 text-sm text-center py-4">No tips sent yet</p>
+                        ) : (
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {tipsSent.map((tip) => (
+                              <div key={tip.id} className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
+                                <div>
+                                  <span className="text-white/70 font-mono text-xs">{formatAddress(tip.to)}</span>
+                                  <p className="text-white/40 text-xs">{formatDate(tip.timestamp)}</p>
+                                </div>
+                                <span className="text-red-300 font-bold">-{formatNumber(tip.amount)} 🌸</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-black/30 border-purple-500/20 backdrop-blur-xl">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-purple-200 flex items-center gap-2">
+                          <ArrowDownLeft className="w-4 h-4 text-green-400" /> Received ({tipStats.received})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {tipsReceived.length === 0 ? (
+                          <p className="text-purple-300/50 text-sm text-center py-4">No tips received yet</p>
+                        ) : (
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {tipsReceived.map((tip) => (
+                              <div key={tip.id} className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
+                                <div>
+                                  <span className="text-white/70 font-mono text-xs">{formatAddress(tip.from)}</span>
+                                  <p className="text-white/40 text-xs">{formatDate(tip.timestamp)}</p>
+                                </div>
+                                <span className="text-green-300 font-bold">+{formatNumber(tip.amount)} 🌸</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
       </div>
     </div>
   );
-
 };
 
 export default BloomTipping;
