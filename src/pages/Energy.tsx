@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFarcaster } from '@/contexts/FarcasterContext';
 import { useEnergyQuiz } from '@/hooks/useEnergyQuiz';
 import { Button } from '@/components/ui/button';
-import { Share2, ArrowLeft, ExternalLink, RefreshCw, Sparkles } from 'lucide-react';
+import { Share2, ArrowLeft, ExternalLink, RefreshCw, Sparkles, Twitter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -448,24 +448,37 @@ const Energy = () => {
           </div>
         </div>
         
-        {/* Share Affirmation Button */}
-        <Button 
-          onClick={handleShareAffirmation}
-          disabled={isAffirmationSharing}
-          className={`w-full max-w-sm bg-gradient-to-r from-amber-600 to-orange-600 hover:brightness-110 text-white px-8 py-3 rounded-full font-bold gap-2 shadow-lg transition-all duration-700 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-        >
-          {isAffirmationSharing ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Share2 className="w-4 h-4" />
-              Share Today's Affirmation
-            </>
-          )}
-        </Button>
+        {/* Share Buttons */}
+        <div className={`w-full max-w-sm flex gap-3 transition-all duration-700 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <Button 
+            onClick={handleShareAffirmation}
+            disabled={isAffirmationSharing}
+            className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:brightness-110 text-white px-6 py-3 rounded-full font-bold gap-2 shadow-lg"
+          >
+            {isAffirmationSharing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4" />
+                Farcaster
+              </>
+            )}
+          </Button>
+          <Button 
+            onClick={() => {
+              const tweetText = `${dailyAffirmation.emoji} "${dailyAffirmation.text}"\n\nDaily Affirmation from Reveal Energy ✨\n\nGet yours 👇\nhttps://naughty-or-nice-wrapped.vercel.app/energy`;
+              const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+              window.open(twitterUrl, '_blank');
+            }}
+            className="bg-black hover:bg-zinc-900 text-white px-6 py-3 rounded-full font-bold gap-2 shadow-lg border border-white/20"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            Share
+          </Button>
+        </div>
 
         <div className="w-full max-w-sm h-px bg-white/10 my-2" />
 
