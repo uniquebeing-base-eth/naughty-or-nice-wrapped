@@ -154,23 +154,38 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false, on
 
       
       <div className={`mt-4 flex flex-col gap-3 transition-all duration-700 delay-1000 relative z-30 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-        <Button 
-          onClick={(e) => { e.stopPropagation(); onShare(); }} 
-          disabled={isGeneratingShare}
-          className="bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto disabled:opacity-70"
-        >
-          {isGeneratingShare ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Share2 className="w-4 h-4" />
-              Share on Farcaster
-            </>
-          )}
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={(e) => { e.stopPropagation(); onShare(); }} 
+            disabled={isGeneratingShare}
+            className="flex-1 bg-gradient-to-r from-christmas-green to-christmas-green-dark hover:from-christmas-green-light hover:to-christmas-green text-white px-6 py-3 rounded-full font-bold gap-2 text-base shadow-lg shadow-christmas-green/30 border-2 border-christmas-gold/30 pointer-events-auto disabled:opacity-70"
+          >
+            {isGeneratingShare ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4" />
+                Farcaster
+              </>
+            )}
+          </Button>
+          <Button 
+            onClick={(e) => {
+              e.stopPropagation();
+              const verdict = judgment.isNice ? 'NICE' : 'NAUGHTY';
+              const emoji = judgment.isNice ? '😇' : '😈';
+              const tweetText = `${emoji} I'm ${judgment.score}% ${verdict}!\n\n🏅 ${judgment.badge}\n\nFind out if you've been Naughty or Nice 🎄\nhttps://naughty-or-nice-wrapped.vercel.app`;
+              window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
+            }}
+            className="bg-black hover:bg-zinc-900 text-white px-5 py-3 rounded-full font-bold gap-2 text-base shadow-lg border border-white/20 pointer-events-auto"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            Share
+          </Button>
+        </div>
         
         {onProceedToEnergy && (
           <Button 
