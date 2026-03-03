@@ -471,7 +471,7 @@ const Energy = () => {
             onClick={() => {
               const tweetText = `${dailyAffirmation.emoji} "${dailyAffirmation.text}"\n\nDaily Affirmation from Reveal Energy ✨\n\nGet yours 👇\nhttps://naughty-or-nice-wrapped.vercel.app/energy`;
               const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-              window.open(twitterUrl, '_blank');
+              sdk.actions.openUrl(twitterUrl);
             }}
             className="bg-black hover:bg-zinc-900 text-white px-6 py-3 rounded-full font-bold gap-2 shadow-lg border border-white/20"
           >
