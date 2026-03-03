@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { JudgmentResult, UserStats } from '@/types/wrapped';
 import { Button } from '@/components/ui/button';
 import { Share2, Sparkles } from 'lucide-react';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 interface JudgmentSlideProps {
   stats: UserStats;
@@ -173,7 +174,8 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false, on
               const verdict = judgment.isNice ? 'NICE' : 'NAUGHTY';
               const emoji = judgment.isNice ? '😇' : '😈';
               const tweetText = `${emoji} I'm ${judgment.score}% ${verdict}!\n\n🏅 ${judgment.badge}\n\nFind out if you've been Naughty or Nice 🎄\nhttps://naughty-or-nice-wrapped.vercel.app`;
-              window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
+              const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+              sdk.actions.openUrl(twitterUrl);
             }}
             className="bg-black hover:bg-zinc-900 text-white px-5 py-3 rounded-full font-bold gap-2 text-base shadow-lg border border-white/20 pointer-events-auto"
           >
