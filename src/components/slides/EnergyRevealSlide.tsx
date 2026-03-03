@@ -68,8 +68,8 @@ const EnergyRevealSlide = ({
       >
         {/* Background effects */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className={`absolute top-0 left-0 w-32 h-32 bg-gradient-to-br ${personality.gradient} opacity-20 rounded-full blur-3xl`} />
-          <div className={`absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl ${personality.gradient} opacity-20 rounded-full blur-3xl`} />
+          <div className={`absolute top-0 left-0 w-32 h-32 bg-gradient-to-br ${personality.gradient} opacity-10 rounded-full`} />
+          <div className={`absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl ${personality.gradient} opacity-10 rounded-full`} />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[100px] opacity-10">
             {personality.emoji}
           </div>
@@ -90,7 +90,7 @@ const EnergyRevealSlide = ({
           {/* User info */}
           <div className={`flex flex-col items-center mb-4 transition-all duration-700 delay-300 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <div className="relative mb-2">
-              <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${personality.gradient} blur-lg opacity-60 scale-125`} />
+              <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${personality.gradient} opacity-30 scale-110`} />
               <img src={stats.pfp} alt={stats.username} className="w-16 h-16 rounded-full border-3 border-white/30 shadow-xl relative z-10" />
               <div className="absolute -bottom-1 -right-1 text-xl z-20">{personality.emoji}</div>
             </div>
