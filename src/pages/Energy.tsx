@@ -468,7 +468,9 @@ const Energy = () => {
             )}
           </Button>
           <Button 
-            onClick={() => {
+            onClick={async () => {
+              // Send micro transaction before sharing
+              await sendMicroTransaction();
               const tweetText = `${dailyAffirmation.emoji} "${dailyAffirmation.text}"\n\nDaily Affirmation from Reveal Energy ✨\n\nGet yours 👇\nhttps://naughty-or-nice-wrapped.vercel.app/energy`;
               const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
               sdk.actions.openUrl(twitterUrl);
