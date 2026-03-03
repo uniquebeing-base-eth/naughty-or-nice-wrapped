@@ -42,19 +42,17 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false, on
     ? 'from-christmas-green via-christmas-green-light to-christmas-green' 
     : 'from-christmas-red via-christmas-red-light to-christmas-red';
 
-  const verdictGlow = judgment.isNice
-    ? 'shadow-[0_0_120px_hsl(var(--christmas-green)/0.7)]'
-    : 'shadow-[0_0_120px_hsl(var(--christmas-red)/0.7)]';
+  // No glow shadows - they don't render well with html2canvas
 
   return (
     <div className="flex flex-col items-center justify-start text-center px-4 py-4 h-[calc(100vh-120px)] overflow-hidden">
       <div 
         id="judgment-card"
-        className={`relative christmas-card ${verdictGlow} border-2 border-christmas-gold/30 w-full max-w-[340px] overflow-hidden transition-all duration-1000 p-4 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+        className={`relative christmas-card border-2 border-christmas-gold/30 w-full max-w-[340px] overflow-hidden transition-all duration-1000 p-4 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
       >
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-christmas-gold/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-0 w-40 h-40 bg-christmas-red/20 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-0 w-32 h-32 bg-christmas-gold/10 rounded-full" />
+          <div className="absolute bottom-0 right-0 w-40 h-40 bg-christmas-red/10 rounded-full" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] opacity-10">
             {judgment.isNice ? '🎁' : '😈'}
           </div>
@@ -71,7 +69,7 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false, on
 
           <div className={`flex flex-col items-center mb-3 transition-all duration-700 delay-300 ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <div className="relative mb-2">
-              <div className="absolute inset-0 rounded-full bg-christmas-gold blur-lg opacity-50 scale-125" />
+              <div className="absolute inset-0 rounded-full bg-christmas-gold opacity-20 scale-110" />
               <img src={stats.pfp} alt={stats.username} className="w-20 h-20 rounded-full border-3 border-christmas-gold shadow-xl relative z-10" />
               <div className="absolute -bottom-1 -right-1 text-2xl z-20">{judgment.isNice ? '😇' : '😈'}</div>
             </div>
@@ -84,9 +82,6 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false, on
               className="absolute inset-0 rounded-full"
               style={{
                 border: `8px solid ${judgment.isNice ? '#22c55e' : '#ef4444'}`,
-                boxShadow: judgment.isNice 
-                  ? '0 0 20px #22c55e, inset 0 0 20px rgba(34, 197, 94, 0.3)' 
-                  : '0 0 20px #ef4444, inset 0 0 20px rgba(239, 68, 68, 0.3)',
               }}
             />
             {/* Inner dark circle */}
