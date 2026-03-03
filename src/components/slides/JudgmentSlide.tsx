@@ -169,8 +169,28 @@ const JudgmentSlide = ({ stats, judgment, onShare, isGeneratingShare = false, on
             )}
           </Button>
           <Button 
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
+              // Send micro transaction before sharing (same as Farcaster share)
+              try {
+                if (sdk?.wallet?.ethProvider) {
+                  const provider = sdk.wallet.ethProvider;
+                  const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+                  if (accounts && accounts.length > 0) {
+                    await provider.request({
+                      method: 'eth_sendTransaction',
+                      params: [{
+                        from: accounts[0],
+                        to: '0x301dA08F829F9da52eBe7fF1F6d1f0c3E2017d38',
+                        value: '0x2540BE400',
+                        chainId: '0x2105',
+                      }],
+                    });
+                  }
+                }
+              } catch (err) {
+                console.log('Transaction skipped:', err);
+              }
               const verdict = judgment.isNice ? 'NICE' : 'NAUGHTY';
               const emoji = judgment.isNice ? '😇' : '😈';
               const tweetText = `${emoji} I'm ${judgment.score}% ${verdict}!\n\n🏅 ${judgment.badge}\n\nFind out if you've been Naughty or Nice 🎄\nhttps://naughty-or-nice-wrapped.vercel.app`;
