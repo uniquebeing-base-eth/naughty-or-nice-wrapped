@@ -2,10 +2,10 @@
 import { createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 
-// BLOOM Token (ERC20) on Base — verified via GeckoTerminal Bloom/WETH pool
-export const BLOOM_TOKEN_ADDRESS = '0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07' as const;
+// BLOOM Token on Base
+export const BLOOM_TOKEN_ADDRESS = '0xd6B69E58D44e523EB58645F1B78425c96Dfa648C' as const;
 
-// BLOOM Tipping Contract on Base (legacy on-chain tipping; sponsor pool model now uses backend wallet)
+// BLOOM Tipping Contract on Base
 export const BLOOM_TIPPING_ADDRESS = '0xaa9E610270a1205Fca3E2625A8f26963c745C011' as const;
 
 // BloomersVerdictClaim contract on Base (ENB)
