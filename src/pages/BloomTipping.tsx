@@ -415,52 +415,11 @@ const BloomTipping = () => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  if (!isInMiniApp) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#1a0a28] to-[#0a1628] flex items-center justify-center p-4">
-        <Card className="bg-black/40 border-pink-500/30 backdrop-blur-xl">
-          <CardContent className="p-8 text-center">
-            <span className="text-5xl mb-4 block">🌸</span>
-            <h2 className="text-2xl font-bold text-white mb-2">BLOOM Tipping</h2>
-            <p className="text-pink-200/70 mb-4">Open in Farcaster to access BLOOM tipping</p>
-            <Button
-              onClick={() => window.open('https://warpcast.com', '_blank')}
-              className="bg-pink-600 hover:bg-pink-700"
-            >
-              Open in Warpcast
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#1a0a28] to-[#0a1628] relative overflow-hidden">
-      {/* Coming Soon Overlay */}
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="text-center px-6 max-w-sm">
-          <div className="p-8 rounded-3xl bg-gradient-to-b from-white/10 to-white/5 border border-pink-500/30 backdrop-blur-xl">
-            <div className="text-6xl mb-4">🌸</div>
-            <h2 className="font-display text-3xl font-bold text-white mb-3">Coming Soon</h2>
-            <p className="text-pink-200/70 mb-6">
-              BLOOM Tipping is being prepared. Check back soon to tip your favorite creators!
-            </p>
-            <Button
-              onClick={() => navigate('/')}
-              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:brightness-110 text-white px-8 py-3 rounded-full font-bold gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </Button>
-          </div>
-        </div>
-      </div>
-      
       <Snowfall />
-      
-      {/* Blurred Content Behind */}
-      <div className="blur-sm pointer-events-none opacity-30">
+
+      <div>
         {/* Header */}
         <div className="sticky top-0 z-40 bg-black/40 backdrop-blur-xl border-b border-pink-500/20 p-4">
           <div className="flex items-center justify-between max-w-lg mx-auto">
