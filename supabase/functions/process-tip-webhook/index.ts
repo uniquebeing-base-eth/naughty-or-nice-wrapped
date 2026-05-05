@@ -9,8 +9,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-neynar-signature',
 };
 
-// BLOOM token on Base
-const BLOOM_TOKEN = "0xaa9E610270a1205Fca3E2625A8f26963c745C011";
+// BLOOM token (ERC20) on Base
+const BLOOM_TOKEN = "0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07";
 const ERC20_ABI = [
   {
     name: "transfer",
