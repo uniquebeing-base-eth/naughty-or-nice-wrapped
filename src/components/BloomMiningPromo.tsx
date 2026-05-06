@@ -6,23 +6,18 @@ import { toast } from 'sonner';
 
 const BLOOM_MINING_URL = 'https://farcaster.xyz/miniapps/egWGFSrJ0s-H/bloom-protocol';
 const INVITE_CODE = 'BLOOM2025';
-const STORAGE_KEY = 'bloom-mining-promo-seen-v1';
 
 export const BloomMiningPromo = () => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [animate, setAnimate] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      setOpen(true);
-      setTimeout(() => setAnimate(true), 50);
-    }
+    const t = setTimeout(() => setAnimate(true), 50);
+    return () => clearTimeout(t);
   }, []);
 
   const close = () => {
-    localStorage.setItem(STORAGE_KEY, '1');
     setAnimate(false);
     setTimeout(() => setOpen(false), 250);
   };
