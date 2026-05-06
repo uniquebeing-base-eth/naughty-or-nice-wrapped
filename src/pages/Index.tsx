@@ -4,6 +4,7 @@ import { useFarcaster } from '@/contexts/FarcasterContext';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Gift, Zap, Coins, Flower2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import BloomMiningPromo from '@/components/BloomMiningPromo';
 
 const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped';
 
