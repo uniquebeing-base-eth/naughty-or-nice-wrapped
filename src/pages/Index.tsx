@@ -4,6 +4,7 @@ import { useFarcaster } from '@/contexts/FarcasterContext';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Gift, Zap, Coins, Flower2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import BloomMiningPromo from '@/components/BloomMiningPromo';
 
 const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/m0Hnzx2HWtB5/naughty-or-nice-wrapped';
 
@@ -75,6 +76,7 @@ const Index = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#1a0a15] via-[#0f0a15] to-[#0a0510]">
+      <BloomMiningPromo />
       {/* Background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[100px]" />
