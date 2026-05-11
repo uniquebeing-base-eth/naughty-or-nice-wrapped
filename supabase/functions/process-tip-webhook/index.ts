@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 // Canonical BLOOM token on Base
-const BLOOM_TOKEN = "0xd6B69E58D44e523EB58645F1B78425c96Dfa648C";
+const BLOOM_TOKEN = "0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07";
 
 // BloomCommentTipping contract (pull-based, approve-once)
 const BLOOM_TIPPING = "0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2";
