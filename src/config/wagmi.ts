@@ -5,8 +5,8 @@ import { base } from 'wagmi/chains';
 // BLOOM Token on Base
 export const BLOOM_TOKEN_ADDRESS = '0xd6B69E58D44e523EB58645F1B78425c96Dfa648C' as const;
 
-// BLOOM Tipping Contract on Base
-export const BLOOM_TIPPING_ADDRESS = '0xaa9E610270a1205Fca3E2625A8f26963c745C011' as const;
+// BLOOM Comment Tipping Contract on Base (pull-based, approve-once flow)
+export const BLOOM_TIPPING_ADDRESS = '0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2' as const;
 
 // BloomersVerdictClaim contract on Base (ENB)
 export const BLOOMERS_VERDICT_ADDRESS = '0xf2BD230858D30e5858937a27A0C2FB8309E47997' as const;
