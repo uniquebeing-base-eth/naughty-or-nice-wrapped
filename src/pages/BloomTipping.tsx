@@ -183,7 +183,7 @@ const BloomTipping = () => {
     try {
       setLoadingBalances(true);
       
-      const [balanceResult, allowanceResult, nonceResult] = await Promise.all([
+      const [balanceResult, allowanceResult] = await Promise.all([
         publicClient.readContract({
           address: BLOOM_TOKEN_ADDRESS,
           abi: ERC20_ABI,
@@ -196,17 +196,11 @@ const BloomTipping = () => {
           functionName: 'allowance',
           args: [walletAddress, BLOOM_TIPPING_ADDRESS],
         }) as Promise<bigint>,
-        publicClient.readContract({
-          address: BLOOM_TIPPING_ADDRESS,
-          abi: BLOOM_TIPPING_ABI,
-          functionName: 'nonces',
-          args: [walletAddress],
-        }) as Promise<bigint>,
       ]);
 
       setBloomBalance(formatUnits(balanceResult, 18));
       setCurrentAllowance(formatUnits(allowanceResult, 18));
-      setUserNonce(nonceResult);
+      setUserNonce(0n);
     } catch (error) {
       console.error('Error fetching balances:', error);
     } finally {
@@ -221,44 +215,23 @@ const BloomTipping = () => {
     try {
       setLoadingHistory(true);
       
-      // Fetch counts first
-      const [sentCount, receivedCount] = await Promise.all([
-        publicClient.readContract({
-          address: BLOOM_TIPPING_ADDRESS,
-          abi: BLOOM_TIPPING_ABI,
-          functionName: 'getTipsSentCount',
-          args: [walletAddress],
-        }) as Promise<bigint>,
-        publicClient.readContract({
-          address: BLOOM_TIPPING_ADDRESS,
-          abi: BLOOM_TIPPING_ABI,
-          functionName: 'getTipsReceivedCount',
-          args: [walletAddress],
-        }) as Promise<bigint>,
-      ]);
-
-      setTipStats({ sent: Number(sentCount), received: Number(receivedCount) });
-
-      // Fetch recent tips (up to 20 each)
-      const limit = 20n;
+      const limit = 50n;
       const [sentTips, receivedTips] = await Promise.all([
-        sentCount > 0n
-          ? (publicClient.readContract({
-              address: BLOOM_TIPPING_ADDRESS,
-              abi: BLOOM_TIPPING_ABI,
-              functionName: 'getTipsSentByUser',
-              args: [walletAddress, 0n, limit],
-            }) as Promise<readonly OnChainTip[]>)
-          : Promise.resolve([] as readonly OnChainTip[]),
-        receivedCount > 0n
-          ? (publicClient.readContract({
-              address: BLOOM_TIPPING_ADDRESS,
-              abi: BLOOM_TIPPING_ABI,
-              functionName: 'getTipsReceivedByUser',
-              args: [walletAddress, 0n, limit],
-            }) as Promise<readonly OnChainTip[]>)
-          : Promise.resolve([] as readonly OnChainTip[]),
+        publicClient.readContract({
+          address: BLOOM_TIPPING_ADDRESS,
+          abi: BLOOM_TIPPING_ABI,
+          functionName: 'getTipsSent',
+          args: [walletAddress, 0n, limit],
+        }) as Promise<readonly OnChainTip[]>,
+        publicClient.readContract({
+          address: BLOOM_TIPPING_ADDRESS,
+          abi: BLOOM_TIPPING_ABI,
+          functionName: 'getTipsReceived',
+          args: [walletAddress, 0n, limit],
+        }) as Promise<readonly OnChainTip[]>,
       ]);
+
+      setTipStats({ sent: sentTips.length, received: receivedTips.length });
 
       // Convert to display format
       const formatTips = (tips: readonly OnChainTip[], isSent: boolean): TipDisplay[] => {
