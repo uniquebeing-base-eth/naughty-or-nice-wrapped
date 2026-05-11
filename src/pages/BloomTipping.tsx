@@ -183,7 +183,7 @@ const BloomTipping = () => {
     try {
       setLoadingBalances(true);
       
-      const [balanceResult, allowanceResult, nonceResult] = await Promise.all([
+      const [balanceResult, allowanceResult] = await Promise.all([
         publicClient.readContract({
           address: BLOOM_TOKEN_ADDRESS,
           abi: ERC20_ABI,
@@ -196,17 +196,11 @@ const BloomTipping = () => {
           functionName: 'allowance',
           args: [walletAddress, BLOOM_TIPPING_ADDRESS],
         }) as Promise<bigint>,
-        publicClient.readContract({
-          address: BLOOM_TIPPING_ADDRESS,
-          abi: BLOOM_TIPPING_ABI,
-          functionName: 'nonces',
-          args: [walletAddress],
-        }) as Promise<bigint>,
       ]);
 
       setBloomBalance(formatUnits(balanceResult, 18));
       setCurrentAllowance(formatUnits(allowanceResult, 18));
-      setUserNonce(nonceResult);
+      setUserNonce(0n);
     } catch (error) {
       console.error('Error fetching balances:', error);
     } finally {
