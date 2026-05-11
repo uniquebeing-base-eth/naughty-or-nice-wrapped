@@ -215,44 +215,23 @@ const BloomTipping = () => {
     try {
       setLoadingHistory(true);
       
-      // Fetch counts first
-      const [sentCount, receivedCount] = await Promise.all([
-        publicClient.readContract({
-          address: BLOOM_TIPPING_ADDRESS,
-          abi: BLOOM_TIPPING_ABI,
-          functionName: 'getTipsSentCount',
-          args: [walletAddress],
-        }) as Promise<bigint>,
-        publicClient.readContract({
-          address: BLOOM_TIPPING_ADDRESS,
-          abi: BLOOM_TIPPING_ABI,
-          functionName: 'getTipsReceivedCount',
-          args: [walletAddress],
-        }) as Promise<bigint>,
-      ]);
-
-      setTipStats({ sent: Number(sentCount), received: Number(receivedCount) });
-
-      // Fetch recent tips (up to 20 each)
-      const limit = 20n;
+      const limit = 50n;
       const [sentTips, receivedTips] = await Promise.all([
-        sentCount > 0n
-          ? (publicClient.readContract({
-              address: BLOOM_TIPPING_ADDRESS,
-              abi: BLOOM_TIPPING_ABI,
-              functionName: 'getTipsSentByUser',
-              args: [walletAddress, 0n, limit],
-            }) as Promise<readonly OnChainTip[]>)
-          : Promise.resolve([] as readonly OnChainTip[]),
-        receivedCount > 0n
-          ? (publicClient.readContract({
-              address: BLOOM_TIPPING_ADDRESS,
-              abi: BLOOM_TIPPING_ABI,
-              functionName: 'getTipsReceivedByUser',
-              args: [walletAddress, 0n, limit],
-            }) as Promise<readonly OnChainTip[]>)
-          : Promise.resolve([] as readonly OnChainTip[]),
+        publicClient.readContract({
+          address: BLOOM_TIPPING_ADDRESS,
+          abi: BLOOM_TIPPING_ABI,
+          functionName: 'getTipsSent',
+          args: [walletAddress, 0n, limit],
+        }) as Promise<readonly OnChainTip[]>,
+        publicClient.readContract({
+          address: BLOOM_TIPPING_ADDRESS,
+          abi: BLOOM_TIPPING_ABI,
+          functionName: 'getTipsReceived',
+          args: [walletAddress, 0n, limit],
+        }) as Promise<readonly OnChainTip[]>,
       ]);
+
+      setTipStats({ sent: sentTips.length, received: receivedTips.length });
 
       // Convert to display format
       const formatTips = (tips: readonly OnChainTip[], isSent: boolean): TipDisplay[] => {
