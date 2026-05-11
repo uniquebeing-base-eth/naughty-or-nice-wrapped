@@ -116,52 +116,41 @@ export const BLOOMERS_NFT_ABI = [
   },
 ] as const;
 
-// ABI for BloomTipping
+// ABI for BloomCommentTipping (pull-based, approve-once)
 export const BLOOM_TIPPING_ABI = [
   {
-    name: 'tip',
+    name: 'executeTip',
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [
+      { name: 'from', type: 'address' },
       { name: 'to', type: 'address' },
       { name: 'amount', type: 'uint256' },
       { name: 'fromFid', type: 'uint256' },
       { name: 'toFid', type: 'uint256' },
       { name: 'castHash', type: 'bytes32' },
-      { name: 'nonce', type: 'uint256' },
-      { name: 'deadline', type: 'uint256' },
-      { name: 'signature', type: 'bytes' },
     ],
     outputs: [],
   },
   {
-    name: 'batchTip',
+    name: 'executeBatch',
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [
       {
-        name: 'tipDataArray',
+        name: 'batch',
         type: 'tuple[]',
         components: [
+          { name: 'from', type: 'address' },
           { name: 'to', type: 'address' },
           { name: 'amount', type: 'uint256' },
           { name: 'fromFid', type: 'uint256' },
           { name: 'toFid', type: 'uint256' },
           { name: 'castHash', type: 'bytes32' },
-          { name: 'nonce', type: 'uint256' },
-          { name: 'deadline', type: 'uint256' },
-          { name: 'signature', type: 'bytes' },
         ],
       },
     ],
     outputs: [],
-  },
-  {
-    name: 'nonces',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'user', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
   },
   {
     name: 'getTipCount',
@@ -171,42 +160,31 @@ export const BLOOM_TIPPING_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
   },
   {
-    name: 'getTip',
+    name: 'getAllowance',
     type: 'function',
     stateMutability: 'view',
-    inputs: [{ name: 'index', type: 'uint256' }],
-    outputs: [
-      {
-        name: '',
-        type: 'tuple',
-        components: [
-          { name: 'from', type: 'address' },
-          { name: 'to', type: 'address' },
-          { name: 'amount', type: 'uint256' },
-          { name: 'fromFid', type: 'uint256' },
-          { name: 'toFid', type: 'uint256' },
-          { name: 'castHash', type: 'bytes32' },
-          { name: 'timestamp', type: 'uint256' },
-        ],
-      },
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'isProcessed',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'from', type: 'address' },
+      { name: 'castHash', type: 'bytes32' },
     ],
+    outputs: [{ name: '', type: 'bool' }],
   },
   {
-    name: 'getTipsSentCount',
+    name: 'maxTipAmount',
     type: 'function',
     stateMutability: 'view',
-    inputs: [{ name: 'user', type: 'address' }],
+    inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
   },
   {
-    name: 'getTipsReceivedCount',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'user', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-  {
-    name: 'getTipsSentByUser',
+    name: 'getTipsSent',
     type: 'function',
     stateMutability: 'view',
     inputs: [
@@ -231,7 +209,7 @@ export const BLOOM_TIPPING_ABI = [
     ],
   },
   {
-    name: 'getTipsReceivedByUser',
+    name: 'getTipsReceived',
     type: 'function',
     stateMutability: 'view',
     inputs: [
