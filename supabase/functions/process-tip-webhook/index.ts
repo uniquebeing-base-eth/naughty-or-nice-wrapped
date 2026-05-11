@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { createWalletClient, createPublicClient, http, parseUnits, getAddress } from "https://esm.sh/viem@2.21.55";
+import { createWalletClient, createPublicClient, http, parseUnits, getAddress, keccak256, toBytes, pad } from "https://esm.sh/viem@2.21.55";
 import { privateKeyToAccount } from "https://esm.sh/viem@2.21.55/accounts";
 import { base } from "https://esm.sh/viem@2.21.55/chains";
 
@@ -9,25 +9,46 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-neynar-signature',
 };
 
-// BLOOM token on Base
-const BLOOM_TOKEN = "0xaa9E610270a1205Fca3E2625A8f26963c745C011";
+// Canonical BLOOM token on Base
+const BLOOM_TOKEN = "0xd6B69E58D44e523EB58645F1B78425c96Dfa648C";
+
+// BloomCommentTipping contract (pull-based, approve-once)
+const BLOOM_TIPPING = "0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2";
+
 const ERC20_ABI = [
-  {
-    name: "transfer",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
   {
     name: "balanceOf",
     type: "function",
     stateMutability: "view",
     inputs: [{ name: "account", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "allowance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
+const TIPPING_ABI = [
+  {
+    name: "executeTip",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "from", type: "address" },
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "fromFid", type: "uint256" },
+      { name: "toFid", type: "uint256" },
+      { name: "castHash", type: "bytes32" },
+    ],
+    outputs: [],
   },
 ] as const;
 
@@ -63,6 +84,12 @@ async function getWalletForFid(fid: number, apiKey: string): Promise<string | nu
   } catch {
     return null;
   }
+}
+
+// Convert Farcaster cast hash (0x... 20 bytes) to bytes32 (left-padded)
+function castHashToBytes32(hash: string): `0x${string}` {
+  const clean = hash.startsWith('0x') ? hash : `0x${hash}`;
+  return pad(clean as `0x${string}`, { size: 32 });
 }
 
 serve(async (req) => {
@@ -107,7 +134,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: 'self-tip blocked' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Idempotency: skip if we already processed this cast
     const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
       : null;
@@ -126,6 +152,12 @@ serve(async (req) => {
       getWalletForFid(receiverFid, NEYNAR_API_KEY),
     ]);
 
+    if (!senderWallet) {
+      console.log(`Sender FID ${senderFid} has no wallet`);
+      return new Response(JSON.stringify({ error: 'sender has no wallet' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     if (!receiverWallet) {
       console.log(`Receiver FID ${receiverFid} has no wallet`);
       return new Response(JSON.stringify({ error: 'receiver has no wallet' }), {
@@ -141,41 +173,70 @@ serve(async (req) => {
     const walletClient = createWalletClient({ account, chain: base, transport: http() });
 
     const amountWei = parseUnits(tipAmount.toString(), 18);
+    const senderAddr = getAddress(senderWallet);
+    const receiverAddr = getAddress(receiverWallet);
 
-    // Check pool balance
-    const poolBalance = await publicClient.readContract({
-      address: BLOOM_TOKEN,
-      abi: ERC20_ABI,
-      functionName: 'balanceOf',
-      args: [account.address],
-    });
+    // Check sender balance + allowance
+    const [senderBalance, senderAllowance] = await Promise.all([
+      publicClient.readContract({
+        address: BLOOM_TOKEN,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [senderAddr],
+      }) as Promise<bigint>,
+      publicClient.readContract({
+        address: BLOOM_TOKEN,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [senderAddr, BLOOM_TIPPING],
+      }) as Promise<bigint>,
+    ]);
 
-    if (poolBalance < amountWei) {
-      console.error(`Pool empty: have ${poolBalance}, need ${amountWei}`);
-      if (supabase) {
-        await supabase.from('pending_tips').insert({
-          sender_fid: senderFid,
-          receiver_fid: receiverFid,
-          sender_wallet: (senderWallet || '').toLowerCase(),
-          receiver_wallet: receiverWallet.toLowerCase(),
-          amount: tipAmount.toString(),
-          cast_hash: castHash,
-          sender_username: data.author.username,
-          status: 'pool_empty',
-        });
-      }
-      return new Response(JSON.stringify({ error: 'pool empty' }), {
+    const recordFailure = async (status: string) => {
+      if (!supabase) return;
+      await supabase.from('pending_tips').insert({
+        sender_fid: senderFid,
+        receiver_fid: receiverFid,
+        sender_wallet: senderAddr.toLowerCase(),
+        receiver_wallet: receiverAddr.toLowerCase(),
+        amount: tipAmount.toString(),
+        cast_hash: castHash,
+        sender_username: data.author.username,
+        status,
+      });
+    };
+
+    if (senderBalance < amountWei) {
+      console.error(`Sender balance too low: have ${senderBalance}, need ${amountWei}`);
+      await recordFailure('insufficient_balance');
+      return new Response(JSON.stringify({ error: 'insufficient sender balance' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (senderAllowance < amountWei) {
+      console.error(`Sender allowance too low: have ${senderAllowance}, need ${amountWei}`);
+      await recordFailure('insufficient_allowance');
+      return new Response(JSON.stringify({ error: 'sender has not approved enough BLOOM. Visit the mini app to approve.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Execute transfer from pool
-    console.log(`Transferring ${tipAmount} BLOOM to ${receiverWallet}`);
+    // Execute pull-based tip via BloomCommentTipping.executeTip
+    const castHashBytes32 = castHashToBytes32(castHash);
+    console.log(`executeTip: ${tipAmount} BLOOM from ${senderAddr} -> ${receiverAddr} (cast ${castHash})`);
+
     const txHash = await walletClient.writeContract({
-      address: BLOOM_TOKEN,
-      abi: ERC20_ABI,
-      functionName: 'transfer',
-      args: [getAddress(receiverWallet), amountWei],
+      address: BLOOM_TIPPING as `0x${string}`,
+      abi: TIPPING_ABI,
+      functionName: 'executeTip',
+      args: [
+        senderAddr,
+        receiverAddr,
+        amountWei,
+        BigInt(senderFid),
+        BigInt(receiverFid),
+        castHashBytes32,
+      ],
     });
 
     console.log('Tx submitted:', txHash);
@@ -184,8 +245,8 @@ serve(async (req) => {
       await supabase.from('pending_tips').insert({
         sender_fid: senderFid,
         receiver_fid: receiverFid,
-        sender_wallet: (senderWallet || '').toLowerCase(),
-        receiver_wallet: receiverWallet.toLowerCase(),
+        sender_wallet: senderAddr.toLowerCase(),
+        receiver_wallet: receiverAddr.toLowerCase(),
         amount: tipAmount.toString(),
         cast_hash: castHash,
         sender_username: data.author.username,
@@ -195,7 +256,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, txHash, amount: tipAmount, to: receiverWallet }), {
+    return new Response(JSON.stringify({ success: true, txHash, amount: tipAmount, from: senderAddr, to: receiverAddr }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
