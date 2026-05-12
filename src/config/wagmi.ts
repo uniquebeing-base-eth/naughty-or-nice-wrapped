@@ -3,7 +3,7 @@ import { createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 
 // BLOOM Token on Base
-export const BLOOM_TOKEN_ADDRESS = '0xd6B69E58D44e523EB58645F1B78425c96Dfa648C' as const;
+export const BLOOM_TOKEN_ADDRESS = '0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07' as const;
 
 // BLOOM Comment Tipping Contract on Base (pull-based, approve-once flow)
 export const BLOOM_TIPPING_ADDRESS = '0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2' as const;
