@@ -106,7 +106,10 @@ serve(async (req) => {
 
   try {
     const NEYNAR_API_KEY = Deno.env.get('NEYNAR_API_KEY');
-    const TIP_POOL_PRIVATE_KEY = Deno.env.get('TIP_POOL_PRIVATE_KEY');
+    // Prefer the on-chain executor key (BACKEND_SIGNER_PRIVATE_KEY = 0xad3e2d50...456637233);
+    // fall back to TIP_POOL_PRIVATE_KEY for backward compatibility.
+    const TIP_POOL_PRIVATE_KEY =
+      Deno.env.get('BACKEND_SIGNER_PRIVATE_KEY') || Deno.env.get('TIP_POOL_PRIVATE_KEY');
     const NEYNAR_WEBHOOK_SECRET = Deno.env.get('NEYNAR_WEBHOOK_SECRET');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
