@@ -11,8 +11,11 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
-const BLOOM_TOKEN = "0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07";
-const BLOOM_TIPPING = "0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2";
+const DEFAULT_BLOOM_TOKEN = "0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07";
+const DEFAULT_TIP_CONTRACT = "0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2";
+const DEFAULT_BLOOM_DECIMALS = 18;
+const DEFAULT_MAX_TIP = 1000;
+const DEFAULT_BASE_RPC_URL = "https://base-rpc.publicnode.com";
 
 const ERC20_ABI = [
   { name: "balanceOf", type: "function", stateMutability: "view",
@@ -33,6 +36,8 @@ const TIPPING_ABI = [
       { name: "castHash", type: "bytes32" },
     ],
     outputs: [] },
+  { name: "executors", type: "function", stateMutability: "view",
+    inputs: [{ name: "executor", type: "address" }], outputs: [{ name: "", type: "bool" }] },
 ] as const;
 
 // Default tip amount when user replies just "bloom" or 🌸 with no number
@@ -65,8 +70,8 @@ async function getWalletForFid(fid: number, apiKey: string): Promise<string | nu
     if (!r.ok) return null;
     const d = await r.json();
     const u = d.users?.[0];
+    if (u?.verified_addresses?.primary?.eth_address) return u.verified_addresses.primary.eth_address;
     if (u?.verified_addresses?.eth_addresses?.length > 0) return u.verified_addresses.eth_addresses[0];
-    if (u?.custody_address) return u.custody_address;
     return null;
   } catch {
     return null;
@@ -84,14 +89,22 @@ function verifySignature(rawBody: string, signature: string | null, secret: stri
     const hmac = createHmac("sha512", secret);
     hmac.update(rawBody);
     const expected = hmac.digest("hex");
+    const provided = signature.trim().toLowerCase();
     // constant-time-ish compare
-    if (expected.length !== signature.length) return false;
+    if (expected.length !== provided.length) return false;
     let diff = 0;
-    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
     return diff === 0;
   } catch {
     return false;
   }
+}
+
+function json(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 serve(async (req) => {
