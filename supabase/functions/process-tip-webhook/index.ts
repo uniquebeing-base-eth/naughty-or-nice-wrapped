@@ -1,45 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { createWalletClient, createPublicClient, http, parseUnits, getAddress, keccak256, toBytes, pad } from "https://esm.sh/viem@2.21.55";
+import { createWalletClient, createPublicClient, http, parseUnits, getAddress, pad } from "https://esm.sh/viem@2.21.55";
 import { privateKeyToAccount } from "https://esm.sh/viem@2.21.55/accounts";
 import { base } from "https://esm.sh/viem@2.21.55/chains";
+import { createHmac } from "node:crypto";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-neynar-signature',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
-// Canonical BLOOM token on Base
 const BLOOM_TOKEN = "0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07";
-
-// BloomCommentTipping contract (pull-based, approve-once)
 const BLOOM_TIPPING = "0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2";
 
 const ERC20_ABI = [
-  {
-    name: "balanceOf",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-  {
-    name: "allowance",
-    type: "function",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-  },
+  { name: "balanceOf", type: "function", stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
+  { name: "allowance", type: "function", stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }] },
 ] as const;
 
 const TIPPING_ABI = [
-  {
-    name: "executeTip",
-    type: "function",
-    stateMutability: "nonpayable",
+  { name: "executeTip", type: "function", stateMutability: "nonpayable",
     inputs: [
       { name: "from", type: "address" },
       { name: "to", type: "address" },
@@ -48,25 +32,28 @@ const TIPPING_ABI = [
       { name: "toFid", type: "uint256" },
       { name: "castHash", type: "bytes32" },
     ],
-    outputs: [],
-  },
+    outputs: [] },
 ] as const;
 
-// Tip command patterns
-const TIP_REGEX = /(?:tip|🌸|\$bloom)\s*(\d+(?:\.\d+)?)\s*(?:bloom|\$bloom|🌸)?/i;
-const BLOOM_MENTION_REGEX = /(\d+(?:\.\d+)?)\s*(?:\$bloom|bloom|🌸)/i;
+// Default tip amount when user replies just "bloom" or 🌸 with no number
+const DEFAULT_TIP = 100;
+
+// Match: "bloom", "🌸", "tip 50 bloom", "50 $bloom", "bloom 25", "🌸 10"
+const NUMBER_THEN_BLOOM = /(\d+(?:\.\d+)?)\s*(?:\$?bloom|🌸)/i;
+const BLOOM_THEN_NUMBER = /(?:\$?bloom|🌸)\s*(\d+(?:\.\d+)?)/i;
+const TIP_THEN_NUMBER = /tip\s+(\d+(?:\.\d+)?)/i;
+const KEYWORD_ONLY = /(?:^|\s)(?:\$?bloom|🌸)(?:\s|$|[!.?])/i;
 
 function parseTipCommand(text: string): number | null {
-  let m = text.match(TIP_REGEX);
-  if (m) {
-    const a = parseFloat(m[1]);
-    if (a >= 1) return a;
+  if (!text) return null;
+  for (const re of [TIP_THEN_NUMBER, NUMBER_THEN_BLOOM, BLOOM_THEN_NUMBER]) {
+    const m = text.match(re);
+    if (m) {
+      const a = parseFloat(m[1]);
+      if (a >= 1) return a;
+    }
   }
-  m = text.match(BLOOM_MENTION_REGEX);
-  if (m) {
-    const a = parseFloat(m[1]);
-    if (a >= 1) return a;
-  }
+  if (KEYWORD_ONLY.test(text)) return DEFAULT_TIP;
   return null;
 }
 
@@ -86,52 +73,118 @@ async function getWalletForFid(fid: number, apiKey: string): Promise<string | nu
   }
 }
 
-// Convert Farcaster cast hash (0x... 20 bytes) to bytes32 (left-padded)
 function castHashToBytes32(hash: string): `0x${string}` {
   const clean = hash.startsWith('0x') ? hash : `0x${hash}`;
   return pad(clean as `0x${string}`, { size: 32 });
 }
 
+function verifySignature(rawBody: string, signature: string | null, secret: string): boolean {
+  if (!signature) return false;
+  try {
+    const hmac = createHmac("sha512", secret);
+    hmac.update(rawBody);
+    const expected = hmac.digest("hex");
+    // constant-time-ish compare
+    if (expected.length !== signature.length) return false;
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+    return diff === 0;
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  // Health check / Neynar test GET
+  if (req.method === 'GET') {
+    return new Response(JSON.stringify({ ok: true, service: 'process-tip-webhook' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   try {
     const NEYNAR_API_KEY = Deno.env.get('NEYNAR_API_KEY');
     const TIP_POOL_PRIVATE_KEY = Deno.env.get('TIP_POOL_PRIVATE_KEY');
+    const NEYNAR_WEBHOOK_SECRET = Deno.env.get('NEYNAR_WEBHOOK_SECRET');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!NEYNAR_API_KEY || !TIP_POOL_PRIVATE_KEY) {
-      console.error('Missing required secrets');
+      console.error('Missing required secrets (NEYNAR_API_KEY / TIP_POOL_PRIVATE_KEY)');
       return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const payload = await req.json();
-    console.log('Webhook:', { type: payload.type, author: payload.data?.author?.username, text: payload.data?.text?.slice(0, 80) });
+    // Read raw body once — needed for HMAC verification AND empty-body handling
+    const rawBody = await req.text();
+    if (!rawBody || rawBody.trim().length === 0) {
+      console.log('Empty body received (likely a Neynar test ping)');
+      return new Response(JSON.stringify({ ok: true, message: 'empty body' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify Neynar HMAC signature if secret is configured
+    if (NEYNAR_WEBHOOK_SECRET) {
+      const sig = req.headers.get('X-Neynar-Signature') || req.headers.get('x-neynar-signature');
+      if (!verifySignature(rawBody, sig, NEYNAR_WEBHOOK_SECRET)) {
+        console.warn('Invalid X-Neynar-Signature; rejecting');
+        return new Response(JSON.stringify({ error: 'invalid signature' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      console.warn('NEYNAR_WEBHOOK_SECRET not configured — accepting webhook unverified');
+    }
+
+    let payload: any;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (e) {
+      console.error('Bad JSON body:', rawBody.slice(0, 200));
+      return new Response(JSON.stringify({ error: 'invalid json' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Webhook:', {
+      type: payload.type,
+      author: payload.data?.author?.username,
+      text: payload.data?.text?.slice(0, 80),
+      parent_hash: payload.data?.parent_hash,
+    });
 
     if (payload.type !== 'cast.created') {
-      return new Response(JSON.stringify({ message: 'ignored' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ message: 'ignored', type: payload.type }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = payload.data;
-    if (!data.parent_hash || !data.parent_author?.fid) {
-      return new Response(JSON.stringify({ message: 'not a reply' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!data?.parent_hash || !data?.parent_author?.fid) {
+      return new Response(JSON.stringify({ message: 'not a reply' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const tipAmount = parseTipCommand(data.text);
+    const tipAmount = parseTipCommand(data.text || '');
     if (!tipAmount) {
-      return new Response(JSON.stringify({ message: 'no tip command' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ message: 'no tip command', text: data.text?.slice(0, 80) }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const senderFid = data.author.fid;
-    const receiverFid = data.parent_author.fid;
-    const castHash = data.hash;
+    const senderFid = Number(data.author.fid);
+    const receiverFid = Number(data.parent_author.fid);
+    const castHash = String(data.hash);
 
     if (senderFid === receiverFid) {
-      console.log('Self-tip blocked');
-      return new Response(JSON.stringify({ message: 'self-tip blocked' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ message: 'self-tip blocked' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
@@ -139,14 +192,19 @@ serve(async (req) => {
       : null;
 
     if (supabase) {
-      const { data: existing } = await supabase.from('pending_tips').select('id').eq('cast_hash', castHash).limit(1);
+      const { data: existing } = await supabase
+        .from('pending_tips')
+        .select('id, status')
+        .eq('cast_hash', castHash)
+        .limit(1);
       if (existing && existing.length > 0) {
-        console.log('Already processed:', castHash);
-        return new Response(JSON.stringify({ message: 'duplicate' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        console.log('Already processed:', castHash, existing[0]);
+        return new Response(JSON.stringify({ message: 'duplicate' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
     }
 
-    // Resolve wallets
     const [senderWallet, receiverWallet] = await Promise.all([
       getWalletForFid(senderFid, NEYNAR_API_KEY),
       getWalletForFid(receiverFid, NEYNAR_API_KEY),
@@ -165,10 +223,8 @@ serve(async (req) => {
       });
     }
 
-    // Set up viem clients
     const pk = TIP_POOL_PRIVATE_KEY.startsWith('0x') ? TIP_POOL_PRIVATE_KEY : `0x${TIP_POOL_PRIVATE_KEY}`;
     const account = privateKeyToAccount(pk as `0x${string}`);
-
     const publicClient = createPublicClient({ chain: base, transport: http() });
     const walletClient = createWalletClient({ account, chain: base, transport: http() });
 
@@ -176,33 +232,22 @@ serve(async (req) => {
     const senderAddr = getAddress(senderWallet);
     const receiverAddr = getAddress(receiverWallet);
 
-    // Check sender balance + allowance
     const [senderBalance, senderAllowance] = await Promise.all([
       publicClient.readContract({
-        address: BLOOM_TOKEN,
-        abi: ERC20_ABI,
-        functionName: 'balanceOf',
-        args: [senderAddr],
+        address: BLOOM_TOKEN, abi: ERC20_ABI, functionName: 'balanceOf', args: [senderAddr],
       }) as Promise<bigint>,
       publicClient.readContract({
-        address: BLOOM_TOKEN,
-        abi: ERC20_ABI,
-        functionName: 'allowance',
-        args: [senderAddr, BLOOM_TIPPING],
+        address: BLOOM_TOKEN, abi: ERC20_ABI, functionName: 'allowance', args: [senderAddr, BLOOM_TIPPING],
       }) as Promise<bigint>,
     ]);
 
     const recordFailure = async (status: string) => {
       if (!supabase) return;
       await supabase.from('pending_tips').insert({
-        sender_fid: senderFid,
-        receiver_fid: receiverFid,
-        sender_wallet: senderAddr.toLowerCase(),
-        receiver_wallet: receiverAddr.toLowerCase(),
-        amount: tipAmount.toString(),
-        cast_hash: castHash,
-        sender_username: data.author.username,
-        status,
+        sender_fid: senderFid, receiver_fid: receiverFid,
+        sender_wallet: senderAddr.toLowerCase(), receiver_wallet: receiverAddr.toLowerCase(),
+        amount: tipAmount.toString(), cast_hash: castHash,
+        sender_username: data.author.username, status,
       });
     };
 
@@ -221,38 +266,25 @@ serve(async (req) => {
       });
     }
 
-    // Execute pull-based tip via BloomCommentTipping.executeTip
     const castHashBytes32 = castHashToBytes32(castHash);
-    console.log(`executeTip: ${tipAmount} BLOOM from ${senderAddr} -> ${receiverAddr} (cast ${castHash})`);
+    console.log(`executeTip: ${tipAmount} BLOOM ${senderAddr} -> ${receiverAddr} (cast ${castHash})`);
 
     const txHash = await walletClient.writeContract({
       address: BLOOM_TIPPING as `0x${string}`,
       abi: TIPPING_ABI,
       functionName: 'executeTip',
-      args: [
-        senderAddr,
-        receiverAddr,
-        amountWei,
-        BigInt(senderFid),
-        BigInt(receiverFid),
-        castHashBytes32,
-      ],
+      args: [senderAddr, receiverAddr, amountWei, BigInt(senderFid), BigInt(receiverFid), castHashBytes32],
     });
 
     console.log('Tx submitted:', txHash);
 
     if (supabase) {
       await supabase.from('pending_tips').insert({
-        sender_fid: senderFid,
-        receiver_fid: receiverFid,
-        sender_wallet: senderAddr.toLowerCase(),
-        receiver_wallet: receiverAddr.toLowerCase(),
-        amount: tipAmount.toString(),
-        cast_hash: castHash,
-        sender_username: data.author.username,
-        status: 'executed',
-        tx_hash: txHash,
-        executed_at: new Date().toISOString(),
+        sender_fid: senderFid, receiver_fid: receiverFid,
+        sender_wallet: senderAddr.toLowerCase(), receiver_wallet: receiverAddr.toLowerCase(),
+        amount: tipAmount.toString(), cast_hash: castHash,
+        sender_username: data.author.username, status: 'executed',
+        tx_hash: txHash, executed_at: new Date().toISOString(),
       });
     }
 
