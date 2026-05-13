@@ -11,8 +11,11 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
-const BLOOM_TOKEN = "0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07";
-const BLOOM_TIPPING = "0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2";
+const DEFAULT_BLOOM_TOKEN = "0xa07e759da6b3d4d75ed76f92fbcb867b9c145b07";
+const DEFAULT_TIP_CONTRACT = "0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2";
+const DEFAULT_BLOOM_DECIMALS = 18;
+const DEFAULT_MAX_TIP = 1000;
+const DEFAULT_BASE_RPC_URL = "https://base-rpc.publicnode.com";
 
 const ERC20_ABI = [
   { name: "balanceOf", type: "function", stateMutability: "view",
@@ -33,6 +36,8 @@ const TIPPING_ABI = [
       { name: "castHash", type: "bytes32" },
     ],
     outputs: [] },
+  { name: "executors", type: "function", stateMutability: "view",
+    inputs: [{ name: "executor", type: "address" }], outputs: [{ name: "", type: "bool" }] },
 ] as const;
 
 // Default tip amount when user replies just "bloom" or 🌸 with no number
@@ -65,8 +70,8 @@ async function getWalletForFid(fid: number, apiKey: string): Promise<string | nu
     if (!r.ok) return null;
     const d = await r.json();
     const u = d.users?.[0];
+    if (u?.verified_addresses?.primary?.eth_address) return u.verified_addresses.primary.eth_address;
     if (u?.verified_addresses?.eth_addresses?.length > 0) return u.verified_addresses.eth_addresses[0];
-    if (u?.custody_address) return u.custody_address;
     return null;
   } catch {
     return null;
@@ -84,14 +89,43 @@ function verifySignature(rawBody: string, signature: string | null, secret: stri
     const hmac = createHmac("sha512", secret);
     hmac.update(rawBody);
     const expected = hmac.digest("hex");
+    const provided = signature.trim().toLowerCase();
     // constant-time-ish compare
-    if (expected.length !== signature.length) return false;
+    if (expected.length !== provided.length) return false;
     let diff = 0;
-    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
     return diff === 0;
   } catch {
     return false;
   }
+}
+
+function json(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function selectExecutorKey(publicClient: ReturnType<typeof createPublicClient>, tipContract: `0x${string}`) {
+  const privateKeys = [
+    Deno.env.get('BACKEND_SIGNER_PRIVATE_KEY'),
+    Deno.env.get('TIP_POOL_PRIVATE_KEY'),
+  ].filter(Boolean) as string[];
+
+  for (const raw of privateKeys) {
+    const pk = raw.startsWith('0x') ? raw : `0x${raw}`;
+    const account = privateKeyToAccount(pk as `0x${string}`);
+    const authorized = await publicClient.readContract({
+      address: tipContract,
+      abi: TIPPING_ABI,
+      functionName: 'executors',
+      args: [account.address],
+    }) as boolean;
+    console.log(`Executor candidate ${account.address}: authorized=${authorized}`);
+    if (authorized) return { pk: pk as `0x${string}`, account };
+  }
+  return null;
 }
 
 serve(async (req) => {
@@ -106,28 +140,25 @@ serve(async (req) => {
 
   try {
     const NEYNAR_API_KEY = Deno.env.get('NEYNAR_API_KEY');
-    // Prefer the on-chain executor key (BACKEND_SIGNER_PRIVATE_KEY = 0xad3e2d50...456637233);
-    // fall back to TIP_POOL_PRIVATE_KEY for backward compatibility.
-    const TIP_POOL_PRIVATE_KEY =
-      Deno.env.get('BACKEND_SIGNER_PRIVATE_KEY') || Deno.env.get('TIP_POOL_PRIVATE_KEY');
     const NEYNAR_WEBHOOK_SECRET = Deno.env.get('NEYNAR_WEBHOOK_SECRET');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const BLOOM_TOKEN = (Deno.env.get('BLOOM_TOKEN_ADDRESS') || DEFAULT_BLOOM_TOKEN) as `0x${string}`;
+    const TIP_CONTRACT = (Deno.env.get('TIP_CONTRACT_ADDRESS') || DEFAULT_TIP_CONTRACT) as `0x${string}`;
+    const BLOOM_DECIMALS = Number(Deno.env.get('BLOOM_DECIMALS') || DEFAULT_BLOOM_DECIMALS);
+    const MAX_TIP = Number(Deno.env.get('MAX_BLOOM_TIP') || DEFAULT_MAX_TIP);
+    const BASE_RPC_URL = Deno.env.get('BASE_RPC_URL') || DEFAULT_BASE_RPC_URL;
 
-    if (!NEYNAR_API_KEY || !TIP_POOL_PRIVATE_KEY) {
-      console.error('Missing required secrets (NEYNAR_API_KEY / TIP_POOL_PRIVATE_KEY)');
-      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!NEYNAR_API_KEY) {
+      console.error('Missing required secret: NEYNAR_API_KEY');
+      return json({ message: 'server misconfigured' });
     }
 
     // Read raw body once — needed for HMAC verification AND empty-body handling
     const rawBody = await req.text();
     if (!rawBody || rawBody.trim().length === 0) {
       console.log('Empty body received (likely a Neynar test ping)');
-      return new Response(JSON.stringify({ ok: true, message: 'empty body' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ ok: true, message: 'empty body' });
     }
 
     // Verify Neynar HMAC signature if secret is configured
@@ -135,9 +166,7 @@ serve(async (req) => {
       const sig = req.headers.get('X-Neynar-Signature') || req.headers.get('x-neynar-signature');
       if (!verifySignature(rawBody, sig, NEYNAR_WEBHOOK_SECRET)) {
         console.warn('Invalid X-Neynar-Signature; rejecting');
-        return new Response(JSON.stringify({ error: 'invalid signature' }), {
-          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ error: 'invalid signature' }, 401);
       }
     } else {
       console.warn('NEYNAR_WEBHOOK_SECRET not configured — accepting webhook unverified');
@@ -148,9 +177,7 @@ serve(async (req) => {
       payload = JSON.parse(rawBody);
     } catch (e) {
       console.error('Bad JSON body:', rawBody.slice(0, 200));
-      return new Response(JSON.stringify({ error: 'invalid json' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'invalid json' });
     }
 
     console.log('Webhook:', {
@@ -161,23 +188,21 @@ serve(async (req) => {
     });
 
     if (payload.type !== 'cast.created') {
-      return new Response(JSON.stringify({ message: 'ignored', type: payload.type }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'ignored', type: payload.type });
     }
 
     const data = payload.data;
     if (!data?.parent_hash || !data?.parent_author?.fid) {
-      return new Response(JSON.stringify({ message: 'not a reply' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'not a reply' });
     }
 
     const tipAmount = parseTipCommand(data.text || '');
     if (!tipAmount) {
-      return new Response(JSON.stringify({ message: 'no tip command', text: data.text?.slice(0, 80) }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'no tip command', text: data.text?.slice(0, 80) });
+    }
+    if (tipAmount <= 0 || tipAmount > MAX_TIP) {
+      console.log(`Tip amount out of range: ${tipAmount}`);
+      return json({ message: 'tip amount out of range', maxTip: MAX_TIP });
     }
 
     const senderFid = Number(data.author.fid);
@@ -185,9 +210,7 @@ serve(async (req) => {
     const castHash = String(data.hash);
 
     if (senderFid === receiverFid) {
-      return new Response(JSON.stringify({ message: 'self-tip blocked' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'self-tip blocked' });
     }
 
     const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
@@ -202,9 +225,7 @@ serve(async (req) => {
         .limit(1);
       if (existing && existing.length > 0) {
         console.log('Already processed:', castHash, existing[0]);
-        return new Response(JSON.stringify({ message: 'duplicate' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ message: 'duplicate' });
       }
     }
 
@@ -215,33 +236,35 @@ serve(async (req) => {
 
     if (!senderWallet) {
       console.log(`Sender FID ${senderFid} has no wallet`);
-      return new Response(JSON.stringify({ error: 'sender has no wallet' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'sender has no verified ETH wallet' });
     }
     if (!receiverWallet) {
       console.log(`Receiver FID ${receiverFid} has no wallet`);
-      return new Response(JSON.stringify({ error: 'receiver has no wallet' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'receiver has no verified ETH wallet' });
     }
 
-    const pk = TIP_POOL_PRIVATE_KEY.startsWith('0x') ? TIP_POOL_PRIVATE_KEY : `0x${TIP_POOL_PRIVATE_KEY}`;
-    const account = privateKeyToAccount(pk as `0x${string}`);
+    const publicClient = createPublicClient({ chain: base, transport: http(BASE_RPC_URL) });
+    const selected = await selectExecutorKey(publicClient, TIP_CONTRACT);
+    if (!selected) {
+      console.error('No configured signer is authorized on the tipping contract');
+      return json({ message: 'no authorized executor signer configured' });
+    }
+    const { account } = selected;
     console.log(`Executor (backend signer): ${account.address}`);
-    const publicClient = createPublicClient({ chain: base, transport: http() });
-    const walletClient = createWalletClient({ account, chain: base, transport: http() });
+    const walletClient = createWalletClient({ account, chain: base, transport: http(BASE_RPC_URL) });
 
-    const amountWei = parseUnits(tipAmount.toString(), 18);
+    const amountWei = parseUnits(tipAmount.toString(), BLOOM_DECIMALS);
     const senderAddr = getAddress(senderWallet);
     const receiverAddr = getAddress(receiverWallet);
+    console.log(`Resolved sender: ${senderAddr}`);
+    console.log(`Resolved recipient: ${receiverAddr}`);
 
     const [senderBalance, senderAllowance] = await Promise.all([
       publicClient.readContract({
         address: BLOOM_TOKEN, abi: ERC20_ABI, functionName: 'balanceOf', args: [senderAddr],
       }) as Promise<bigint>,
       publicClient.readContract({
-        address: BLOOM_TOKEN, abi: ERC20_ABI, functionName: 'allowance', args: [senderAddr, BLOOM_TIPPING],
+        address: BLOOM_TOKEN, abi: ERC20_ABI, functionName: 'allowance', args: [senderAddr, TIP_CONTRACT],
       }) as Promise<bigint>,
     ]);
 
@@ -258,23 +281,19 @@ serve(async (req) => {
     if (senderBalance < amountWei) {
       console.error(`Sender balance too low: have ${senderBalance}, need ${amountWei}`);
       await recordFailure('insufficient_balance');
-      return new Response(JSON.stringify({ error: 'insufficient sender balance' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'insufficient sender balance' });
     }
     if (senderAllowance < amountWei) {
       console.error(`Sender allowance too low: have ${senderAllowance}, need ${amountWei}`);
       await recordFailure('insufficient_allowance');
-      return new Response(JSON.stringify({ error: 'sender has not approved enough BLOOM. Visit the mini app to approve.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ message: 'sender has not approved enough BLOOM for the tip contract' });
     }
 
     const castHashBytes32 = castHashToBytes32(castHash);
     console.log(`executeTip: ${tipAmount} BLOOM ${senderAddr} -> ${receiverAddr} (cast ${castHash})`);
 
     const txHash = await walletClient.writeContract({
-      address: BLOOM_TIPPING as `0x${string}`,
+      address: TIP_CONTRACT,
       abi: TIPPING_ABI,
       functionName: 'executeTip',
       args: [senderAddr, receiverAddr, amountWei, BigInt(senderFid), BigInt(receiverFid), castHashBytes32],
@@ -292,13 +311,9 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, txHash, amount: tipAmount, from: senderAddr, to: receiverAddr }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ success: true, txHash, amount: tipAmount, from: senderAddr, to: receiverAddr });
   } catch (err) {
     console.error('Webhook error:', err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : 'unknown' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ message: 'webhook handled with internal error', error: err instanceof Error ? err.message : 'unknown' });
   }
 });
