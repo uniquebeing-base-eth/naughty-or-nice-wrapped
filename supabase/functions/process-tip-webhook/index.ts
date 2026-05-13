@@ -228,6 +228,7 @@ serve(async (req) => {
 
     const pk = TIP_POOL_PRIVATE_KEY.startsWith('0x') ? TIP_POOL_PRIVATE_KEY : `0x${TIP_POOL_PRIVATE_KEY}`;
     const account = privateKeyToAccount(pk as `0x${string}`);
+    console.log(`Executor (backend signer): ${account.address}`);
     const publicClient = createPublicClient({ chain: base, transport: http() });
     const walletClient = createWalletClient({ account, chain: base, transport: http() });
 
