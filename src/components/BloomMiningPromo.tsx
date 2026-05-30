@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Pickaxe, Copy, Check, X } from 'lucide-react';
+import { ExternalLink, Copy, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-const BLOOM_MINING_URL = 'https://farcaster.xyz/miniapps/egWGFSrJ0s-H/bloom-protocol';
-const INVITE_CODE = 'BLOOM2025';
+const BLOOM_MINING_URL = 'https://farcaster.xyz/miniapps/UnTd2dXmN_HG/petfolio';
+const INVITE_CODE = 'PETFOLIO';
 
 export const BloomMiningPromo = () => {
   const [open, setOpen] = useState(true);
@@ -34,10 +34,10 @@ export const BloomMiningPromo = () => {
     try {
       await navigator.clipboard.writeText(INVITE_CODE);
       setCopied(true);
-      toast.success('Invite code copied!');
+      toast.success('Petfolio copied!');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Could not copy code');
+      toast.error('Could not copy');
     }
   };
 
@@ -50,11 +50,20 @@ export const BloomMiningPromo = () => {
   if (!open) return null;
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center px-5 transition-opacity duration-300 ${animate ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={close} />
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center px-5 transition-opacity duration-300 ${
+        animate ? 'opacity-100' : 'opacity-0'
+      }`}
+    >
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-md"
+        onClick={close}
+      />
 
       <div
-        className={`relative z-10 w-full max-w-md rounded-3xl p-7 text-center bg-gradient-to-b from-[#1f0a2a] via-[#15081e] to-[#0a0510] border border-amber-400/30 shadow-2xl shadow-amber-500/20 transition-all duration-300 ${animate ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}
+        className={`relative z-10 w-full max-w-md rounded-3xl p-7 text-center bg-gradient-to-b from-[#1b1028] via-[#12091d] to-[#09050f] border border-purple-400/30 shadow-2xl shadow-purple-500/20 transition-all duration-300 ${
+          animate ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
+        }`}
       >
         <button
           onClick={close}
@@ -64,39 +73,53 @@ export const BloomMiningPromo = () => {
           <X className="w-5 h-5" />
         </button>
 
-        <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 flex items-center justify-center text-4xl shadow-lg shadow-amber-500/40 mb-5">
-          ⛏️
+        <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-violet-500 flex items-center justify-center text-4xl shadow-lg shadow-purple-500/40 mb-5">
+          🐾
         </div>
 
-        <div className="inline-block px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-xs font-bold tracking-wide mb-3">
-          ✨ EXCLUSIVE FOR YOU
+        <div className="inline-block px-3 py-1 rounded-full bg-purple-400/15 border border-purple-400/30 text-purple-300 text-xs font-bold tracking-wide mb-3">
+          NEW ON PETFOLIO
         </div>
 
         <h2 className="font-display text-3xl font-bold text-white mb-2">
-          Mine <span className="bg-gradient-to-r from-amber-300 via-orange-400 to-pink-400 bg-clip-text text-transparent">$BLOOM</span>
+          Create Your Pet&apos;s{' '}
+          <span className="bg-gradient-to-r from-purple-300 via-pink-400 to-violet-400 bg-clip-text text-transparent">
+            Onchain Identity
+          </span>
         </h2>
+
         <p className="text-white/70 text-sm leading-relaxed mb-5">
-          Our new mini app <span className="text-white font-semibold">Bloom Mining</span> just dropped 🌸
-          Start mining and earn <span className="text-amber-300 font-semibold">$BLOOM</span> tokens daily!
+          Petfolio lets you create a profile for your pet and automatically
+          launch a token via Clanker.
+          <br />
+          <br />
+          Build a community, share updates, track market activity, and grow
+          your pet&apos;s presence onchain.
         </p>
 
-        <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 to-pink-500/10 border border-amber-400/30 p-4 mb-5">
-          <p className="text-white/60 text-xs uppercase tracking-wider mb-2">Your Special Invite Code</p>
+        <div className="rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/30 p-4 mb-5">
+          <p className="text-white/60 text-xs uppercase tracking-wider mb-2">
+            Featured Platform
+          </p>
+
           <button
             onClick={copyCode}
-            className="w-full flex items-center justify-center gap-2 text-2xl font-mono font-bold text-amber-300 hover:text-amber-200 transition"
+            className="w-full flex items-center justify-center gap-2 text-xl font-bold text-purple-300 hover:text-purple-200 transition"
           >
             {INVITE_CODE}
-            {copied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5 opacity-60" />}
+            {copied ? (
+              <Check className="w-5 h-5 text-green-400" />
+            ) : (
+              <Copy className="w-5 h-5 opacity-60" />
+            )}
           </button>
         </div>
 
         <Button
           onClick={handleMine}
-          className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:from-amber-400 hover:to-pink-400 text-white font-bold py-6 rounded-full text-base gap-2 shadow-lg shadow-orange-500/40 border border-amber-300/40"
+          className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-violet-500 hover:from-purple-400 hover:to-violet-400 text-white font-bold py-6 rounded-full text-base gap-2 shadow-lg shadow-purple-500/40 border border-purple-300/40"
         >
-          <Pickaxe className="w-5 h-5" />
-          Start Mining Now
+          View Petfolio
           <ExternalLink className="w-4 h-4" />
         </Button>
 
