@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BLOOM_TIPPING_ADDRESS = '0xaa9E610270a1205Fca3E2625A8f26963c745C011';
+const BLOOM_TIPPING_ADDRESS = '0xF009C91FF4838Ebd76d23B9694Fb6e78bE25a5f2';
 const BASE_CHAIN_ID = 8453;
 
 // Helper to convert hex string to bytes
